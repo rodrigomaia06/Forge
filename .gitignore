@@ -57,3 +57,7 @@ fastlane/screenshots_dark/screenshots.html
 fastlane/test_output
 
 fastlane/metadata
+
+### XcodeGen ###
+# The Xcode project is generated from project.yml (via `xcodegen generate`) and is not committed.
+/Iron.xcodeproj/

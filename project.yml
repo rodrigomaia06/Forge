@@ -1,0 +1,105 @@
+# XcodeGen spec — source of truth for the Xcode project.
+# The .xcodeproj is generated (in CI via `xcodegen generate`) and is NOT committed.
+#
+# Single-app build for free (unpaid) signing: only the iPhone app, its tests, and the
+# shared framework. The Apple Watch app and both Siri-intent extensions are dropped by
+# omission, and no paid entitlements (App Group / HealthKit / iCloud / Siri) are declared.
+# The watch/HealthKit/Siri source code is intentionally kept for now — it compiles fine
+# (system frameworks auto-link) and simply no-ops at runtime without its entitlements;
+# a later pass removes the dead code. The old widget target is dropped too and will be
+# rebuilt as a rest-timer Live Activity later.
+
+name: Iron
+
+options:
+  bundleIdPrefix: com.kabouzeid
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    MARKETING_VERSION: "1.6"
+    CURRENT_PROJECT_VERSION: "36"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+
+packages:
+  Charts:
+    url: https://github.com/danielgindi/Charts
+    from: "5.1.0"
+
+targets:
+  WorkoutDataKit:
+    type: framework
+    platform: iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kabouzeid.WorkoutDataKit
+        INFOPLIST_FILE: WorkoutDataKit/Info.plist
+        DEFINES_MODULE: "YES"
+        APPLICATION_EXTENSION_API_ONLY: "YES"
+        SKIP_INSTALL: "YES"
+    sources:
+      - path: WorkoutDataKit
+        excludes:
+          - everkinetic-data
+      - path: WorkoutDataKit/everkinetic-data
+        type: folder
+      # WorkoutDataKit uses its own WorkoutDataKit/Extension/OSLog+Logs.swift (globbed above);
+      # the Shared one has the same basename and would collide, so it is NOT added here.
+      - Shared/Benchmark.swift
+
+  Iron:
+    type: application
+    platform: iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kabouzeid.Iron
+        INFOPLIST_FILE: Iron/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: "YES"
+    sources:
+      - path: Iron
+        excludes:
+          - quotes
+          - iron_backup_file_images
+      - path: Iron/quotes
+        type: folder
+      - path: Iron/iron_backup_file_images
+        type: folder
+      - path: Shared
+    dependencies:
+      - target: WorkoutDataKit
+      - package: Charts
+        product: DGCharts
+
+  IronTests:
+    type: bundle.unit-test
+    platform: iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kabouzeid.IronTests
+        INFOPLIST_FILE: IronTests/Info.plist
+    sources:
+      - path: IronTests
+        excludes:
+          - workout_data
+          - iron_backups
+      - path: IronTests/workout_data
+        type: folder
+      - path: IronTests/iron_backups
+        type: folder
+    dependencies:
+      - target: Iron
+
+schemes:
+  Iron:
+    build:
+      targets:
+        Iron: all
+    test:
+      targets:
+        - IronTests

@@ -25,8 +25,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  XCODE_VERSION: "15.4"
-  SIMULATOR_NAME: "iPhone 15"
+  # Xcode 16+ is required: XcodeGen emits the Xcode-16 project format (objectVersion 77),
+  # which Xcode 15.x cannot open.
+  XCODE_VERSION: "16.2"
+  SIMULATOR_NAME: "iPhone 16"
 
 jobs:
   build-test:
@@ -40,6 +42,12 @@ jobs:
 
       - name: Select Xcode
         run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
 
       - name: Show available Xcodes / simulators (diagnostics for first run)
         run: |
