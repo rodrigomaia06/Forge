@@ -9,10 +9,9 @@
 import Foundation
 
 extension UserDefaults {
-    static let appGroup: UserDefaults = {
-        guard let userDefaults = UserDefaults(suiteName: FileManager.appGroupIdentifier) else {
-            fatalError("could not create user defaults for group suite \(FileManager.appGroupIdentifier)")
-        }
-        return userDefaults
-    }()
+    /// The App Group defaults suite when available, otherwise standard defaults.
+    ///
+    /// Forge is a single-app build with no App Group entitlement (free signing), and no
+    /// extensions read this suite, so standard defaults are a correct fallback.
+    static let appGroup: UserDefaults = UserDefaults(suiteName: FileManager.appGroupIdentifier) ?? .standard
 }
