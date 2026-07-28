@@ -52,12 +52,18 @@ struct RestTimerLiveActivity: Widget {
                 }
             } compactLeading: {
                 Image(systemName: "timer")
+                    .foregroundStyle(.white)
             } compactTrailing: {
                 Text(timerInterval: context.state.startDate...context.state.endDate, countsDown: true)
-                    .font(.caption2.monospacedDigit())
-                    .frame(maxWidth: 40)
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.trailing)
+                    .frame(minWidth: 44, maxWidth: 56)
             } minimal: {
-                Image(systemName: "timer")
+                Text(timerInterval: context.state.startDate...context.state.endDate, countsDown: true)
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: 44)
             }
         }
     }
