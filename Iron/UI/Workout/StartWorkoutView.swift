@@ -29,35 +29,14 @@ struct StartWorkoutView: View {
     var body: some View {
         NavigationStack {
             List {
-                if #available(iOS 15.0, *) {
-                    Button {
-                        Workout.create(context: self.managedObjectContext).startOrCrash()
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Text("Start Workout").font(.headline)
-                            Spacer()
-                        }
-                        .padding(6)
-                    }
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
-                    .buttonStyle(.borderedProminent)
-                } else {
-                    Button {
-                        Workout.create(context: self.managedObjectContext).startOrCrash()
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Text("Start Workout").font(.headline)
-                            Spacer()
-                        }
-                        .padding(6)
-                    }
-                    .foregroundColor(.white)
-                    .listRowBackground(Color.accentColor)
-                    .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
+                Button {
+                    Workout.create(context: self.managedObjectContext).startOrCrash()
+                } label: {
+                    Text("Start workout")
                 }
+                .buttonStyle(ForgePrimaryButtonStyle())
+                .listRowBackground(Color.clear)
+                .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
                 
                 ForEach(workoutPlans) { workoutPlan in
                     Section {

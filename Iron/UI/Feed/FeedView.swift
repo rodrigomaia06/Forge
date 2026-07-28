@@ -104,7 +104,7 @@ struct FeedView: View {
         }
         .padding(Theme.Spacing.m)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous).fill(Color.forgeSurface))
+        .forgeCard(radius: Theme.Radius.medium)
     }
 
     private func count(in unit: Calendar.Component) -> Int {
@@ -381,7 +381,7 @@ struct FeedView: View {
         }
         .padding(Theme.Spacing.l)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous).fill(Color.forgeSurface))
+        .forgeCard()
     }
 
     // MARK: Data helpers
