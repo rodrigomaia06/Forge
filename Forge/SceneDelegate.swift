@@ -143,10 +143,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         os_log("Scene did enter background, saving workout data", log: .default)
         WorkoutDataStorage.shared.persistentContainer.viewContext.saveOrCrash()
         
-        if let currentWorkout = try? WorkoutDataStorage.shared.persistentContainer.viewContext.fetch(Workout.currentWorkoutFetchRequest).first {
+        if SettingsStore.shared.unfinishedWorkoutReminderEnabled,
+           let currentWorkout = try? WorkoutDataStorage.shared.persistentContainer.viewContext.fetch(Workout.currentWorkoutFetchRequest).first {
             if currentWorkout.hasCompletedSets ?? false { // allows the user to prefill a workout without getting the notification
-                // remind the user about his unfinished workout
-                NotificationManager.shared.requestUnfinishedWorkoutNotification()
+                // remind the user once about the unfinished workout
+                NotificationManager.shared.requestUnfinishedWorkoutNotification(after: SettingsStore.shared.unfinishedWorkoutReminderDelay)
             }
         }
     }

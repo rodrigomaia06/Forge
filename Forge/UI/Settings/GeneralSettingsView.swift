@@ -89,6 +89,20 @@ struct GeneralSettingsView: View {
         }
     }
     
+    private var reminderSection: some View {
+        Section(footer: Text("Sends a single reminder if you leave a workout in progress after logging a set.")) {
+            Toggle("Unfinished workout reminder", isOn: $settingsStore.unfinishedWorkoutReminderEnabled)
+            if settingsStore.unfinishedWorkoutReminderEnabled {
+                Picker("Remind after", selection: $settingsStore.unfinishedWorkoutReminderDelay) {
+                    Text("15 minutes").tag(TimeInterval(15 * 60))
+                    Text("30 minutes").tag(TimeInterval(30 * 60))
+                    Text("1 hour").tag(TimeInterval(60 * 60))
+                    Text("2 hours").tag(TimeInterval(120 * 60))
+                }
+            }
+        }
+    }
+
     var body: some View {
         Form {
             appearanceSection
@@ -96,6 +110,7 @@ struct GeneralSettingsView: View {
             calendarSection
             restTimerTimesSection
             restTimerSection
+            reminderSection
         }
         .navigationBarTitle("General", displayMode: .inline)
     }

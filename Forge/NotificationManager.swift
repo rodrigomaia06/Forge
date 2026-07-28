@@ -48,19 +48,20 @@ class NotificationManager: NSObject {
         notificationCenter.removeDeliveredNotifications(withIdentifiers: withIdentifiers.map { $0.rawValue })
     }
 
-    func requestUnfinishedWorkoutNotification() {
+    func requestUnfinishedWorkoutNotification(after delay: TimeInterval) {
         notificationCenter.getNotificationSettings { settings in
             guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }
-            
+
             let content = UNMutableNotificationContent()
             content.title = "Unfinished workout"
             content.body = "You have an unfinished workout. Do you want to finish it?"
             if settings.soundSetting == .enabled {
                 content.sound = UNNotificationSound.default
             }
-            
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 15*60, repeats: true)
-            
+
+            // A single reminder, not a repeating one. The system requires a positive interval.
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(60, delay), repeats: false)
+
             let request = UNNotificationRequest(identifier: NotificationIdentifier.unfinishedWorkout.rawValue, content: content, trigger: trigger)
             
             self.notificationCenter.add(request) { (error) in

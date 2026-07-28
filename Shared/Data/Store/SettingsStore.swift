@@ -110,6 +110,26 @@ final class SettingsStore: ObservableObject {
             userDefaults.accentIdentifier = newValue
         }
     }
+
+    var unfinishedWorkoutReminderEnabled: Bool {
+        get {
+            userDefaults.unfinishedWorkoutReminderEnabled
+        }
+        set {
+            self.objectWillChange.send()
+            userDefaults.unfinishedWorkoutReminderEnabled = newValue
+        }
+    }
+
+    var unfinishedWorkoutReminderDelay: TimeInterval {
+        get {
+            userDefaults.unfinishedWorkoutReminderDelay
+        }
+        set {
+            self.objectWillChange.send()
+            userDefaults.unfinishedWorkoutReminderDelay = newValue
+        }
+    }
 }
 
 #if DEBUG

@@ -19,12 +19,26 @@ extension UserDefaults {
         case autoBackup
         case firstWeekday
         case accentIdentifier
+        case unfinishedWorkoutReminderEnabled
+        case unfinishedWorkoutReminderDelay
     }
 
     /// Identifier of the selected accent theme (see ForgeAccent). Empty string means the default.
     var accentIdentifier: String {
         set { self.set(newValue, forKey: SettingsKeys.accentIdentifier.rawValue) }
         get { self.string(forKey: SettingsKeys.accentIdentifier.rawValue) ?? "" }
+    }
+
+    /// Whether to schedule one reminder after backgrounding a workout with completed sets.
+    var unfinishedWorkoutReminderEnabled: Bool {
+        set { self.set(newValue, forKey: SettingsKeys.unfinishedWorkoutReminderEnabled.rawValue) }
+        get { self.value(forKey: SettingsKeys.unfinishedWorkoutReminderEnabled.rawValue) as? Bool ?? true }
+    }
+
+    /// Delay before the single unfinished-workout reminder fires (seconds). Default 15 minutes.
+    var unfinishedWorkoutReminderDelay: TimeInterval {
+        set { self.set(newValue, forKey: SettingsKeys.unfinishedWorkoutReminderDelay.rawValue) }
+        get { self.value(forKey: SettingsKeys.unfinishedWorkoutReminderDelay.rawValue) as? TimeInterval ?? 15 * 60 }
     }
 
     var weightUnit: WeightUnit {
