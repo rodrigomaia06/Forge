@@ -245,9 +245,18 @@ struct FeedView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(dayAccessibilityLabel(date, active: active))
+            .accessibilityAddTraits(isSelected ? [.isSelected] : [])
         } else {
             Color.clear.frame(height: 34).frame(maxWidth: .infinity)
+                .accessibilityHidden(true)
         }
+    }
+
+    private func dayAccessibilityLabel(_ date: Date, active: Bool) -> String {
+        let f = DateFormatter(); f.dateStyle = .full; f.timeStyle = .none
+        let day = f.string(from: date)
+        return active ? "\(day), workout logged" : "\(day), no workout"
     }
 
     // The full year as smaller, tappable month grids (4 per row).
@@ -266,8 +275,20 @@ struct FeedView: View {
                     miniMonth(year: year, month: month, selected: filter == .month(year: year, month: month))
                 }
                 .buttonStyle(.plain)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(monthAccessibilityLabel(year: year, month: month))
             }
         }
+    }
+
+    private func monthAccessibilityLabel(year: Int, month: Int) -> String {
+        let name = cal.standaloneMonthSymbols[month - 1]
+        let count = workouts.filter { w in
+            guard let s = w.start else { return false }
+            return cal.component(.year, from: s) == year && cal.component(.month, from: s) == month
+        }.count
+        let workoutText = count == 1 ? "1 workout" : "\(count) workouts"
+        return "\(name) \(year), \(workoutText)"
     }
 
     private func miniMonth(year: Int, month: Int, selected: Bool) -> some View {

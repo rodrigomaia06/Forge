@@ -131,8 +131,9 @@ extension Font {
     /// Supporting captions and secondary metadata.
     static var forgeCaption: Font { .subheadline }
 
-    /// Large, calm greeting / screen title (e.g. "Good afternoon").
-    static var forgeGreeting: Font { .system(size: 30, weight: .semibold) }
+    /// Large, calm greeting / screen title (e.g. "Good afternoon"). Uses a text style so it
+    /// scales with Dynamic Type instead of clipping at a fixed size.
+    static var forgeGreeting: Font { .system(.largeTitle, design: .default).weight(.semibold) }
 
     /// Small uppercase section label (e.g. "MARCH 2026", tracked wider by the caller).
     static var forgeSectionLabel: Font { .system(.caption, design: .default).weight(.semibold) }
