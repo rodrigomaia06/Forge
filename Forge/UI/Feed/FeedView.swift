@@ -44,18 +44,22 @@ struct FeedView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-                header
-                statsRow
-                activitySection
-                recent
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                    header
+                    statsRow
+                    activitySection
+                    recent
+                }
+                .padding(.horizontal, Theme.Spacing.l)
+                .padding(.top, Theme.Spacing.xxl)
+                .padding(.bottom, Theme.Spacing.l)
             }
-            .padding(.horizontal, Theme.Spacing.l)
-            .padding(.top, Theme.Spacing.xxl)
-            .padding(.bottom, Theme.Spacing.l)
+            .background(Color.forgeBackground.ignoresSafeArea())
+            // Keep the custom greeting header; the nav bar only appears on pushed detail screens.
+            .toolbar(.hidden, for: .navigationBar)
         }
-        .background(Color.forgeBackground.ignoresSafeArea())
     }
 
     // MARK: Header
@@ -394,15 +398,20 @@ struct FeedView: View {
 
     private func workoutCard(_ workout: Workout) -> some View {
         let s = stats(workout)
-        return VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            Text(dateLabel(workout.start)).font(.forgeSectionLabel).tracking(1).foregroundColor(.forgeSecondaryLabel)
-            Text(workout.title ?? "Workout").font(.forgeHeadline).foregroundColor(.forgeLabel)
-            Text("\(s.exercises) exercises · \(s.sets) sets · \(volumeString(s.volume))")
-                .font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)
+        return NavigationLink {
+            WorkoutDetailView(workout: workout)
+        } label: {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text(dateLabel(workout.start)).font(.forgeSectionLabel).tracking(1).foregroundColor(.forgeSecondaryLabel)
+                Text(workout.title ?? "Workout").font(.forgeHeadline).foregroundColor(.forgeLabel)
+                Text("\(s.exercises) exercises · \(s.sets) sets · \(volumeString(s.volume))")
+                    .font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)
+            }
+            .padding(Theme.Spacing.l)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .forgeCard()
         }
-        .padding(Theme.Spacing.l)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .forgeCard()
+        .buttonStyle(.plain)
     }
 
     // MARK: Data helpers
