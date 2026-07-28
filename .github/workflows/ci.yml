@@ -1,17 +1,10 @@
 name: CI
 
-# Builds and tests Forge on a GitHub-hosted macOS runner.
-# This is the ONLY way the project is built/tested — the maintainer has no Mac.
+# Builds/tests Forge and produces artifacts (UI screenshots + an unsigned .ipa) on a
+# GitHub-hosted macOS runner — the only build environment (the maintainer has no Mac).
 #
-# Notes for the first run (expect to iterate once from the Actions log):
-#  - Builds for the iOS Simulator, which does NOT enforce code signing or
-#    entitlements, so this stays green even while the project still has the
-#    paid-only App Group / HealthKit / iCloud / Siri capabilities (removed in F3).
-#  - CODE_SIGNING_ALLOWED=NO lets the app + embedded watch/extensions build
-#    unsigned for the simulator.
-#  - Pin XCODE_VERSION and SIMULATOR_NAME to values actually present on the
-#    runner image (see the "Show available Xcodes / simulators" step output)
-#    and adjust if the first run reports them missing.
+# Xcode 16+ is required: XcodeGen emits the Xcode-16 project format (objectVersion 77),
+# which Xcode 15.x cannot open. The .xcodeproj is generated from project.yml each run.
 
 on:
   push:
@@ -25,17 +18,14 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Xcode 16+ is required: XcodeGen emits the Xcode-16 project format (objectVersion 77),
-  # which Xcode 15.x cannot open.
   XCODE_VERSION: "16.2"
   SIMULATOR_NAME: "iPhone 16"
 
 jobs:
   build-test:
-    name: Build & Test (iOS Simulator)
+    name: Build, test & screenshots (iOS Simulator)
     runs-on: macos-14
     timeout-minutes: 30
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,18 +39,13 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Show available Xcodes / simulators (diagnostics for first run)
-        run: |
-          echo "Xcode:"; xcodebuild -version
-          echo "Installed Xcodes:"; ls /Applications | grep -i Xcode || true
-          echo "Schemes:"; xcodebuild -project Iron.xcodeproj -list || true
-          echo "iPhone simulators:"; xcrun simctl list devices available | grep -i iphone || true
-
-      - name: Resolve Swift packages
-        run: xcodebuild -resolvePackageDependencies -project Iron.xcodeproj -scheme Iron
-
       - name: Build & test
+        env:
+          # simctl forwards SIMCTL_CHILD_* into the app running in the simulator,
+          # so the screenshot test sees FORGE_SCREENSHOT_DIR and writes PNGs there.
+          SIMCTL_CHILD_FORGE_SCREENSHOT_DIR: ${{ github.workspace }}/screenshots
         run: |
+          mkdir -p "${{ github.workspace }}/screenshots"
           xcodebuild test \
             -project Iron.xcodeproj \
             -scheme Iron \
@@ -69,6 +54,14 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
 
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots/
+          if-no-files-found: warn
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -76,3 +69,51 @@ jobs:
           name: TestResults
           path: TestResults.xcresult
           if-no-files-found: ignore
+
+  package-ipa:
+    name: Package unsigned .ipa (AltStore / SideStore)
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build unsigned (Release, device)
+        run: |
+          xcodebuild build \
+            -project Iron.xcodeproj \
+            -scheme Iron \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Package .ipa
+        run: |
+          set -euo pipefail
+          APP="$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)"
+          echo "Packaging: $APP"
+          rm -rf Payload
+          mkdir Payload
+          cp -R "$APP" Payload/
+          zip -qry Forge-unsigned.ipa Payload
+          ls -lh Forge-unsigned.ipa
+
+      - name: Upload .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: Forge-unsigned-ipa
+          path: Forge-unsigned.ipa
+          if-no-files-found: error
