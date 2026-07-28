@@ -1,9 +1,11 @@
 //
 //  WorkoutSetCell.swift
-//  Sunrise Fit
+//  Forge
 //
-//  Created by Karim Abou Zeid on 28.08.19.
-//  Copyright © 2019 Karim Abou Zeid Software. All rights reserved.
+//  The set row used across every workout and history screen. Restyled on the Forge
+//  design tokens (see ForgeSetRow, which is the same visual language as a standalone,
+//  value-based component). All existing states are preserved: placeholder, selection,
+//  completed / up-next, set tag, personal record, RPE, and the disabled (history) mode.
 //
 
 import SwiftUI
@@ -18,130 +20,135 @@ struct WorkoutSetCell: View {
     var isPlaceholder = false
     var showCompleted = false
     var showUpNextIndicator = false
-    
+
     enum ColorMode {
         case selected
         case activated
         case deactivated
         case disabled
     }
-    
-    private func titleView(isPlaceholder: Bool, colorMode: ColorMode) -> some View {
-        HStack {
-            if isPlaceholder {
-                Text("Set")
-                    .foregroundColor(.secondary)
-            } else {
-                Text(workoutSet.displayTitle(weightUnit: settingsStore.weightUnit))
-                    .font(Font.body.monospacedDigit())
-                    .foregroundColor(colorMode == .disabled ? .secondary : .primary)
-            }
-        }
-    }
-    
+
     private static var rpeFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.minimumFractionDigits = 0
         formatter.maximumFractionDigits = 1
         return formatter
     }()
-    
+
+    private var isMuted: Bool { colorMode == .disabled }
+
     var body: some View {
-        HStack {
-            if showUpNextIndicator {
-                Image(systemName: "chevron.right.circle.fill")
-                    .foregroundColor(.accentColor)
-            } else if showCompleted && workoutSet.isCompleted {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(colorMode == .disabled ? .secondary : .green)
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    titleView(isPlaceholder: isPlaceholder, colorMode: colorMode)
-                        .background(
-                            Group {
-                                if colorMode == .selected {
-                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                        .stroke(Color.accentColor)
-                                        .padding(-4)
-                                }
-                            }
-                        )
-                    
+        HStack(spacing: Theme.Spacing.m) {
+            leadingStatus
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.s) {
+                    title
+
                     if let interval = WorkoutRoutineSetCell.repetitionIntervalString(minRepetitions: workoutSet.minTargetRepetitions?.intValue, maxRepetitions: workoutSet.maxTargetRepetitions?.intValue) {
-                        Group {
-                            if !isPlaceholder {
-                                Text("/")
-                            }
-                            
-                            Text("\(interval)")
-                        }
-                        .foregroundColor(Color(.tertiaryLabel))
+                        Text(interval)
+                            .font(.forgeCaption)
+                            .foregroundColor(.forgeSecondaryLabel)
                     }
                 }
-                
-                workoutSet.comment.map {
-                    Text($0.enquoted)
+
+                if let comment = workoutSet.comment {
+                    Text(comment.enquoted)
                         .lineLimit(1)
-                        .font(Font.caption.italic())
-                        .foregroundColor(.secondary)
+                        .font(.forgeCaption.italic())
+                        .foregroundColor(.forgeSecondaryLabel)
                 }
-            }
-            
-            Spacer()
-            
-            if let rpe = workoutSet.rpeValue {
-                Text("RPE " + (Self.rpeFormatter.string(from: NSNumber(value: rpe)) ?? String(format: "%.1f", rpe)))
-                    .modifier(TagStyle())
-            }
-            
-            if workoutSet.isPersonalRecord ?? false {
-                // TODO: replace with a trophy symbol
-                Image(systemName: "star.circle.fill")
-                    .foregroundColor(colorMode == .disabled ? .secondary : .yellow)
             }
 
-            Text("\(index)")
-                .font(Font.body.monospacedDigit())
-                .foregroundColor(workoutSet.tagValue != nil ? .clear : .secondary)
-                .background(
-                    Group {
-                        workoutSet.tagValue.map {
-                            Text($0.title.first!.uppercased())
-                                .fontWeight(.semibold)
-                                .foregroundColor($0.color)
-                                .fixedSize()
-                        }
-                    }
-                )
+            Spacer(minLength: Theme.Spacing.s)
+
+            if let rpe = workoutSet.rpeValue {
+                rpePill(rpe)
+            }
+
+            if workoutSet.isPersonalRecord ?? false {
+                Image(systemName: "trophy.fill")
+                    .font(.caption)
+                    .foregroundColor(isMuted ? .forgeSecondaryLabel : .forgeWarning)
+                    .accessibilityLabel("Personal record")
+            }
+
+            numberBadge
+        }
+        .padding(.vertical, Theme.Spacing.xxs)
+    }
+
+    @ViewBuilder private var leadingStatus: some View {
+        if showUpNextIndicator {
+            Image(systemName: "chevron.right.circle.fill")
+                .foregroundColor(.forgeAccent)
+        } else if showCompleted {
+            if workoutSet.isCompleted {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(isMuted ? .forgeSecondaryLabel : .forgeSuccess)
+            } else {
+                Image(systemName: "circle")
+                    .foregroundColor(.forgeSeparator)
+            }
         }
     }
-}
 
-private struct TagStyle: ViewModifier {
-    func body(content: Content) -> some View {
-        content
+    @ViewBuilder private var title: some View {
+        if isPlaceholder {
+            Text("Set")
+                .font(.forgeValue)
+                .foregroundColor(.forgeSecondaryLabel)
+        } else {
+            Text(workoutSet.displayTitle(weightUnit: settingsStore.weightUnit))
+                .font(.forgeValue)
+                .foregroundColor(isMuted ? .forgeSecondaryLabel : .forgeLabel)
+                .background(selectionBorder)
+        }
+    }
+
+    @ViewBuilder private var selectionBorder: some View {
+        if colorMode == .selected {
+            RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+                .stroke(Color.forgeAccent)
+                .padding(-Theme.Spacing.xs)
+        }
+    }
+
+    private func rpePill(_ rpe: Double) -> some View {
+        Text("RPE " + (Self.rpeFormatter.string(from: NSNumber(value: rpe)) ?? String(format: "%.1f", rpe)))
             .font(.caption)
-            .foregroundColor(.secondary)
-            .padding(4)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder()
-                    .foregroundColor(Color(.systemFill))
-            )
+            .foregroundColor(.forgeSecondaryLabel)
+            .padding(.horizontal, Theme.Spacing.s)
+            .padding(.vertical, Theme.Spacing.xxs)
+            .background(Capsule().stroke(Color.forgeSeparator))
+    }
+
+    private var numberBadge: some View {
+        ZStack {
+            Circle().fill(Color.forgeBackground)
+            if let tag = workoutSet.tagValue, let letter = tag.title.first {
+                Text(letter.uppercased())
+                    .font(.forgeCaption.weight(.semibold))
+                    .foregroundColor(tag.color)
+            } else {
+                Text("\(index)")
+                    .font(.forgeCaption.monospacedDigit())
+                    .foregroundColor(.forgeSecondaryLabel)
+            }
+        }
+        .frame(width: 26, height: 26)
     }
 }
 
 #if DEBUG
-struct WorkoutSetCell_Previews: PreviewProvider {
+struct WorkoutSetCell_Previews : PreviewProvider {
     static var workoutSet1: WorkoutSet = {
         let set = WorkoutSet(context: MockWorkoutData.metric.context)
         set.weightValue = 82.5
         set.repetitionsValue = 5
         return set
     }()
-    
+
     static var workoutSet2: WorkoutSet = {
         let set = WorkoutSet(context: MockWorkoutData.metric.context)
         set.weightValue = 82.5
@@ -151,16 +158,7 @@ struct WorkoutSetCell_Previews: PreviewProvider {
         set.isCompleted = true
         return set
     }()
-    
-    static var workoutSet3: WorkoutSet = {
-        let set = WorkoutSet(context: MockWorkoutData.metric.context)
-        set.weightValue = 82.5
-        set.repetitionsValue = 5
-        set.minTargetRepetitionsValue = 8
-        set.maxTargetRepetitionsValue = 12
-        return set
-    }()
-    
+
     static var workoutSet4: WorkoutSet = {
         let set = WorkoutSet(context: MockWorkoutData.metric.context)
         set.weightValue = 82.5
@@ -170,66 +168,14 @@ struct WorkoutSetCell_Previews: PreviewProvider {
         set.isCompleted = true
         return set
     }()
-    
-    static var workoutSet5: WorkoutSet = {
-        let set = WorkoutSet(context: MockWorkoutData.metric.context)
-        set.weightValue = 82.5
-        set.repetitionsValue = 5
-        set.minTargetRepetitionsValue = 8
-        set.rpeValue = 8
-        set.isCompleted = true
-        return set
-    }()
-    
-    static var workoutSet6: WorkoutSet = {
-        let set = WorkoutSet(context: MockWorkoutData.metric.context)
-        set.weightValue = 82.5
-        set.repetitionsValue = 5
-        set.minTargetRepetitionsValue = 5
-        set.maxTargetRepetitionsValue = 5
-        set.isCompleted = true
-        set.comment = "This is a comment"
-        return set
-    }()
-    
-    static var workoutSet7: WorkoutSet = {
-        let set = WorkoutSet(context: MockWorkoutData.metric.context)
-        set.weightValue = 82.5
-        set.repetitionsValue = 5
-        set.isCompleted = true
-        return set
-    }()
-    
-    static var workoutSet8: WorkoutSet = {
-        let set = WorkoutSet(context: MockWorkoutData.metric.context)
-        set.weightValue = 132.5
-        set.repetitionsValue = 3
-        set.minTargetRepetitionsValue = 1
-        set.rpeValue = 10
-        set.isCompleted = true
-        return set
-    }()
-    
+
     static var previews: some View {
         List {
             Section {
-                WorkoutSetCell(workoutSet: workoutSet6, index: 1, showCompleted: true)
-                WorkoutSetCell(workoutSet: workoutSet6, index: 2, colorMode: .selected, showCompleted: true)
-                WorkoutSetCell(workoutSet: workoutSet8, index: 4, showCompleted: true)
-                WorkoutSetCell(workoutSet: workoutSet7, index: 5, showUpNextIndicator: true)
-                WorkoutSetCell(workoutSet: workoutSet3, index: 6, isPlaceholder: true)
-                WorkoutSetCell(workoutSet: workoutSet6, index: 7, isPlaceholder: true)
-                WorkoutSetCell(workoutSet: workoutSet1, index: 8, isPlaceholder: true)
-            }
-            
-            Section {
-                WorkoutSetCell(workoutSet: workoutSet1, index: 1)
-                WorkoutSetCell(workoutSet: workoutSet2, index: 2)
-                WorkoutSetCell(workoutSet: workoutSet3, index: 3)
-                WorkoutSetCell(workoutSet: workoutSet4, index: 4)
-                WorkoutSetCell(workoutSet: workoutSet5, index: 5)
-                WorkoutSetCell(workoutSet: workoutSet6, index: 6)
-                WorkoutSetCell(workoutSet: workoutSet8, index: 7)
+                WorkoutSetCell(workoutSet: workoutSet4, index: 1, showCompleted: true)
+                WorkoutSetCell(workoutSet: workoutSet1, index: 2, colorMode: .selected, showUpNextIndicator: true)
+                WorkoutSetCell(workoutSet: workoutSet1, index: 3, showCompleted: true)
+                WorkoutSetCell(workoutSet: workoutSet2, index: 4)
             }
         }
         .listStyleCompat_InsetGroupedListStyle()
