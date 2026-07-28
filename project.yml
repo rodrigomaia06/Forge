@@ -70,8 +70,22 @@ targets:
       - path: Shared
     dependencies:
       - target: WorkoutDataKit
+      - target: RestTimerWidget
       - package: Charts
         product: DGCharts
+
+  RestTimerWidget:
+    type: app-extension
+    platform: iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rodrigomaia.forge.RestTimerWidget
+        INFOPLIST_FILE: RestTimerWidget/Info.plist
+        SKIP_INSTALL: "YES"
+    sources:
+      - path: RestTimerWidget
+      # The Live Activity attributes are shared with the app (compiled into both targets).
+      - Shared/RestTimerActivity.swift
 
   ForgeTests:
     type: bundle.unit-test
