@@ -2,9 +2,9 @@
 //  ContentView.swift
 //  Forge
 //
-//  Root screen: the selected tab's content with the custom floating dock (ForgeTabBar)
-//  pinned at the bottom, on Forge's dark canvas. Also hosts the import-database flow that
-//  fires when the user opens a .sqlite file.
+//  Root screen: a horizontally-paged TabView (swipe between tabs, Instagram/Reddit-style)
+//  with the custom floating dock (ForgeTabBar) pinned at the bottom, on Forge's dark canvas.
+//  Also hosts the import-database flow that fires when the user opens a .sqlite file.
 //
 
 import SwiftUI
@@ -25,46 +25,40 @@ struct ContentView : View {
     }
 
     var body: some View {
-        content
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.forgeBackground.ignoresSafeArea())
-            .safeAreaInset(edge: .bottom) {
-                ForgeTabBar(selection: Binding(
-                    get: { sceneState.selectedTab },
-                    set: { sceneState.selectedTab = $0 }
-                ))
-                .padding(.horizontal, Theme.Spacing.l)
-                .padding(.top, Theme.Spacing.xs)
-            }
-            .preferredColorScheme(.dark) // Forge is dark-first (matches the design direction)
-            .onReceive(NotificationCenter.default.publisher(for: Notification.Name.RestoreFromBackup)) { output in
-                guard let url = output.userInfo?[restoreFromBackupDataUserInfoKey] as? URL else { return }
-                self.pendingImportURL = IdentifiableHolder(value: url)
-            }
-            .alert(item: $pendingImportURL) { holder in
-                Alert(
-                    title: Text("Import Database?"),
-                    message: Text("This replaces all workouts and exercises with the contents of this file. A safety copy of your current data is kept first. Reopen Forge afterwards to load the imported data."),
-                    primaryButton: .destructive(Text("Import")) { self.importDatabase(from: holder.value) },
-                    secondaryButton: .cancel()
-                )
-            }
-            .alert(item: $importResult) { result in
-                Alert(title: Text(result.title), message: Text(result.message))
-            }
-    }
-
-    @ViewBuilder private var content: some View {
-        Group {
-            switch sceneState.selectedTab {
-            case .feed: FeedView()
-            case .history: HistoryView()
-            case .workout: WorkoutTab()
-            case .exercises: ExerciseMuscleGroupsView()
-            case .settings: SettingsView()
-            }
+        TabView(selection: $sceneState.selectedTabNumber) {
+            FeedView().tag(SceneState.Tab.feed.rawValue)
+            HistoryView().tag(SceneState.Tab.history.rawValue)
+            WorkoutTab().tag(SceneState.Tab.workout.rawValue)
+            ExerciseMuscleGroupsView().tag(SceneState.Tab.exercises.rawValue)
+            SettingsView().tag(SceneState.Tab.settings.rawValue)
         }
+        .tabViewStyle(.page(indexDisplayMode: .never))
         .productionEnvironment()
+        .background(Color.forgeBackground.ignoresSafeArea())
+        .safeAreaInset(edge: .bottom) {
+            ForgeTabBar(selection: Binding(
+                get: { sceneState.selectedTab },
+                set: { sceneState.selectedTab = $0 }
+            ))
+            .padding(.horizontal, Theme.Spacing.l)
+            .padding(.top, Theme.Spacing.xs)
+        }
+        .preferredColorScheme(.dark) // Forge is dark-first (matches the design direction)
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name.RestoreFromBackup)) { output in
+            guard let url = output.userInfo?[restoreFromBackupDataUserInfoKey] as? URL else { return }
+            self.pendingImportURL = IdentifiableHolder(value: url)
+        }
+        .alert(item: $pendingImportURL) { holder in
+            Alert(
+                title: Text("Import Database?"),
+                message: Text("This replaces all workouts and exercises with the contents of this file. A safety copy of your current data is kept first. Reopen Forge afterwards to load the imported data."),
+                primaryButton: .destructive(Text("Import")) { self.importDatabase(from: holder.value) },
+                secondaryButton: .cancel()
+            )
+        }
+        .alert(item: $importResult) { result in
+            Alert(title: Text(result.title), message: Text(result.message))
+        }
     }
 
     private func importDatabase(from url: URL) {
