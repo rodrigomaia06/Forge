@@ -25,6 +25,10 @@ final class ScreenshotTests: XCTestCase {
         try capture(StyleGuide(), named: "style-guide")
     }
 
+    func testCaptureSetRows() throws {
+        try capture(ForgeSetRowGallery(), named: "set-rows")
+    }
+
     // MARK: - Helpers
 
     private func capture<V: View>(_ view: V, named name: String) throws {
