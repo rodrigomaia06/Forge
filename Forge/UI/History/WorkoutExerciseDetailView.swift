@@ -370,33 +370,14 @@ private struct ActiveSetRow: View {
         )
     }
 
-    private func setTag(_ tag: WorkoutSetTag?) {
-        workoutSet.tagValue = (workoutSet.tagValue == tag) ? nil : tag
-        workoutSet.managedObjectContext?.saveOrCrash()
-    }
-
-    // The set-type control sits right after the set number. The dot shows the current tag color;
-    // each menu option carries its own color so the meaning reads without the label.
-    private var tagMenu: some View {
-        Menu {
-            Button { setTag(nil) } label: {
-                Label("No type", systemImage: workoutSet.tagValue == nil ? "checkmark" : "circle")
-            }
-            ForEach(WorkoutSetTag.allCases, id: \.self) { tag in
-                Button { setTag(tag) } label: {
-                    Label(tag.title.capitalized, systemImage: workoutSet.tagValue == tag ? "checkmark.circle.fill" : "circle.fill")
-                }
-                .tint(tag.color)
-            }
-        } label: {
-            Circle()
-                .fill(workoutSet.tagValue?.color ?? Color.clear)
-                .overlay(Circle().strokeBorder(Color.forgeSeparator, lineWidth: workoutSet.tagValue == nil ? 1.2 : 0))
-                .frame(width: 11, height: 11)
-                .frame(width: 26, height: 30)
-                .contentShape(Rectangle())
-        }
-        .accessibilityLabel(workoutSet.tagValue.map { "Set type: \($0.title)" } ?? "Set type")
+    // The leading rail carries the set's state at a glance: its type color when tagged, otherwise
+    // green once completed, otherwise a gray marker for the set you're on. The set type is set from
+    // the more (...) sheet. Completed sets also get a faint green wash behind the whole row.
+    private var railColor: Color {
+        if let tag = workoutSet.tagValue { return tag.color }
+        if workoutSet.isCompleted { return .forgeSuccess }
+        if isUpNext { return .forgeSecondaryLabel }
+        return .clear
     }
 
     var body: some View {
@@ -406,8 +387,6 @@ private struct ActiveSetRow: View {
                     .font(.forgeCaption)
                     .foregroundColor(.forgeSecondaryLabel)
                     .frame(minWidth: 14, alignment: .leading)
-
-                tagMenu
 
                 TextField("0", value: weightField, format: .number)
                     .keyboardType(.decimalPad)
@@ -480,6 +459,19 @@ private struct ActiveSetRow: View {
                     .padding(.leading, 22)
             }
         }
+        // The rail fills the full row cell flush to the card edge; the row content keeps its normal
+        // insets, so the numbers never sit on top of the rail.
+        .listRowBackground(
+            ZStack(alignment: .leading) {
+                Color(.secondarySystemGroupedBackground)
+                if workoutSet.isCompleted {
+                    Color.forgeSuccess.opacity(0.08)
+                }
+                Rectangle()
+                    .fill(railColor)
+                    .frame(width: 3)
+            }
+        )
     }
 }
 
