@@ -18,7 +18,7 @@ struct CreateCustomExerciseSheet: View {
         let title = exerciseValues.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { return false }
         guard !exerciseStore.exercises.contains(where: { $0.title == title }) else { return false }
-        // TODO: and at least one muscle
+        guard !exerciseValues.muscles.isEmpty else { return false }
         return true
     }
     

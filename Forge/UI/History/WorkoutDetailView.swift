@@ -103,17 +103,8 @@ struct WorkoutDetailView : View {
             // editMode still doesn't work in 13.1 beta2
 //            if editMode?.wrappedValue == .active {
                 Section {
-                    // TODO: add clear button
-                    TextField("Title", text: workoutTitle, onEditingChanged: { isEditingTextField in
-                        if !isEditingTextField {
-                            self.adjustAndSaveWorkoutTitleInput()
-                        }
-                    })
-                    TextField("Comment", text: workoutComment, onEditingChanged: { isEditingTextField in
-                        if !isEditingTextField {
-                            self.adjustAndSaveWorkoutCommentInput()
-                        }
-                    })
+                    ClearableTextField(titleKey: "Title", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
+                    ClearableTextField(titleKey: "Comment", text: workoutComment, onCommit: { self.adjustAndSaveWorkoutCommentInput() })
                 }
                 
                 Section {

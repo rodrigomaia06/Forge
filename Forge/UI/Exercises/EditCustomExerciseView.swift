@@ -53,7 +53,7 @@ struct EditCustomExerciseView: View {
                 TextField("Description (Optional)", text: $exerciseValues.description)
             }
             
-            Section(header: Text("Muscles".uppercased())) {
+            Section(header: Text("Muscles".uppercased()), footer: Text("Select at least one muscle.")) {
                 ForEach(primaryMuscles, id: \.self) { exerciseMuscle in
                     HStack {
                         Text(exerciseMuscle.shortDisplayTitle)

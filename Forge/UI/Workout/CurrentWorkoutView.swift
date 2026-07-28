@@ -191,17 +191,8 @@ struct CurrentWorkoutView: View {
                 Divider()
                 List {
                     Section {
-                        // TODO: add clear button
-                        TextField("Title", text: workoutTitle, onEditingChanged: { isEditingTextField in
-                            if !isEditingTextField {
-                                self.adjustAndSaveWorkoutTitleInput()
-                            }
-                        })
-                        TextField("Comment", text: workoutComment, onEditingChanged: { isEditingTextField in
-                            if !isEditingTextField {
-                                self.adjustAndSaveWorkoutCommentInput()
-                            }
-                        })
+                        ClearableTextField(titleKey: "Title", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
+                        ClearableTextField(titleKey: "Comment", text: workoutComment, onCommit: { self.adjustAndSaveWorkoutCommentInput() })
                     }
                     // In edit mode the exercises collapse to a plain, reorderable list of names (drag to
                     // reorder, swipe/– to remove). Otherwise each exercise is a full card with its set

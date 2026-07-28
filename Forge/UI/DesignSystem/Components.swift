@@ -34,3 +34,30 @@ extension View {
         )
     }
 }
+
+/// A text field with a clear (x) button that appears while it has content. Commits on end-edit and
+/// when cleared, so callers can persist through the same closure.
+struct ClearableTextField: View {
+    let titleKey: String
+    @Binding var text: String
+    var onCommit: () -> Void = {}
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.s) {
+            TextField(titleKey, text: $text, onEditingChanged: { isEditing in
+                if !isEditing { onCommit() }
+            })
+            if !text.isEmpty {
+                Button {
+                    text = ""
+                    onCommit()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.forgeSecondaryLabel)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear")
+            }
+        }
+    }
+}
