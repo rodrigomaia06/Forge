@@ -106,12 +106,23 @@ struct RestTimerView: View {
         restTimerStore.recentRestTimes.insert(duration, at: 0)
     }
     
-    private func defaultTimerButton(duration: TimeInterval) -> some View {
-        CircleButton(action: {
-            self.startTimer(duration: duration)
-        }) {
-            Text(restTimerDurationFormatter.string(from: duration)!)
+    private func timeTile(_ label: String, filled: Bool = true, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.forgeValue)
+                .foregroundColor(filled ? .forgeLabel : .forgeSecondaryLabel)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
+                        .fill(filled ? Color.forgeSurface : Color.clear)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
+                                .strokeBorder(Color.forgeSeparator, lineWidth: filled ? 0 : 1)
+                        )
+                )
         }
+        .buttonStyle(.plain)
     }
     
     private static let defaultRestTimes: [TimeInterval] = [60, 90, 120, 150, 180]
@@ -123,24 +134,21 @@ struct RestTimerView: View {
     }
     
     private var defaultTimerButtons: some View {
-        let restTimes = self.restTimes
-        return VStack {
-            HStack {
-                defaultTimerButton(duration: restTimes[0])
-                defaultTimerButton(duration: restTimes[1])
-            }
-            HStack {
-                defaultTimerButton(duration: restTimes[2])
-                defaultTimerButton(duration: restTimes[3])
-            }
-            HStack {
-                defaultTimerButton(duration: restTimes[4])
-                CircleButton(action: {
+        let columns = [GridItem(.flexible(), spacing: Theme.Spacing.m), GridItem(.flexible(), spacing: Theme.Spacing.m)]
+        return VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            LazyVGrid(columns: columns, spacing: Theme.Spacing.m) {
+                ForEach(restTimes, id: \.self) { time in
+                    timeTile(restTimerDurationFormatter.string(from: time) ?? "") {
+                        self.startTimer(duration: time)
+                    }
+                }
+                timeTile("Other", filled: false) {
                     self.showCustomTimerSelector = true
-                }) {
-                    Text("Other")
                 }
             }
+            .padding(.horizontal)
+            Spacer(minLength: 0)
         }
     }
     
