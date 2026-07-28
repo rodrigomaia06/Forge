@@ -170,6 +170,17 @@ final class SettingsStore: ObservableObject {
             userDefaults.restTimerHaptic = newValue
         }
     }
+
+    /// App appearance preference: "system", "light", or "dark".
+    var appearance: String {
+        get {
+            userDefaults.appearance
+        }
+        set {
+            self.objectWillChange.send()
+            userDefaults.appearance = newValue
+        }
+    }
 }
 
 #if DEBUG

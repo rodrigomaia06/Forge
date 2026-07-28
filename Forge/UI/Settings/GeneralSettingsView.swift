@@ -25,11 +25,24 @@ struct GeneralSettingsView: View {
         ForgeAccent(rawValue: settingsStore.accentIdentifier) ?? .graphite
     }
 
+    private var appearance: Binding<ForgeAppearance> {
+        Binding(
+            get: { ForgeAppearance(rawValue: settingsStore.appearance) ?? .dark },
+            set: { settingsStore.appearance = $0.rawValue }
+        )
+    }
+
     private var appearanceSection: some View {
         Section(
             header: Text("Appearance"),
-            footer: Text("Accent tints buttons, links, and the selected tab. Graphite is the default monochrome look.")
+            footer: Text("Theme sets light or dark, or follows the system. Accent tints buttons, links, and the selected tab. Graphite is the default monochrome look.")
         ) {
+            Picker("Theme", selection: appearance) {
+                ForEach(ForgeAppearance.allCases) { option in
+                    Text(option.title).tag(option)
+                }
+            }
+
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: Theme.Spacing.s)], spacing: Theme.Spacing.s) {
                 ForEach(ForgeAccent.allCases) { accent in
                     let isSelected = accent == selectedAccent

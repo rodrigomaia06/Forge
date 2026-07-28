@@ -115,6 +115,30 @@ enum ForgeAccent: String, CaseIterable, Identifiable {
     }
 }
 
+/// Light, dark, or follow the system. Forge is dark-first, so dark is the default.
+enum ForgeAppearance: String, CaseIterable, Identifiable {
+    case system, light, dark
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system: return "System"
+        case .light: return "Light"
+        case .dark: return "Dark"
+        }
+    }
+
+    /// The scheme to force on the app, or nil to follow the system setting.
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+}
+
 // MARK: - Typography
 
 extension Font {

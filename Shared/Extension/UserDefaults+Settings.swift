@@ -25,6 +25,13 @@ extension UserDefaults {
         case showRPE
         case restTimerSound
         case restTimerHaptic
+        case appearance
+    }
+
+    /// App appearance preference: "system", "light", or "dark". Defaults to dark (Forge is dark-first).
+    var appearance: String {
+        set { self.set(newValue, forKey: SettingsKeys.appearance.rawValue) }
+        get { self.string(forKey: SettingsKeys.appearance.rawValue) ?? "dark" }
     }
 
     /// Play a sound when the rest timer ends.

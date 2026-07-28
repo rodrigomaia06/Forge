@@ -50,7 +50,7 @@ struct ContentView : View {
         .environmentObject(ExerciseStore.shared)
         .environment(\.managedObjectContext, WorkoutDataStorage.shared.persistentContainer.viewContext)
         .tint((ForgeAccent(rawValue: settings.accentIdentifier) ?? .graphite).color) // accent-driven tint
-        .preferredColorScheme(.dark) // Forge is dark-first (matches the design direction)
+        .preferredColorScheme((ForgeAppearance(rawValue: settings.appearance) ?? .dark).colorScheme) // Forge is dark-first; overridable in Settings
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name.RestoreFromBackup)) { output in
             guard let url = output.userInfo?[restoreFromBackupDataUserInfoKey] as? URL else { return }
             self.pendingImportURL = IdentifiableHolder(value: url)

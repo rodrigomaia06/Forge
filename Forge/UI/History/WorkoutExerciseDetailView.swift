@@ -502,17 +502,19 @@ private struct ActiveSetRow: View {
             // The note itself is not shown under the row during a workout; the green note icon is
             // enough to signal a set has one. Tap it to read or edit.
         }
-        // The rail fills the full row cell flush to the card edge; the row content keeps its normal
-        // insets, so the numbers never sit on top of the rail.
+        // An inset rounded pill on the left marks the set state. Inset vertically so the card's
+        // rounded corners never clip it (a flush rectangle looked cut off on the first and last rows).
         .listRowBackground(
             ZStack(alignment: .leading) {
                 Color(.secondarySystemGroupedBackground)
                 if workoutSet.isCompleted {
                     Color.forgeSuccess.opacity(0.03)
                 }
-                Rectangle()
+                Capsule()
                     .fill(railColor)
-                    .frame(width: 3)
+                    .frame(width: 4)
+                    .padding(.vertical, 7)
+                    .padding(.leading, 4)
             }
         )
     }
