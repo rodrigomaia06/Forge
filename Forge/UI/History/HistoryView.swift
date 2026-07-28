@@ -122,13 +122,10 @@ struct HistoryView : View {
                     EditButton()
                 }
             )
-            .actionSheet(item: $offsetsToDelete) { offsets in
-                ActionSheet(title: Text("This cannot be undone."), buttons: [
-                    .destructive(Text("Delete Workout"), action: {
-                        self.deleteAt(offsets: offsets)
-                    }),
-                    .cancel()
-                ])
+            .confirmationDialog("This cannot be undone.", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } }), titleVisibility: .visible, presenting: offsetsToDelete) { offsets in
+                Button("Delete workout", role: .destructive) {
+                    self.deleteAt(offsets: offsets)
+                }
             }
             // FIXME: .placeholder() suddenly crashes the app when the last workout is deleted (iOS 13.4)
             .placeholder(show: workouts.isEmpty,

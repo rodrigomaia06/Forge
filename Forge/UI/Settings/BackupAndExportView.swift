@@ -53,33 +53,30 @@ struct BackupAndExportView: View {
             case .failure(let error): message = Message(title: "Import Failed", text: error.localizedDescription)
             }
         }
-        .actionSheet(isPresented: $showExportWorkoutDataSheet) {
-            ActionSheet(title: Text("Workout Data"), buttons: [
-                .default(Text("JSON"), action: {
-                    guard let workouts = self.fetchWorkouts() else { return }
+        .confirmationDialog("Workout data", isPresented: $showExportWorkoutDataSheet, titleVisibility: .visible) {
+            Button("JSON") {
+                guard let workouts = self.fetchWorkouts() else { return }
 
-                    let encoder = JSONEncoder()
-                    encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
-                    encoder.dateEncodingStrategy = .iso8601
-                    if let exercisesKey = CodingUserInfoKey.exercisesKey {
-                        encoder.userInfo[exercisesKey] = ExerciseStore.shared.exercises
-                    }
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
+                encoder.dateEncodingStrategy = .iso8601
+                if let exercisesKey = CodingUserInfoKey.exercisesKey {
+                    encoder.userInfo[exercisesKey] = ExerciseStore.shared.exercises
+                }
 
-                    guard let data = try? encoder.encode(workouts) else { return }
-                    guard let url = try? self.tempFile(data: data, name: "workout_data.json") else { return }
-                    self.shareFile(url: url)
-                }),
-                .default(Text("TXT"), action: {
-                    guard let workouts = self.fetchWorkouts() else { return }
+                guard let data = try? encoder.encode(workouts) else { return }
+                guard let url = try? self.tempFile(data: data, name: "workout_data.json") else { return }
+                self.shareFile(url: url)
+            }
+            Button("TXT") {
+                guard let workouts = self.fetchWorkouts() else { return }
 
-                    let text = workouts.compactMap { $0.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit) }.joined(separator: "\n\n\n\n\n")
+                let text = workouts.compactMap { $0.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit) }.joined(separator: "\n\n\n\n\n")
 
-                    guard let data = text.data(using: .utf8) else { return }
-                    guard let url = try? self.tempFile(data: data, name: "workout_data.txt") else { return }
-                    self.shareFile(url: url)
-                }),
-                .cancel()
-            ])
+                guard let data = text.data(using: .utf8) else { return }
+                guard let url = try? self.tempFile(data: data, name: "workout_data.txt") else { return }
+                self.shareFile(url: url)
+            }
         }
         .alert(item: $message) { message in
             Alert(title: Text(message.title), message: Text(message.text))

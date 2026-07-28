@@ -23,6 +23,7 @@ struct WorkoutExerciseDetailView : View {
     @ObservedObject var workoutExercise: WorkoutExercise
 
     @State private var moreSheetSet: WorkoutSet? = nil
+    @State private var noteSheetSet: WorkoutSet? = nil
     @State private var showExerciseNote = false
     @State private var showHistory = false
     @State private var showAllHistory = false
@@ -200,7 +201,7 @@ struct WorkoutExerciseDetailView : View {
     private var setsHeader: some View {
         HStack(spacing: Theme.Spacing.s) {
             Text("Set").frame(width: 36)
-            Text("Previous").frame(maxWidth: .infinity, alignment: .leading)
+            Text("Previous").frame(maxWidth: .infinity, alignment: .center)
             Text(settingsStore.weightUnit.unit.symbol).frame(width: 68)
             Text("Reps").frame(width: 60)
             if isCurrentWorkout { Color.clear.frame(width: 34, height: 0) }
@@ -228,7 +229,8 @@ struct WorkoutExerciseDetailView : View {
                 showRPE: settingsStore.showRPE,
                 previousText: previousPerformance(atZeroBased: index - 1),
                 onToggleComplete: { toggleComplete(workoutSet) },
-                onMore: { moreSheetSet = workoutSet }
+                onMore: { moreSheetSet = workoutSet },
+                onNote: { noteSheetSet = workoutSet }
             )
         }
         .onDelete { offsets in
@@ -379,6 +381,14 @@ struct WorkoutExerciseDetailView : View {
             // A compact sheet, not a full screen; expandable for the longer options.
             .presentationDetents([.medium, .large])
         }
+        .sheet(item: $noteSheetSet) { set in
+            NavigationStack {
+                SetNoteEditor(workoutSet: set)
+                    .navigationBarTitle(Text("Note"), displayMode: .inline)
+                    .navigationBarItems(trailing: Button("Done") { noteSheetSet = nil })
+            }
+            .presentationDetents([.medium])
+        }
         .sheet(isPresented: $showHistory) {
             NavigationStack {
                 List {
@@ -450,6 +460,7 @@ private struct ActiveSetRow: View {
     let previousText: String?
     var onToggleComplete: () -> Void
     var onMore: () -> Void
+    var onNote: () -> Void
 
     private var hasNote: Bool { !(workoutSet.comment ?? "").isEmpty }
 
@@ -508,10 +519,21 @@ private struct ActiveSetRow: View {
                 .font(.forgeCaption)
                 .foregroundColor(.forgeSecondaryLabel)
                 .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .center)
 
             setField(weightField, field: .weight, keyboard: .decimalPad, width: 68)
             setField(repsField, field: .reps, keyboard: .numberPad, width: 60)
+
+            // Quick per-set note: green once the set has one. The chip opens the full options sheet.
+            Button(action: onNote) {
+                Image(systemName: hasNote ? "text.bubble.fill" : "text.bubble")
+                    .font(.footnote)
+                    .foregroundColor(hasNote ? .forgeSuccess : .forgeSecondaryLabel)
+                    .frame(width: 26, height: 30)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(hasNote ? "Edit set note" : "Add set note")
 
             if isCurrentWorkout {
                 Button(action: onToggleComplete) {
@@ -535,6 +557,32 @@ private struct ActiveSetRow: View {
                 }
             }
         )
+    }
+}
+
+/// A focused editor for a single set's note, opened from the note icon on the row.
+private struct SetNoteEditor: View {
+    @ObservedObject var workoutSet: WorkoutSet
+
+    private var noteBinding: Binding<String> {
+        Binding(
+            get: { workoutSet.comment ?? "" },
+            set: { workoutSet.comment = $0.isEmpty ? nil : $0 }
+        )
+    }
+
+    var body: some View {
+        Form {
+            Section(footer: Text("A note for this set only.")) {
+                TextField("Note", text: noteBinding, axis: .vertical)
+                    .lineLimit(3...8)
+            }
+        }
+        .onDisappear {
+            let trimmed = (workoutSet.comment ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            workoutSet.comment = trimmed.isEmpty ? nil : trimmed
+            workoutSet.managedObjectContext?.saveOrCrash()
+        }
     }
 }
 

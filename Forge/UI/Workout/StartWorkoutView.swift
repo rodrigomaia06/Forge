@@ -65,13 +65,10 @@ struct StartWorkoutView: View {
                 }
                 .accessibilityLabel("New workout plan")
             )
-            .actionSheet(item: $offsetsToDelete) { offsets in
-                ActionSheet(title: Text("This cannot be undone."), buttons: [
-                    .destructive(Text("Delete Workout Plan"), action: {
-                        self.deleteAt(offsets: offsets)
-                    }),
-                    .cancel()
-                ])
+            .confirmationDialog("This cannot be undone.", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } }), titleVisibility: .visible, presenting: offsetsToDelete) { offsets in
+                Button("Delete workout plan", role: .destructive) {
+                    self.deleteAt(offsets: offsets)
+                }
             }
         }
     }

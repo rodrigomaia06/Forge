@@ -14,9 +14,8 @@ struct ExerciseDetailView : View {
     @EnvironmentObject var exerciseStore: ExerciseStore
     @Environment(\.managedObjectContext) var managedObjectContext
     var exercise: Exercise
-    
-    @State private var showOptionsMenu = false
-    
+
+
     @State private var activeSheet: SheetType?
     
     private enum SheetType: Identifiable {
@@ -172,26 +171,22 @@ struct ExerciseDetailView : View {
         }
     }
     
-    private var options: [ActionSheet.Button] {
-        var options: [ActionSheet.Button] = [
-            .default(Text("History"), action: {
-                self.activeSheet = .history
-            }),
-            .default(Text("Statistics"), action: {
-                self.activeSheet = .statistics
-            })
-        ]
-        if exerciseStore.isHidden(exercise: exercise) {
-            options.append(.default(Text("Unhide"), action: {
-                self.exerciseStore.show(exercise: self.exercise)
-            }))
-        } else if !exercise.isCustom {
-            options.append(.default(Text("Hide"), action: {
-                self.exerciseStore.hide(exercise: self.exercise)
-            }))
+    @ViewBuilder private var optionsMenu: some View {
+        Button { self.activeSheet = .history } label: {
+            Label("History", systemImage: "clock.arrow.circlepath")
         }
-        options.append(.cancel())
-        return options
+        Button { self.activeSheet = .statistics } label: {
+            Label("Statistics", systemImage: "chart.xyaxis.line")
+        }
+        if exerciseStore.isHidden(exercise: exercise) {
+            Button { self.exerciseStore.show(exercise: self.exercise) } label: {
+                Label("Unhide", systemImage: "eye")
+            }
+        } else if !exercise.isCustom {
+            Button { self.exerciseStore.hide(exercise: self.exercise) } label: {
+                Label("Hide", systemImage: "eye.slash")
+            }
+        }
     }
     
     private var restTimeSection: some View {
@@ -242,17 +237,14 @@ struct ExerciseDetailView : View {
         .sheet(item: $activeSheet) { type in
             self.sheetView(type: type)
         }
-        .actionSheet(isPresented: $showOptionsMenu) {
-            ActionSheet(title: Text("Exercise"), message: nil, buttons: options)
-        }
         .navigationBarTitle(Text(exercise.title), displayMode: .inline)
         .navigationBarItems(trailing:
             HStack(spacing: NAVIGATION_BAR_SPACING) {
-                Button(action: {
-                    self.showOptionsMenu = true
-                }) {
+                Menu {
+                    optionsMenu
+                } label: {
                     Image(systemName: "ellipsis")
-                        .padding([.leading, .top, .bottom])
+                        .imageScale(.large)
                 }
                 if exercise.isCustom {
                     Button("Edit") {

@@ -71,13 +71,10 @@ struct CustomExercisesView: View {
         .sheet(item: $activeSheet, content: { type in
             self.sheetView(type: type)
         })
-        .actionSheet(item: $offsetsToDelete) { offsets in
-            ActionSheet(title: Text("This cannot be undone."), message: Text("Warning: Any set belonging to this exercise will be deleted."), buttons: [
-                .destructive(Text("Delete"), action: {
-                    self.deleteAtOffsets(offsets: offsets)
-                }),
-                .cancel()
-            ])
+        .confirmationDialog("This cannot be undone. Any set belonging to this exercise will be deleted.", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } }), titleVisibility: .visible, presenting: offsetsToDelete) { offsets in
+            Button("Delete", role: .destructive) {
+                self.deleteAtOffsets(offsets: offsets)
+            }
         }
     }
     

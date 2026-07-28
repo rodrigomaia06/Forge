@@ -87,13 +87,10 @@ struct WorkoutPlanView: View {
         .listStyleCompat_InsetGroupedListStyle()
         .navigationBarTitle(Text(workoutPlan.displayTitle), displayMode: .inline)
         .navigationBarItems(trailing: EditButton())
-        .actionSheet(item: $offsetsToDelete) { offsets in
-            ActionSheet(title: Text("This cannot be undone."), buttons: [
-                .destructive(Text("Delete Workout Routine"), action: {
-                    self.deleteAt(offsets: offsets)
-                }),
-                .cancel()
-            ])
+        .confirmationDialog("This cannot be undone.", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } }), titleVisibility: .visible, presenting: offsetsToDelete) { offsets in
+            Button("Delete workout routine", role: .destructive) {
+                self.deleteAt(offsets: offsets)
+            }
         }
     }
     
