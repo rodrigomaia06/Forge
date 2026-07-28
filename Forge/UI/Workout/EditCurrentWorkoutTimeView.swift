@@ -36,6 +36,7 @@ struct EditCurrentWorkoutTimeView: View {
                 }
                 
                 Toggle("Automatic Time Tracking", isOn: automaticTimeTracking)
+                    .tint(.forgeSuccess)
 
                 if !automaticTimeTracking.wrappedValue {
                     DatePicker(selection: $workout.safeEnd, in: workout.safeStart...Date()) {

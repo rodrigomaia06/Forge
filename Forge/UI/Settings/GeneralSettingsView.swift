@@ -79,19 +79,23 @@ struct GeneralSettingsView: View {
                 settingsStore.keepRestTimerRunning = newValue
                 RestTimerStore.shared.notifyKeepRestTimerRunningChanged()
             }))
+            .tint(.forgeSuccess)
         }
     }
 
     private var restTimerAlertSection: some View {
         Section(header: Text("Rest timer alert"), footer: Text("Plays when the rest timer ends. The sound also plays with the notification when Forge is in the background.")) {
             Toggle("Sound", isOn: $settingsStore.restTimerSound)
+                .tint(.forgeSuccess)
             Toggle("Haptic", isOn: $settingsStore.restTimerHaptic)
+                .tint(.forgeSuccess)
         }
     }
     
     private var reminderSection: some View {
         Section(header: Text("Reminders"), footer: Text("Sends a single reminder if you leave a workout in progress after logging a set.")) {
             Toggle("Unfinished workout reminder", isOn: $settingsStore.unfinishedWorkoutReminderEnabled)
+                .tint(.forgeSuccess)
             if settingsStore.unfinishedWorkoutReminderEnabled {
                 Picker("Remind after", selection: $settingsStore.unfinishedWorkoutReminderDelay) {
                     Text("15 minutes").tag(TimeInterval(15 * 60))
@@ -106,7 +110,9 @@ struct GeneralSettingsView: View {
     private var recordsSection: some View {
         Section(header: Text("Extras"), footer: Text("Optional features. The trophy marks a set that is your best estimated one-rep max for that exercise. RPE is a rating of perceived exertion you can log per set.")) {
             Toggle("Personal record trophies", isOn: $settingsStore.showPersonalRecords)
+                .tint(.forgeSuccess)
             Toggle("RPE (perceived exertion)", isOn: $settingsStore.showRPE)
+                .tint(.forgeSuccess)
         }
     }
 

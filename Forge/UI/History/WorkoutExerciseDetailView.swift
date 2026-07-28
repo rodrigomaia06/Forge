@@ -296,7 +296,11 @@ struct WorkoutExerciseDetailView : View {
                             self.adjustAndSaveWorkoutExerciseCommentInput()
                         }
                     })
+                }
 
+                // A labeled section for the sets being logged now, so they read as clearly separate
+                // from the muted "Previous sessions" list below.
+                Section(header: Text("This session")) {
                     currentWorkoutSets
                     addSetButton
                 }
