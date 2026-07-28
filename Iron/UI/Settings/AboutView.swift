@@ -1,6 +1,6 @@
 //
 //  AboutView.swift
-//  Iron
+//  Forge
 //
 //  Created by Karim Abou Zeid on 04.03.20.
 //  Copyright © 2020 Karim Abou Zeid Software. All rights reserved.
@@ -16,77 +16,37 @@ struct AboutView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(height: 80)
-                
+
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Iron \(versionString)")
+                    Text("Forge \(versionString)")
                         .font(.headline)
-                    
-                    Text("by Karim Abou Zeid")
+
+                    // GPL attribution: Forge is a derived work of the open-source Iron app.
+                    Text("Based on Iron by Karim Abou Zeid")
                         .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
                 .padding()
             }
             .listRowBackground(Color.clear)
-            
-            Section {
-                Button(action: {
-                    UIApplication.shared.open(URL(string: "https://github.com/kabouzeid/Iron")!)
-                }) {
-                    if #available(iOS 14.0, *) {
-                        Label("Source Code", image: "github.fill")
-                    } else {
-                        HStack {
-                            Image("github.fill")
-                            Text("Source Code")
-                        }
-                    }
-                }
-                
-                Button(action: {
-                    UIApplication.shared.open(URL(string: "https://twitter.com/kacodes")!)
-                }) {
-                    if #available(iOS 14.0, *) {
-                        Label("@kacodes", image: "twitter.fill")
-                    } else {
-                        HStack {
-                            Image("twitter.fill")
-                            Text("@kacodes")
-                        }
-                    }
-                }
-                
-                Button(action: {
-                    UIApplication.shared.open(URL(string: "https://ka.codes")!)
-                }) {
-                    if #available(iOS 14.0, *) {
-                        Label("Website", systemImage: "globe")
-                    } else {
-                        HStack {
-                            Image(systemName: "globe")
-                            Text("Website")
-                        }
-                    }
-                }
-            }
-            
+
             Section {
                 Button {
-                    UIApplication.shared.open(URL(string: "https://iron.ka.codes/privacy.html")!)
+                    UIApplication.shared.open(URL(string: "https://github.com/rodrigomaia06/Forge")!)
                 } label: {
-                    if #available(iOS 14.0, *) {
-                        Label("Privacy Policy", systemImage: "hand.raised")
-                    } else {
-                        HStack {
-                            Image("hand.raised")
-                            Text("Privacy Policy")
-                        }
-                    }
+                    Label("Source code", image: "github.fill")
                 }
+            }
+
+            Section(header: Text("Privacy")) {
+                Text("Forge keeps your workouts on this iPhone. No account, no server, no tracking.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
             }
         }
         .navigationBarTitle("About", displayMode: .inline)
     }
-    
+
     private var versionString: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
         #if DEBUG

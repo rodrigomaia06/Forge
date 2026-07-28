@@ -7,7 +7,6 @@
 //
 
 import SwiftUI
-import MessageUI
 
 struct SettingsView : View {
     @EnvironmentObject var settingsStore: SettingsStore
@@ -28,46 +27,10 @@ struct SettingsView : View {
         }
     }
     
-    @State private var showSupportMailAlert = false // if mail client is not configured
-    private var aboutRatingAndSupportSection: some View {
+    private var aboutSection: some View {
         Section {
             NavigationLink(destination: AboutView()) {
                 Text("About")
-            }
-
-            Button(action: {
-                guard let writeReviewURL = URL(string: "https://itunes.apple.com/app/id1479893244?action=write-review") else { return }
-                UIApplication.shared.open(writeReviewURL)
-            }) {
-                HStack {
-                    Text("Rate Iron")
-                    Spacer()
-                    Image(systemName: "star")
-                }
-            }
-            
-            Button(action: {
-                guard MFMailComposeViewController.canSendMail() else {
-                    self.showSupportMailAlert = true // fallback
-                    return
-                }
-                
-                let mail = MFMailComposeViewController()
-                mail.mailComposeDelegate = MailCloseDelegate.shared
-                mail.setToRecipients(["iron@ka.codes"])
-                
-                // TODO: replace this hack with a proper way to retreive the rootViewController
-                guard let rootVC = UIApplication.shared.activeSceneKeyWindow?.rootViewController else { return }
-                rootVC.present(mail, animated: true)
-            }) {
-                HStack {
-                    Text("Send Feedback")
-                    Spacer()
-                    Image(systemName: "paperplane")
-                }
-            }
-            .alert(isPresented: $showSupportMailAlert) {
-                Alert(title: Text("Support E-Mail"), message: Text("iron@ka.codes"))
             }
         }
     }
@@ -87,7 +50,7 @@ struct SettingsView : View {
             Form {
                 mainSection
 
-                aboutRatingAndSupportSection
+                aboutSection
 
                 #if DEBUG
                 developerSettings
@@ -99,15 +62,6 @@ struct SettingsView : View {
     
     // select the general tab by default on iPad
     @State private var generalSelected = UIDevice.current.userInterfaceIdiom == .pad ? true : false
-}
-
-// hack because we can't store it in the View
-private class MailCloseDelegate: NSObject, MFMailComposeViewControllerDelegate {
-    static let shared = MailCloseDelegate()
-    
-    func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
-        controller.dismiss(animated: true)
-    }
 }
 
 #if DEBUG
