@@ -172,9 +172,9 @@ struct WorkoutExerciseDetailView : View {
                         .font(.forgeCaption.italic())
                         .lineLimit(2)
                 } else {
-                    Image(systemName: "plus")
-                        .font(.caption2.weight(.semibold))
-                    Text("Add a note")
+                    Image(systemName: "square.and.pencil")
+                        .font(.caption2)
+                    Text("Add a note for this exercise")
                         .font(.forgeCaption)
                 }
             }
@@ -354,8 +354,9 @@ struct WorkoutExerciseDetailView : View {
                     Button(action: {
                         showExerciseInfo = true
                     }, label: {
+                        // No asymmetric padding: it pushed the icon off-center next to Edit.
                         Image(systemName: "info.circle")
-                            .padding([.leading, .top, .bottom])
+                            .imageScale(.large)
                     })
                 }
                 EditButton()
@@ -513,8 +514,7 @@ private struct ActiveSetRow: View {
                 Capsule()
                     .fill(railColor)
                     .frame(width: 4)
-                    .padding(.vertical, 7)
-                    .padding(.leading, 4)
+                    .padding(.vertical, 5)
             }
         )
     }
