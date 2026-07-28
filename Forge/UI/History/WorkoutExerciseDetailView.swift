@@ -236,14 +236,15 @@ struct WorkoutExerciseDetailView : View {
                 onToggleComplete: { toggleComplete(workoutSet) },
                 onMore: { moreSheetSet = workoutSet }
             )
-            // Native trailing swipe rather than onDelete, so the delete action fills the row height
-            // cleanly instead of leaving a black square against the custom row background.
+            // Explicit red tint: the app-wide white tint was overriding the destructive colour, so the
+            // swipe button rendered white on the dark background instead of a full red delete action.
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                 Button(role: .destructive) {
                     deleteSet(workoutSet)
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
+                .tint(Color.forgeDestructive)
             }
         }
     }
