@@ -268,24 +268,26 @@ struct WorkoutExerciseDetailView : View {
                     sceneState.historyWorkoutToOpen = workout
                     sceneState.selectedTab = .history
                 } label: {
-                    HStack(spacing: Theme.Spacing.xs) {
-                        VStack(alignment: .leading, spacing: 1) {
+                    // Date and chevron share the top row so the chevron always lines up with the date,
+                    // whether or not a routine name is shown below. Keeps headers aligned across cards.
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: Theme.Spacing.xs) {
                             Text(Workout.dateFormatter.string(from: pastWorkoutExercise.workout?.start, fallback: "Unknown date"))
                                 .font(.forgeCaption.weight(.semibold))
                                 .foregroundColor(.forgeSecondaryLabel)
-                            // Show the routine or plan name (and its day) when the workout came from one,
-                            // so same-day sessions are told apart by what they were.
-                            if let planTitle = sessionTitle(for: pastWorkoutExercise.workout) {
-                                Text(planTitle)
-                                    .font(.caption2)
-                                    .foregroundColor(.forgeSecondaryLabel)
-                                    .lineLimit(1)
-                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundColor(.forgeSeparator)
                         }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundColor(.forgeSeparator)
+                        // Show the routine or plan name (and its day) when the workout came from one,
+                        // so same-day sessions are told apart by what they were.
+                        if let planTitle = sessionTitle(for: pastWorkoutExercise.workout) {
+                            Text(planTitle)
+                                .font(.caption2)
+                                .foregroundColor(.forgeSecondaryLabel)
+                                .lineLimit(1)
+                        }
                     }
                     .contentShape(Rectangle())
                 }
@@ -514,12 +516,12 @@ private struct ActiveSetRow: View {
             // The note itself is not shown under the row during a workout; the green note icon is
             // enough to signal a set has one. Tap it to read or edit.
         }
-        // Completed sets get a faint green wash; the type now reads from the number chip, not a rail.
+        // Completed sets get a green wash; the type now reads from the number chip, not a rail.
         .listRowBackground(
             ZStack {
                 Color(.secondarySystemGroupedBackground)
                 if workoutSet.isCompleted {
-                    Color.forgeSuccess.opacity(0.03)
+                    Color.forgeSuccess.opacity(0.08)
                 }
             }
         )

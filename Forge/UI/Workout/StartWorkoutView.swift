@@ -53,20 +53,18 @@ struct StartWorkoutView: View {
                         self.deleteAt(offsets: offsets)
                     }
                 }
-                
-                Section {
-                    Button(action: {
-                        self.newWorkoutPlan()
-                    }) {
-                        HStack {
-                            Image(systemName: "plus")
-                            Text("New Workout Plan")
-                        }
-                    }
-                }
             }
             .listStyleCompat_InsetGroupedListStyle()
             .navigationBarTitle("Workout")
+            .navigationBarItems(trailing:
+                Button(action: {
+                    self.newWorkoutPlan()
+                }) {
+                    Image(systemName: "plus")
+                        .imageScale(.large)
+                }
+                .accessibilityLabel("New workout plan")
+            )
             .actionSheet(item: $offsetsToDelete) { offsets in
                 ActionSheet(title: Text("This cannot be undone."), buttons: [
                     .destructive(Text("Delete Workout Plan"), action: {

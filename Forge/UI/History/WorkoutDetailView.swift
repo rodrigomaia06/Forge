@@ -19,8 +19,7 @@ struct WorkoutDetailView : View {
 
     @Environment(\.editMode) var editMode
     @State private var showingExerciseSelectorSheet = false
-    @State private var showingOptionsMenu = false
-    
+
     @State private var activityItems: [Any]?
 
     @State private var workoutCommentInput: String? = nil
@@ -170,10 +169,26 @@ struct WorkoutDetailView : View {
         .navigationBarTitle(Text(workout.displayTitle(in: exerciseStore.exercises)), displayMode: .inline)
         .navigationBarItems(trailing:
             HStack(spacing: NAVIGATION_BAR_SPACING) {
-                Button(action: {
-                    self.showingOptionsMenu = true
-                }) {
-                    // No asymmetric padding: it pushed the icon off-center next to Edit.
+                // A Menu attached to the button, rather than an action sheet, so the options appear
+                // reliably right under the control.
+                Menu {
+                    Button {
+                        guard let logText = self.workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit) else { return }
+                        self.activityItems = [logText]
+                    } label: {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                    }
+                    Button {
+                        Self.repeatWorkout(workout: self.workout, settingsStore: self.settingsStore, sceneState: sceneState)
+                    } label: {
+                        Label("Repeat", systemImage: "arrow.clockwise")
+                    }
+                    Button {
+                        Self.repeatWorkoutBlank(workout: self.workout, settingsStore: self.settingsStore, sceneState: sceneState)
+                    } label: {
+                        Label("Repeat blank", systemImage: "arrow.clockwise.circle")
+                    }
+                } label: {
                     Image(systemName: "ellipsis")
                         .imageScale(.large)
                 }
@@ -192,21 +207,6 @@ struct WorkoutDetailView : View {
                     }
                     self.managedObjectContext.saveOrCrash()
             })
-        }
-        .actionSheet(isPresented: $showingOptionsMenu) {
-            ActionSheet(title: Text("Workout"), buttons: [
-                .default(Text("Share"), action: {
-                    guard let logText = self.workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit) else { return }
-                    self.activityItems = [logText]
-                }),
-                .default(Text("Repeat"), action: {
-                    Self.repeatWorkout(workout: self.workout, settingsStore: self.settingsStore, sceneState: sceneState)
-                }),
-                .default(Text("Repeat (Blank)"), action: {
-                    Self.repeatWorkoutBlank(workout: self.workout, settingsStore: self.settingsStore, sceneState: sceneState)
-                }),
-                .cancel()
-            ])
         }
         .overlay(ActivitySheet(activityItems: $activityItems))
     }
