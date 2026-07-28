@@ -62,6 +62,9 @@ public class WorkoutRoutine: NSManagedObject, Codable {
     public func createWorkout(context: NSManagedObjectContext) -> Workout {
         let workout = Workout.create(context: context)
         workout.comment = self.comment
+        // Seed the workout with the routine's custom fields (location, mood, ...) so a plan's defaults
+        // carry into the session. The user can still edit them on the live workout.
+        workout.customAttributes = self.customAttributes
         // NOTE: don't set title here, it should be inferred automatically by the relation ship
         
         if let workoutRoutineExercises = workoutRoutineExercises?.compactMap({ $0 as? WorkoutRoutineExercise }) {
