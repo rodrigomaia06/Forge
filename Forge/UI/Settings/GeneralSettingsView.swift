@@ -12,8 +12,8 @@ struct GeneralSettingsView: View {
     @EnvironmentObject var settingsStore: SettingsStore
     
     private var weightPickerSection: some View {
-        Section {
-            Picker("Weight Unit", selection: $settingsStore.weightUnit) {
+        Section(header: Text("Units")) {
+            Picker("Weight unit", selection: $settingsStore.weightUnit) {
                 ForEach(WeightUnit.allCases, id: \.self) { weightUnit in
                     Text(weightUnit.title).tag(weightUnit)
                 }
@@ -27,8 +27,8 @@ struct GeneralSettingsView: View {
 
     private var appearanceSection: some View {
         Section(
-            header: Text("Accent color"),
-            footer: Text("Tints buttons, links, and the selected tab. Graphite is the default monochrome look.")
+            header: Text("Appearance"),
+            footer: Text("Accent tints buttons, links, and the selected tab. Graphite is the default monochrome look.")
         ) {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: Theme.Spacing.s)], spacing: Theme.Spacing.s) {
                 ForEach(ForgeAccent.allCases) { accent in
@@ -57,40 +57,40 @@ struct GeneralSettingsView: View {
         }
     }
     
-    private var restTimerTimesSection: some View {
-        Section(footer: Text("Used for exercises without their own rest time. Set a rest time per exercise on the exercise's page.")) {
-            Picker("Default Rest Time", selection: $settingsStore.defaultRestTime) {
-                ForEach(restTimerCustomTimes, id: \.self) { time in
-                    Text(restTimerDurationFormatter.string(from: time) ?? "").tag(time)
-                }
-            }
-        }
-    }
-
     private var calendarSection: some View {
-        Section {
-            Picker("First Day of Week", selection: $settingsStore.firstWeekday) {
+        Section(header: Text("Calendar")) {
+            Picker("First day of week", selection: $settingsStore.firstWeekday) {
                 Text("Sunday").tag(1)
                 Text("Monday").tag(2)
             }
         }
     }
-    
+
     private var restTimerSection: some View {
-        Section(footer: Text("Keep the rest timer running even after it has elapsed. The time exceeded is displayed in red.")) {
-            Toggle("Keep Rest Timer Running", isOn: Binding(get: {
+        Section(header: Text("Rest timer"), footer: Text("The default is used for exercises without their own rest time (set that on the exercise's page). Keeping the timer running shows the time exceeded in red.")) {
+            Picker("Default rest time", selection: $settingsStore.defaultRestTime) {
+                ForEach(restTimerCustomTimes, id: \.self) { time in
+                    Text(restTimerDurationFormatter.string(from: time) ?? "").tag(time)
+                }
+            }
+            Toggle("Keep rest timer running", isOn: Binding(get: {
                 settingsStore.keepRestTimerRunning
             }, set: { newValue in
                 settingsStore.keepRestTimerRunning = newValue
-                
-                // TODO in future somehow let RestTimerStore subscribe to this specific change
                 RestTimerStore.shared.notifyKeepRestTimerRunningChanged()
             }))
         }
     }
+
+    private var restTimerAlertSection: some View {
+        Section(header: Text("Rest timer alert"), footer: Text("Plays when the rest timer ends. The sound also plays with the notification when Forge is in the background.")) {
+            Toggle("Sound", isOn: $settingsStore.restTimerSound)
+            Toggle("Haptic", isOn: $settingsStore.restTimerHaptic)
+        }
+    }
     
     private var reminderSection: some View {
-        Section(footer: Text("Sends a single reminder if you leave a workout in progress after logging a set.")) {
+        Section(header: Text("Reminders"), footer: Text("Sends a single reminder if you leave a workout in progress after logging a set.")) {
             Toggle("Unfinished workout reminder", isOn: $settingsStore.unfinishedWorkoutReminderEnabled)
             if settingsStore.unfinishedWorkoutReminderEnabled {
                 Picker("Remind after", selection: $settingsStore.unfinishedWorkoutReminderDelay) {
@@ -104,7 +104,7 @@ struct GeneralSettingsView: View {
     }
 
     private var recordsSection: some View {
-        Section(footer: Text("Optional features. The trophy marks a set that is your best estimated one-rep max for that exercise. RPE is a rating of perceived exertion you can log per set.")) {
+        Section(header: Text("Extras"), footer: Text("Optional features. The trophy marks a set that is your best estimated one-rep max for that exercise. RPE is a rating of perceived exertion you can log per set.")) {
             Toggle("Personal record trophies", isOn: $settingsStore.showPersonalRecords)
             Toggle("RPE (perceived exertion)", isOn: $settingsStore.showRPE)
         }
@@ -115,8 +115,8 @@ struct GeneralSettingsView: View {
             appearanceSection
             weightPickerSection
             calendarSection
-            restTimerTimesSection
             restTimerSection
+            restTimerAlertSection
             reminderSection
             recordsSection
         }

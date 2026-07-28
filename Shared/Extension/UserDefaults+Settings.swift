@@ -23,6 +23,20 @@ extension UserDefaults {
         case unfinishedWorkoutReminderDelay
         case showPersonalRecords
         case showRPE
+        case restTimerSound
+        case restTimerHaptic
+    }
+
+    /// Play a sound when the rest timer ends.
+    var restTimerSound: Bool {
+        set { self.set(newValue, forKey: SettingsKeys.restTimerSound.rawValue) }
+        get { self.value(forKey: SettingsKeys.restTimerSound.rawValue) as? Bool ?? true }
+    }
+
+    /// Play a haptic when the rest timer ends (in the foreground).
+    var restTimerHaptic: Bool {
+        set { self.set(newValue, forKey: SettingsKeys.restTimerHaptic.rawValue) }
+        get { self.value(forKey: SettingsKeys.restTimerHaptic.rawValue) as? Bool ?? true }
     }
 
     /// Whether to show the personal-record (estimated 1RM) trophy on qualifying sets.

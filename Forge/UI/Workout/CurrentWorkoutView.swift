@@ -138,34 +138,30 @@ struct CurrentWorkoutView: View {
     }
 
     private func workoutExerciseCell(workoutExercise: WorkoutExercise) -> some View {
-        let text: String?
-        if let totalSets = workoutExercise.workoutSets?.count, totalSets > 0, let completedSets = workoutExercise.numberOfCompletedSets{
-            text = "\(completedSets) / \(totalSets)"
-        } else {
-            text = nil
-        }
+        let totalSets = workoutExercise.workoutSets?.count ?? 0
+        let completedSets = workoutExercise.numberOfCompletedSets ?? 0
         let isCompleted = workoutExercise.isCompleted ?? false
-        
-        return HStack {
-            NavigationLink(destination:
-                    currentWorkoutExerciseDetailView(workoutExercise: workoutExercise)
-                ) {
-                VStack(alignment: .leading) {
+
+        return NavigationLink(destination: currentWorkoutExerciseDetailView(workoutExercise: workoutExercise)) {
+            HStack(spacing: Theme.Spacing.m) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                     Text(workoutExercise.exercise(in: exerciseStore.exercises)?.title ?? "Unknown Exercise")
-                        .foregroundColor(isCompleted ? .secondary : .primary)
-                    text.map {
-                        Text($0)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        .font(.forgeHeadline)
+                        .foregroundColor(isCompleted ? .forgeSecondaryLabel : .forgeLabel)
+                    if totalSets > 0 {
+                        Text("\(completedSets) of \(totalSets) sets")
+                            .font(.forgeCaption)
+                            .foregroundColor(.forgeSecondaryLabel)
                     }
                 }
-                .layoutPriority(1) // without this the text is suddenly displayed multiline (because of the spacer below)
+                .layoutPriority(1)
+                Spacer(minLength: Theme.Spacing.s)
                 if isCompleted {
-                    Spacer()
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
+                        .foregroundColor(.forgeSuccess)
                 }
             }
+            .padding(.vertical, Theme.Spacing.s)
         }
     }
     
@@ -229,13 +225,9 @@ struct CurrentWorkoutView: View {
     private var cancelButton: some View {
         Button("Cancel") {
             if (self.workout.workoutExercises?.count ?? 0) == 0 {
-                // the workout is empty, do not need confirm to cancel
+                // the workout is empty, no need to confirm
                 self.cancelWorkout()
             } else {
-                guard UIDevice.current.userInterfaceIdiom != .pad else { // TODO: actionSheet not supported on iPad yet (13.2)
-                    self.cancelWorkout()
-                    return
-                }
                 self.showingCancelActionSheet = true
             }
         }
@@ -291,14 +283,13 @@ struct CurrentWorkoutView: View {
                         }
                     }
                     Section {
-                        Button(action: {
+                        Button("Finish workout") {
+                            Haptics.impact(.medium)
                             self.activeSheet = .finish
-                        }) {
-                            HStack {
-                                Image(systemName: "checkmark")
-                                Text("Finish Workout")
-                            }
                         }
+                        .buttonStyle(ForgePrimaryButtonStyle())
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
                     }
                 }
                 .listStyleCompat_InsetGroupedListStyle()
@@ -309,14 +300,12 @@ struct CurrentWorkoutView: View {
         .sheet(item: $activeSheet) { type in
             self.sheetView(type: type)
         }
-        .actionSheet(isPresented: $showingCancelActionSheet, content: {
-            ActionSheet(title: Text("This cannot be undone."), message: nil, buttons: [
-                .destructive(Text("Discard Workout"), action: {
-                    self.cancelWorkout()
-                }),
-                .cancel()
-            ])
-        })
+        .alert("Discard workout?", isPresented: $showingCancelActionSheet) {
+            Button("Discard", role: .destructive) { self.cancelWorkout() }
+            Button("Keep going", role: .cancel) { }
+        } message: {
+            Text("This cannot be undone.")
+        }
     }
 }
 

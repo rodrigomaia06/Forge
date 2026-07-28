@@ -150,6 +150,26 @@ final class SettingsStore: ObservableObject {
             userDefaults.showRPE = newValue
         }
     }
+
+    var restTimerSound: Bool {
+        get {
+            userDefaults.restTimerSound
+        }
+        set {
+            self.objectWillChange.send()
+            userDefaults.restTimerSound = newValue
+        }
+    }
+
+    var restTimerHaptic: Bool {
+        get {
+            userDefaults.restTimerHaptic
+        }
+        set {
+            self.objectWillChange.send()
+            userDefaults.restTimerHaptic = newValue
+        }
+    }
 }
 
 #if DEBUG

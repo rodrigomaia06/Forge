@@ -86,8 +86,8 @@ class NotificationManager: NSObject {
             if let totalTime = totalTime, let totalTimeString = restTimerDurationFormatter.string(from: totalTime) {
                 content.title += " (\(totalTimeString))"
             }
-            content.body = "Back to work 💪"
-            if settings.soundSetting == .enabled {
+            content.body = "Back to work."
+            if settings.soundSetting == .enabled, SettingsStore.shared.restTimerSound {
                 content.sound = UNNotificationSound.default
             }
             content.categoryIdentifier = NotificationCategoryIdentifier.restTimerUp.rawValue
@@ -125,9 +125,16 @@ class NotificationManager: NSObject {
 
 extension NotificationManager: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        if notification.request.identifier == NotificationIdentifier.restTimerUp.rawValue {
-            completionHandler([.alert, .sound])
+        guard notification.request.identifier == NotificationIdentifier.restTimerUp.rawValue else {
+            completionHandler([])
+            return
         }
+        // The rest timer ended while Forge is in the foreground: fire the configured haptic here
+        // (the notification itself carries the configured sound).
+        if SettingsStore.shared.restTimerHaptic {
+            DispatchQueue.main.async { Haptics.success() }
+        }
+        completionHandler(SettingsStore.shared.restTimerSound ? [.alert, .sound] : [.alert])
     }
     
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
