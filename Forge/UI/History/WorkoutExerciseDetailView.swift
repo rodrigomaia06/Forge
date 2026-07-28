@@ -119,7 +119,18 @@ struct WorkoutExerciseDetailView : View {
         }
         return exercise?.workoutSets?[index] as? WorkoutSet
     }
-    
+
+    /// The set at the same position from the most recent previous session of this exercise, for
+    /// the inline "last time" reference shown while logging the current set.
+    private func lastTimeSet(for set: WorkoutSet) -> WorkoutSet? {
+        guard let workoutSets = workoutExercise.workoutSets else { return nil }
+        let index = workoutSets.index(of: set)
+        guard index != NSNotFound,
+              let historySets = workoutExerciseHistory.first?.workoutSets,
+              index < historySets.count else { return nil }
+        return historySets[index] as? WorkoutSet
+    }
+
     private func moveWorkoutExerciseBehindLastBegun() {
         assert(isCurrentWorkout)
         guard let workout = workoutExercise.workout else { return }
@@ -250,7 +261,7 @@ struct WorkoutExerciseDetailView : View {
     private var workoutSetEditor: some View {
         VStack(spacing: 0) {
             Divider()
-            WorkoutSetEditor(workoutSet: self.selectedWorkoutSet!, onDone: {
+            WorkoutSetEditor(workoutSet: self.selectedWorkoutSet!, previousSet: self.lastTimeSet(for: self.selectedWorkoutSet!), onDone: {
                 guard let set = self.selectedWorkoutSet else { return }
                 
                 if !set.isCompleted {
