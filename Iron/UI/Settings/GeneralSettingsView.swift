@@ -22,23 +22,20 @@ struct GeneralSettingsView: View {
     }
     
     private var restTimerTimesSection: some View {
-        Section {
+        Section(footer: Text("Used for exercises without their own rest time. Set a rest time per exercise on the exercise's page.")) {
             Picker("Default Rest Time", selection: $settingsStore.defaultRestTime) {
                 ForEach(restTimerCustomTimes, id: \.self) { time in
                     Text(restTimerDurationFormatter.string(from: time) ?? "").tag(time)
                 }
             }
-            
-            Picker("Default Rest Time (Dumbbell)", selection: $settingsStore.defaultRestTimeDumbbellBased) {
-                ForEach(restTimerCustomTimes, id: \.self) { time in
-                    Text(restTimerDurationFormatter.string(from: time) ?? "").tag(time)
-                }
-            }
-            
-            Picker("Default Rest Time (Barbell)", selection: $settingsStore.defaultRestTimeBarbellBased) {
-                ForEach(restTimerCustomTimes, id: \.self) { time in
-                    Text(restTimerDurationFormatter.string(from: time) ?? "").tag(time)
-                }
+        }
+    }
+
+    private var calendarSection: some View {
+        Section {
+            Picker("First Day of Week", selection: $settingsStore.firstWeekday) {
+                Text("Sunday").tag(1)
+                Text("Monday").tag(2)
             }
         }
     }
@@ -56,22 +53,12 @@ struct GeneralSettingsView: View {
         }
     }
     
-    private var oneRmSection: some View {
-        Section(footer: Text("Maximum number of repetitions that a set can have for it to be considered in the one rep max (1RM) calculation. Keep in mind that higher values are less accurate.")) {
-            Picker("Max Repetitions for 1RM", selection: $settingsStore.maxRepetitionsOneRepMax) {
-                ForEach(maxRepetitionsOneRepMaxValues, id: \.self) { i in
-                    Text("\(i)").tag(i)
-                }
-            }
-        }
-    }
-    
     var body: some View {
         Form {
             weightPickerSection
+            calendarSection
             restTimerTimesSection
             restTimerSection
-            oneRmSection
         }
         .navigationBarTitle("General", displayMode: .inline)
     }

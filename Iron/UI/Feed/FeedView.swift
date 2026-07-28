@@ -20,7 +20,11 @@ struct FeedView: View {
     @State private var calendarExpanded = false
     @State private var selectedDate: Date?
 
-    private let cal = Calendar.current
+    private var cal: Calendar {
+        var c = Calendar.current
+        c.firstWeekday = settingsStore.firstWeekday
+        return c
+    }
 
     init() {
         let request: NSFetchRequest<Workout> = Workout.fetchRequest()

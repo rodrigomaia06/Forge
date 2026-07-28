@@ -241,15 +241,10 @@ struct WorkoutExerciseDetailView : View {
     }
     
     private var restTimerDuration: TimeInterval {
-        // TODO: allow customizable default rest timer for each exercise
-        switch workoutExercise.exercise(in: exerciseStore.exercises)?.type {
-        case .barbell:
-            return settingsStore.defaultRestTimeBarbellBased
-        case .dumbbell:
-            return settingsStore.defaultRestTimeDumbbellBased
-        default:
-            return settingsStore.defaultRestTime
+        if let uuid = workoutExercise.exerciseUuid, let time = settingsStore.restTime(forExercise: uuid) {
+            return time
         }
+        return settingsStore.defaultRestTime
     }
     
     private var workoutSetEditor: some View {

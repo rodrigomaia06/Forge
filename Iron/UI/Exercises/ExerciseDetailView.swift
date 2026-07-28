@@ -198,9 +198,25 @@ struct ExerciseDetailView : View {
         return options
     }
     
+    private var restTimeSection: some View {
+        Section(footer: Text("Rest timer started after completing a set of this exercise. \"Default\" uses the rest time set in General.")) {
+            Picker("Rest Time", selection: Binding(
+                get: { settingsStore.restTime(forExercise: exercise.uuid) },
+                set: { settingsStore.setRestTime($0, forExercise: exercise.uuid) }
+            )) {
+                Text("Default").tag(TimeInterval?.none)
+                ForEach(restTimerCustomTimes, id: \.self) { time in
+                    Text(restTimerDurationFormatter.string(from: time) ?? "").tag(TimeInterval?.some(time))
+                }
+            }
+        }
+    }
+
     var body: some View {
         GeometryReader { geometry in
             List {
+                self.restTimeSection
+
                 if !self.exercise.pdfPaths.isEmpty {
                     self.imageSection(geometry: geometry)
                 }

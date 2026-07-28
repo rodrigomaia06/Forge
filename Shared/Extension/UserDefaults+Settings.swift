@@ -18,6 +18,8 @@ extension UserDefaults {
         case maxRepetitionsOneRepMax
         case autoBackup
         case watchCompanion
+        case firstWeekday
+        case exerciseRestTimes
     }
 
     var weightUnit: WeightUnit {
@@ -96,6 +98,26 @@ extension UserDefaults {
         }
         get {
             self.value(forKey: SettingsKeys.watchCompanion.rawValue) as? Bool ?? true // default true
+        }
+    }
+
+    /// Calendar first weekday: 1 = Sunday, 2 = Monday. Defaults to the locale's.
+    var firstWeekday: Int {
+        set {
+            self.set(newValue, forKey: SettingsKeys.firstWeekday.rawValue)
+        }
+        get {
+            (self.value(forKey: SettingsKeys.firstWeekday.rawValue) as? Int) ?? Calendar.current.firstWeekday
+        }
+    }
+
+    /// Per-exercise rest time overrides, keyed by exercise UUID string (seconds).
+    var exerciseRestTimes: [String: TimeInterval] {
+        set {
+            self.set(newValue, forKey: SettingsKeys.exerciseRestTimes.rawValue)
+        }
+        get {
+            (self.dictionary(forKey: SettingsKeys.exerciseRestTimes.rawValue) as? [String: TimeInterval]) ?? [:]
         }
     }
 }
