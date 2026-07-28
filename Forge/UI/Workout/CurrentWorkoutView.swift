@@ -7,7 +7,6 @@
 //
 
 import SwiftUI
-import StoreKit
 import AVKit
 import WorkoutDataKit
 import os.log
@@ -180,12 +179,6 @@ struct CurrentWorkoutView: View {
         feedbackGenerator.prepare()
         feedbackGenerator.notificationOccurred(.success)
         AudioServicesPlaySystemSound(1103) // Tink sound
-        
-        UserDefaults.standard.finishedWorkoutsCount += 1
-        if UserDefaults.standard.finishedWorkoutsCount == 6 {
-            // ask for review after the user finishes his third workout
-            SKStoreReviewController.requestReview()
-        }
 
         // Switch to the dashboard first, then dismiss the summary. The sheet slides down and reveals
         // the dashboard already in place, so finishing lands the user back home.
