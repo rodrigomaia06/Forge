@@ -32,8 +32,8 @@ struct AnimatedImageView : UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: UIView, context: UIViewRepresentableContext<AnimatedImageView>) {
-        let imageView = uiView.subviews.first as? UIImageView
-        setImages(imageView: imageView!)
+        guard let imageView = uiView.subviews.first as? UIImageView else { return }
+        setImages(imageView: imageView)
     }
     
     func setImages(imageView: UIImageView) {

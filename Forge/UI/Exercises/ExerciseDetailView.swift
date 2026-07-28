@@ -41,12 +41,17 @@ struct ExerciseDetailView : View {
     }
     
     private func pdfToImage(url: URL, fit: CGSize) -> UIImage? {
+        // A non-positive fit size (e.g. during an early layout pass) would make the renderer
+        // size zero or negative and crash. Bail out until a valid size is available.
+        guard fit.width > 0, fit.height > 0 else { return nil }
         guard let document = CGPDFDocument(url as CFURL) else { return nil }
         guard let page = document.page(at: 1) else { return nil }
-        
+
         let pageRect = page.getBoxRect(.mediaBox)
+        guard pageRect.width > 0, pageRect.height > 0 else { return nil }
         let scale = min(fit.width / pageRect.width, fit.height / pageRect.height)
         let size = CGSize(width: pageRect.width * scale, height: pageRect.height * scale)
+        guard size.width > 0, size.height > 0 else { return nil }
         
         let renderer = UIGraphicsImageRenderer(size: size)
         let img = renderer.image { ctx in
@@ -65,14 +70,16 @@ struct ExerciseDetailView : View {
     }
 
     private func exerciseImages(width: CGFloat, height: CGFloat) -> [UIImage] {
-        exercise.pdfPaths
+        guard width > 0, height > 0 else { return [] }
+        return exercise.pdfPaths
             .map { ExerciseStore.defaultBuiltInExercisesResourceURL.appendingPathComponent($0) }
             .compactMap { pdfToImage(url: $0, fit: CGSize(width: width, height: height)) }
             .compactMap { $0.tinted(with: .label) }
     }
-    
+
     private func imageHeight(geometry: GeometryProxy) -> CGFloat {
-        min(geometry.size.width, (geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom) * 0.7)
+        let available = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
+        return max(0, min(geometry.size.width, max(0, available) * 0.7))
     }
     
     private var closeSheetButton: some View {
@@ -110,7 +117,7 @@ struct ExerciseDetailView : View {
     
     private var descriptionSection: some View {
         Section {
-            Text(self.exercise.description!)
+            Text(self.exercise.description ?? "")
                 .lineLimit(nil)
         }
     }
