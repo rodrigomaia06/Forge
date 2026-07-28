@@ -424,22 +424,22 @@ private struct ActiveSetRow: View {
     }
 
     // The leading rail carries the set's state at a glance: its type color when tagged, otherwise
-    // green once completed, otherwise a gray marker for the set you're on. The set type is set from
-    // the more (...) sheet. Completed sets also get a faint green wash behind the whole row.
-    private var railColor: Color {
-        if let tag = workoutSet.tagValue { return tag.color }
-        if workoutSet.isCompleted { return .forgeSuccess }
-        if isUpNext { return .forgeSecondaryLabel }
-        return .clear
+    // The set number sits in a filled chip tinted by the set type (failure, drop set). Untagged sets
+    // keep a neutral chip. The type is set from the more (...) sheet; completion is the right-hand check.
+    private var numberChip: some View {
+        let tint = workoutSet.tagValue?.color
+        return Text("\(index)")
+            .font(.forgeCaption)
+            .foregroundColor(tint ?? .forgeSecondaryLabel)
+            .frame(width: 26, height: 26)
+            .background(Circle().fill((tint ?? .forgeSecondaryLabel).opacity(tint == nil ? 0.14 : 0.22)))
+            .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title)" } ?? "Set \(index)")
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: Theme.Spacing.s) {
-                Text("\(index)")
-                    .font(.forgeCaption)
-                    .foregroundColor(.forgeSecondaryLabel)
-                    .frame(minWidth: 14, alignment: .leading)
+                numberChip
 
                 TextField("0", value: weightField, format: .number)
                     .keyboardType(.decimalPad)
@@ -514,18 +514,13 @@ private struct ActiveSetRow: View {
             // The note itself is not shown under the row during a workout; the green note icon is
             // enough to signal a set has one. Tap it to read or edit.
         }
-        // An inset rounded pill on the left marks the set state. Inset vertically so the card's
-        // rounded corners never clip it (a flush rectangle looked cut off on the first and last rows).
+        // Completed sets get a faint green wash; the type now reads from the number chip, not a rail.
         .listRowBackground(
-            ZStack(alignment: .leading) {
+            ZStack {
                 Color(.secondarySystemGroupedBackground)
                 if workoutSet.isCompleted {
                     Color.forgeSuccess.opacity(0.03)
                 }
-                Capsule()
-                    .fill(railColor)
-                    .frame(width: 4)
-                    .padding(.vertical, 5)
             }
         )
     }
