@@ -57,13 +57,23 @@ struct StartWorkoutView: View {
             .listStyleCompat_InsetGroupedListStyle()
             .navigationBarTitle("Workout", displayMode: .inline)
             .navigationBarItems(trailing:
-                Button(action: {
-                    self.newWorkoutPlan()
-                }) {
+                Menu {
+                    Button {
+                        Haptics.success()
+                        Workout.create(context: self.managedObjectContext).startOrCrash()
+                    } label: {
+                        Label("New workout", systemImage: "figure.strengthtraining.traditional")
+                    }
+                    Button {
+                        self.newWorkoutPlan()
+                    } label: {
+                        Label("New workout plan", systemImage: "list.bullet.rectangle")
+                    }
+                } label: {
                     Image(systemName: "plus")
                         .imageScale(.large)
                 }
-                .accessibilityLabel("New workout plan")
+                .accessibilityLabel("Add")
             )
             .confirmationDialog("This cannot be undone.", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } }), titleVisibility: .visible, presenting: offsetsToDelete) { offsets in
                 Button("Delete workout plan", role: .destructive) {

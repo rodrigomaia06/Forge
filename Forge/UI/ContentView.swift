@@ -34,16 +34,16 @@ struct ContentView : View {
         TabView(selection: selectedTab) {
             FeedView()
                 .tag(SceneState.Tab.feed)
-                .tabItem { Label("Home", systemImage: "house.fill") }
+                .tabItem { Image(systemName: "house.fill").accessibilityLabel("Home") }
             HistoryView()
                 .tag(SceneState.Tab.history)
-                .tabItem { Label("History", systemImage: "clock.fill") }
+                .tabItem { Image(systemName: "clock.fill").accessibilityLabel("History") }
             WorkoutTab()
                 .tag(SceneState.Tab.workout)
-                .tabItem { Label("Workout", systemImage: "dumbbell.fill") }
+                .tabItem { Image(systemName: "dumbbell.fill").accessibilityLabel("Workout") }
             SettingsView()
                 .tag(SceneState.Tab.settings)
-                .tabItem { Label("Settings", systemImage: "gearshape.fill") }
+                .tabItem { Image(systemName: "gearshape.fill").accessibilityLabel("Settings") }
         }
         .environmentObject(SettingsStore.shared)
         .environmentObject(RestTimerStore.shared)

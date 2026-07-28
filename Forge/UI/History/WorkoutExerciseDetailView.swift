@@ -34,6 +34,11 @@ struct WorkoutExerciseDetailView : View {
     }
     
     @State private var showExerciseInfo = false
+    // History (standalone) starts read-only; its Edit button flips this so sets become editable.
+    @State private var historyEditMode: EditMode = .inactive
+
+    /// Sets are editable during the live workout, or in history only after tapping Edit.
+    private var setsEditable: Bool { isCurrentWorkout || historyEditMode == .active }
 
     /// When true, renders as a card embedded in the current-workout list (name header + set table,
     /// no navigation bar). When false, renders as the pushed full-screen view used from history.
@@ -233,6 +238,7 @@ struct WorkoutExerciseDetailView : View {
                 isUpNext: firstUncompletedSet == workoutSet,
                 showRPE: settingsStore.showRPE,
                 previousText: previousPerformance(atZeroBased: index - 1),
+                isEditable: setsEditable,
                 onToggleComplete: { toggleComplete(workoutSet) },
                 onMore: { moreSheetSet = workoutSet }
             )
@@ -455,11 +461,11 @@ struct WorkoutExerciseDetailView : View {
             attachingSheets(to: exerciseHeaderRow)
             setsHeader
             currentWorkoutSets
-            addSetButton
+            if setsEditable { addSetButton }
         }
     }
 
-    /// The pushed, full-screen layout used when viewing an exercise from history.
+    /// The pushed, full-screen layout used when viewing an exercise from history. Read-only until Edit.
     private var standaloneBody: some View {
         attachingSheets(to:
             VStack(spacing: 0) {
@@ -469,7 +475,7 @@ struct WorkoutExerciseDetailView : View {
                     Section(header: Text("This session")) {
                         setsHeader
                         currentWorkoutSets
-                        addSetButton
+                        if setsEditable { addSetButton }
                     }
                 }
                 .listStyleCompat_InsetGroupedListStyle()
@@ -484,7 +490,9 @@ struct WorkoutExerciseDetailView : View {
                     Image(systemName: "ellipsis")
                         .imageScale(.large)
                 }
-                EditButton()
+                Button(historyEditMode == .active ? "Done" : "Edit") {
+                    withAnimation { historyEditMode = historyEditMode == .active ? .inactive : .active }
+                }
             }
         )
         .onDisappear {
@@ -530,10 +538,16 @@ private struct ActiveSetRow: View {
     let isUpNext: Bool
     let showRPE: Bool
     let previousText: String?
+    let isEditable: Bool
     var onToggleComplete: () -> Void
     var onMore: () -> Void
 
     private var hasNote: Bool { !(workoutSet.comment ?? "").isEmpty }
+
+    private var weightText: String {
+        let value = WeightUnit.convert(weight: workoutSet.weightValue, from: .metric, to: weightUnit)
+        return String(format: "%g", value)
+    }
 
     @FocusState private var focus: Field?
     private enum Field { case weight, reps }
@@ -577,6 +591,15 @@ private struct ActiveSetRow: View {
             .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
     }
 
+    /// Read-only value shown in place of the editable field (history, outside edit mode).
+    private func readValue(_ text: String, width: CGFloat) -> some View {
+        Text(text)
+            .font(.forgeValue)
+            .multilineTextAlignment(.center)
+            .padding(.vertical, 7)
+            .frame(width: width)
+    }
+
     var body: some View {
         HStack(spacing: Theme.Spacing.s) {
             Button(action: onMore) { numberChip }
@@ -590,8 +613,13 @@ private struct ActiveSetRow: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .center)
 
-            setField(weightField, field: .weight, keyboard: .decimalPad, width: 68)
-            setField(repsField, field: .reps, keyboard: .numberPad, width: 60)
+            if isEditable {
+                setField(weightField, field: .weight, keyboard: .decimalPad, width: 68)
+                setField(repsField, field: .reps, keyboard: .numberPad, width: 60)
+            } else {
+                readValue(weightText, width: 68)
+                readValue("\(workoutSet.repetitionsValue)", width: 60)
+            }
 
             if isCurrentWorkout {
                 Button(action: onToggleComplete) {
@@ -606,15 +634,13 @@ private struct ActiveSetRow: View {
             }
         }
         .foregroundColor(workoutSet.isCompleted ? .forgeLabel : .forgeSecondaryLabel)
-        // Completed sets get a green wash; the type reads from the number chip.
-        .listRowBackground(
-            ZStack {
-                Color(.secondarySystemGroupedBackground)
-                if workoutSet.isCompleted {
-                    Color.forgeSuccess.opacity(0.08)
-                }
+        // A Done button above the number pad, which otherwise has no way to dismiss itself.
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { focus = nil }
             }
-        )
+        }
     }
 }
 

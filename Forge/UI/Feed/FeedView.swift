@@ -73,12 +73,10 @@ struct FeedView: View {
                 sceneState.selectedTab = .workout
             } label: {
                 Image(systemName: "plus")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.forgeBackground)
+                    .imageScale(.large)
                     .frame(width: 44, height: 44)
-                    .background(Circle().fill(Color.forgeAccent))
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
             .accessibilityLabel("Start workout")
         }
     }
