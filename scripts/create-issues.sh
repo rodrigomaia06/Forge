@@ -7,13 +7,15 @@
 #   gh auth login          # one time
 #   ./scripts/create-issues.sh
 #
-# The script is roughly idempotent for labels (it updates them with --force), but running
-# it twice will create duplicate ISSUES. Run it once. To preview without creating anything,
+# Labels are updated with --force, and issues are de-duplicated by title against the issues
+# already in the repo, so the script is safe to re-run (for example after a rate-limit stop):
+# it skips any issue whose exact title already exists. To preview without creating anything,
 # run: DRY_RUN=1 ./scripts/create-issues.sh
 #
 set -euo pipefail
 
 DRY_RUN="${DRY_RUN:-0}"
+EXISTING_TITLES=""
 
 if [[ "$DRY_RUN" != "1" ]]; then
   if ! command -v gh >/dev/null 2>&1; then
@@ -24,6 +26,8 @@ if [[ "$DRY_RUN" != "1" ]]; then
     echo "error: gh is not authenticated. Run: gh auth login" >&2
     exit 1
   fi
+  # Snapshot existing titles (open and closed) once, for de-duplication on re-run.
+  EXISTING_TITLES="$(gh issue list --state all --limit 500 --json title --jq '.[].title')"
 fi
 
 label() { # name color description
@@ -33,6 +37,7 @@ label() { # name color description
 
 issue() { # title labels body
   if [[ "$DRY_RUN" == "1" ]]; then echo "issue: [$2] $1"; return; fi
+  if grep -Fxq "$1" <<<"$EXISTING_TITLES"; then echo "skip (exists): $1"; return; fi
   gh issue create --title "$1" --label "$2" --body "$3" >/dev/null
   echo "created: $1"
 }
