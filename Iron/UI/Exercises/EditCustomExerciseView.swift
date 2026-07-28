@@ -15,7 +15,8 @@ struct EditCustomExerciseView: View {
         var description: String
         var muscles: Set<ExerciseMuscle>
         var type: Exercise.ExerciseType
-        
+        var restTime: TimeInterval? = nil
+
         struct ExerciseMuscle: Hashable {
             enum MuscleType {
                 case primary
@@ -77,6 +78,15 @@ struct EditCustomExerciseView: View {
             Picker("Type", selection: $exerciseValues.type) {
                 ForEach(Exercise.ExerciseType.allCases, id: \.self) {
                     Text($0.title.capitalized).tag($0)
+                }
+            }
+
+            Section(footer: Text("Rest timer for this exercise. \"Default\" uses the rest time set in General.")) {
+                Picker("Rest Time", selection: $exerciseValues.restTime) {
+                    Text("Default").tag(TimeInterval?.none)
+                    ForEach(restTimerCustomTimes, id: \.self) { time in
+                        Text(restTimerDurationFormatter.string(from: time) ?? "").tag(TimeInterval?.some(time))
+                    }
                 }
             }
         }
