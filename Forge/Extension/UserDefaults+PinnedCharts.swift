@@ -25,26 +25,8 @@ extension UserDefaults {
             if let pinnedCharts = try? JSONDecoder().decode([PinnedChart].self, from: data) {
                 return pinnedCharts
             }
-            
-            // TODO: remove in future
-            os_log("Trying to decode pinnedChartUuids as Ids", log: .migration, type: .debug)
-            if let pinnedChartsOld = try? JSONDecoder().decode([PinnedChartOldId].self, from: data) {
-                let pinnedCharts: [PinnedChart] = pinnedChartsOld.compactMap { pinnedChart in
-                    guard let uuid = ExerciseStore.shared.exercises.first(where: { exercise in exercise.everkineticId == pinnedChart.exerciseId })?.uuid else { return nil }
-                    return PinnedChart(exerciseUuid: uuid, measurementType: pinnedChart.measurementType)
-                }
-                self.pinnedCharts = pinnedCharts
-                return pinnedCharts
-            }
-            
+
             return []
         }
     }
-    
-    // TODO: remove in future
-    private struct PinnedChartOldId: Hashable, Codable {
-        let exerciseId: Int
-        let measurementType: WorkoutExerciseChartData.MeasurementType
-    }
-
 }

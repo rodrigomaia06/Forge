@@ -108,7 +108,6 @@ class NotificationManager: NSObject {
     
     enum NotificationIdentifier: String {
         case unfinishedWorkout
-        case unfinishedTraining // TODO: remove unfinishedTraining in future version
         case restTimerUp
     }
     

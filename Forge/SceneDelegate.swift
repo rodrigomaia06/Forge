@@ -132,8 +132,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         NotificationManager.shared.notificationCenter.removeAllDeliveredNotifications()
         NotificationManager.shared.removePendingNotificationRequests(withIdentifiers: [.unfinishedWorkout])
-        
-        NotificationManager.shared.removePendingNotificationRequests(withIdentifiers: [.unfinishedTraining]) // TODO: remove unfinishedTraining in future version
     }
 
     func sceneDidEnterBackground(_ scene: UIScene) {
