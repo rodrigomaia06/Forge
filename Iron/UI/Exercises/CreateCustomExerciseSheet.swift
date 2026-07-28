@@ -51,7 +51,7 @@ struct CreateCustomExerciseSheet: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             EditCustomExerciseView(exerciseValues: $exerciseValues)
                 .navigationBarTitle("Edit Exercise", displayMode: .inline)
                 .navigationBarItems(
@@ -62,6 +62,5 @@ struct CreateCustomExerciseSheet: View {
                     trailing: saveButton
                 )
         }
-        .navigationViewStyle(StackNavigationViewStyle())
     }
 }

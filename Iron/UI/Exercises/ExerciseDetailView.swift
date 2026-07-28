@@ -82,25 +82,23 @@ struct ExerciseDetailView : View {
     }
     
     private var exerciseHistorySheet: some View {
-        NavigationView {
+        NavigationStack {
             ExerciseHistoryView(exercise: self.exercise)
                 .navigationBarTitle("History", displayMode: .inline)
                 .navigationBarItems(leading: closeSheetButton)
                 .environmentObject(self.settingsStore)
                 .environment(\.managedObjectContext, self.managedObjectContext)
         }
-        .navigationViewStyle(StackNavigationViewStyle())
     }
     
     private var exerciseStatisticsSheet: some View {
-        NavigationView {
+        NavigationStack {
             ExerciseStatisticsView(exercise: self.exercise)
                 .navigationBarTitle("Statistics", displayMode: .inline)
                 .navigationBarItems(leading: closeSheetButton)
                 .environmentObject(self.settingsStore)
                 .environment(\.managedObjectContext, self.managedObjectContext)
         }
-        .navigationViewStyle(StackNavigationViewStyle())
     }
     
     private func imageSection(geometry: GeometryProxy) -> some View {
@@ -275,7 +273,7 @@ struct ExerciseDetailView : View {
 #if DEBUG
 struct ExerciseDetailView_Previews : PreviewProvider {
     static var previews: some View {
-        NavigationView {
+        NavigationStack {
             ExerciseDetailView(exercise: ExerciseStore.shared.exercises.first(where: { $0.everkineticId == 99 })!)
                 .mockEnvironment(weightUnit: .metric)
         }

@@ -91,7 +91,7 @@ struct EditCustomExerciseView: View {
             }
         }
         .sheet(isPresented: $showingMuscleSelectionSheet) {
-            NavigationView {
+            NavigationStack {
                 MuscleSelectionView(muscles: Exercise.muscleNames, selection: self.$exerciseValues.muscles)
                     .navigationBarTitle("Select Muscles", displayMode: .inline)
                     .navigationBarItems(trailing:
@@ -100,7 +100,6 @@ struct EditCustomExerciseView: View {
                         }
                     )
             }
-            .navigationViewStyle(StackNavigationViewStyle())
         }
     }
 }

@@ -23,7 +23,7 @@ struct ExercisesView : View {
 #if DEBUG
 struct ExercisesView_Previews : PreviewProvider {
     static var previews: some View {
-        NavigationView {
+        NavigationStack {
             ExercisesView(exercises: ExerciseStore.shared.shownExercises)
                 .mockEnvironment(weightUnit: .metric)
         }

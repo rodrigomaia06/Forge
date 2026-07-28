@@ -213,7 +213,7 @@ struct WorkoutRoutineSetEditor: View {
             title += " \(index + 1)"
         }
         
-        return NavigationView {
+        return NavigationStack {
             MoreView(workoutRoutineSet: workoutRoutineSet)
                 .navigationBarTitle(Text(title), displayMode: .inline)
                 .navigationBarItems(leading:
@@ -222,7 +222,6 @@ struct WorkoutRoutineSetEditor: View {
                     }
             )
         }
-        .navigationViewStyle(StackNavigationViewStyle())
     }
     
     private var keyboard: some View {

@@ -101,7 +101,7 @@ struct AboutView: View {
 #if DEBUG
 struct AboutView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationView {
+        NavigationStack {
             AboutView().mockEnvironment(weightUnit: .metric)
         }
     }

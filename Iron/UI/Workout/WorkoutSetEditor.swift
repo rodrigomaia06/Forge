@@ -181,7 +181,7 @@ struct WorkoutSetEditor : View {
     }
     
     private var moreSheet: some View {
-        NavigationView {
+        NavigationStack {
             MoreView(workoutSet: workoutSet)
                 .navigationBarTitle(Text(workoutSet.displayTitle(weightUnit: settingsStore.weightUnit)), displayMode: .inline)
                 .navigationBarItems(leading:
@@ -190,7 +190,6 @@ struct WorkoutSetEditor : View {
                     }
             )
         }
-        .navigationViewStyle(StackNavigationViewStyle())
     }
     
     private var keyboard: some View {

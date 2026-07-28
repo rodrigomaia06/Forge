@@ -40,21 +40,19 @@ struct TimerBannerView: View {
     }
     
     private var editTimeSheet: some View {
-        NavigationView {
+        NavigationStack {
             EditCurrentWorkoutTimeView(workout: workout)
                 .navigationBarTitle("Workout Duration", displayMode: .inline)
                 .navigationBarItems(leading: closeSheetButton)
         }
-        .navigationViewStyle(StackNavigationViewStyle())
     }
     
     private var restTimerSheet: some View {
-        NavigationView {
+        NavigationStack {
             RestTimerView().environmentObject(self.restTimerStore)
                 .navigationBarTitle("Rest Timer", displayMode: .inline)
                 .navigationBarItems(leading: closeSheetButton)
         }
-        .navigationViewStyle(StackNavigationViewStyle())
     }
     
     var body: some View {

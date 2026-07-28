@@ -212,7 +212,7 @@ struct WorkoutsLast28DaysKey: PreferenceKey {
 #if DEBUG
 struct ActivityCalendarView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 VStack(spacing: 16) {
                     Divider()

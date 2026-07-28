@@ -2,9 +2,9 @@
 //  ContentView.swift
 //  Forge
 //
-//  Root screen: a reliably swipeable pager (SwipeTabView / UIPageViewController) with the
-//  custom floating dock (ForgeTabBar) overlaid so page content sits behind it — that's what
-//  gives the dock real frosted glass. Also hosts the .sqlite import flow.
+//  Root screen: a standard SwiftUI TabView with the native system tab bar. Native gives reliable
+//  tab switching, correct titles, and state restoration for free; the system bar is translucent,
+//  so it reads as glass without any custom control. Also hosts the .sqlite import flow.
 //
 
 import SwiftUI
@@ -24,39 +24,30 @@ struct ContentView : View {
         let message: String
     }
 
-    private let tabs: [SceneState.Tab] = [.feed, .history, .workout, .settings]
-    /// Room reserved inside each page (above the home indicator) so content clears the dock.
-    private let dockInset: CGFloat = 64
+    private var selectedTab: Binding<SceneState.Tab> {
+        Binding(get: { sceneState.selectedTab }, set: { sceneState.selectedTab = $0 })
+    }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            SwipeTabView(
-                selection: Binding(
-                    get: { tabs.firstIndex(of: sceneState.selectedTab) ?? 0 },
-                    set: { sceneState.selectedTab = tabs[$0] }
-                ),
-                bottomInset: dockInset,
-                pages: tabs.map { tab in
-                    AnyView(
-                        page(for: tab)
-                            .environmentObject(SettingsStore.shared)
-                            .environmentObject(RestTimerStore.shared)
-                            .environmentObject(ExerciseStore.shared)
-                            .environmentObject(sceneState)
-                            .environment(\.managedObjectContext, WorkoutDataStorage.shared.persistentContainer.viewContext)
-                    )
-                }
-            )
-            .ignoresSafeArea()
-
-            ForgeTabBar(selection: Binding(
-                get: { sceneState.selectedTab },
-                set: { sceneState.selectedTab = $0 }
-            ))
-            .padding(.horizontal, Theme.Spacing.l)
-            .padding(.bottom, Theme.Spacing.xs)
+        TabView(selection: selectedTab) {
+            FeedView()
+                .tag(SceneState.Tab.feed)
+                .tabItem { Label("Home", systemImage: "house.fill") }
+            HistoryView()
+                .tag(SceneState.Tab.history)
+                .tabItem { Label("History", systemImage: "clock.fill") }
+            WorkoutTab()
+                .tag(SceneState.Tab.workout)
+                .tabItem { Label("Workout", systemImage: "dumbbell.fill") }
+            SettingsView()
+                .tag(SceneState.Tab.settings)
+                .tabItem { Label("Settings", systemImage: "gearshape.fill") }
         }
-        .background(Color.forgeBackground.ignoresSafeArea())
+        .environmentObject(SettingsStore.shared)
+        .environmentObject(RestTimerStore.shared)
+        .environmentObject(ExerciseStore.shared)
+        .environment(\.managedObjectContext, WorkoutDataStorage.shared.persistentContainer.viewContext)
+        .tint(.forgeAccent) // selected-tab color
         .preferredColorScheme(.dark) // Forge is dark-first (matches the design direction)
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name.RestoreFromBackup)) { output in
             guard let url = output.userInfo?[restoreFromBackupDataUserInfoKey] as? URL else { return }
@@ -72,16 +63,6 @@ struct ContentView : View {
         }
         .alert(item: $importResult) { result in
             Alert(title: Text(result.title), message: Text(result.message))
-        }
-    }
-
-    @ViewBuilder private func page(for tab: SceneState.Tab) -> some View {
-        switch tab {
-        case .feed: FeedView()
-        case .history: HistoryView()
-        case .workout: WorkoutTab()
-        case .settings: SettingsView()
-        case .exercises: EmptyView() // Exercises lives inside Settings; not a page.
         }
     }
 

@@ -29,7 +29,7 @@ struct MuscleGroupSectionedExercisesView : View {
 #if DEBUG
 struct MuscleGroupSectionedExercisesView_Previews : PreviewProvider {
     static var previews: some View {
-        NavigationView {
+        NavigationStack {
             MuscleGroupSectionedExercisesView(exerciseGroups: ExerciseStore.splitIntoMuscleGroups(exercises: ExerciseStore.shared.shownExercises))
                 .mockEnvironment(weightUnit: .metric)
         }

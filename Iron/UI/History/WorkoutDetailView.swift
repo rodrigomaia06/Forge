@@ -236,7 +236,7 @@ extension WorkoutDetailView {
 #if DEBUG
 struct WorkoutDetailView_Previews : PreviewProvider {
     static var previews: some View {
-        NavigationView {
+        NavigationStack {
             WorkoutDetailView(workout: MockWorkoutData.metricRandom.workout)
                 .mockEnvironment(weightUnit: .metric)
         }

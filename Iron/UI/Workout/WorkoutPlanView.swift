@@ -125,7 +125,7 @@ struct WorkoutPlanView: View {
 #if DEBUG
 struct WorkoutPlanView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationView {
+        NavigationStack {
             WorkoutPlanView(workoutPlan: MockWorkoutData.metric.workoutPlan)
                 .mockEnvironment(weightUnit: .metric)
         }
