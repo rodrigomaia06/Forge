@@ -97,11 +97,11 @@ struct WorkoutExerciseDetailView : View {
         }
         if let previousSet = previousSet {
             set.repetitionsValue = previousSet.repetitionsValue
+            // A target planned last time applies once: pre-fill the weight from it, but do not copy the
+            // target onto this set, or it would propagate to every future session. After this, the
+            // weight just carries forward normally like any logged value.
             if let target = previousSet.targetWeightValue {
-                // A target planned last time carries forward: pre-fill the weight from it and keep
-                // the target on this set so the row can mark it as planned.
                 set.weightValue = target
-                set.targetWeightValue = target
             } else {
                 set.weightValue = previousSet.weightValue
             }
@@ -251,6 +251,13 @@ struct WorkoutExerciseDetailView : View {
         }
     }
     
+    /// A custom workout title, or the plan and routine (day) name when the workout came from a routine.
+    /// Returns nil when there is no meaningful name, so the header shows just the date.
+    private func sessionTitle(for workout: Workout?) -> String? {
+        if let title = workout?.title, !title.isEmpty { return title }
+        return workout?.workoutPlanAndRoutineTitle()
+    }
+
     @ViewBuilder private var historyWorkoutSets: some View {
         // Each past session is its own card so different days read as clearly separate, not one merged
         // list. The date header opens that whole workout in the History tab.
@@ -262,14 +269,18 @@ struct WorkoutExerciseDetailView : View {
                     sceneState.selectedTab = .history
                 } label: {
                     HStack(spacing: Theme.Spacing.xs) {
-                        Text(Workout.dateFormatter.string(from: pastWorkoutExercise.workout?.start, fallback: "Unknown date"))
-                            .font(.forgeCaption.weight(.semibold))
-                            .foregroundColor(.forgeSecondaryLabel)
-                        if let comment = pastWorkoutExercise.comment, !comment.isEmpty {
-                            Text(comment)
-                                .font(.forgeCaption.italic())
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(Workout.dateFormatter.string(from: pastWorkoutExercise.workout?.start, fallback: "Unknown date"))
+                                .font(.forgeCaption.weight(.semibold))
                                 .foregroundColor(.forgeSecondaryLabel)
-                                .lineLimit(1)
+                            // Show the routine or plan name (and its day) when the workout came from one,
+                            // so same-day sessions are told apart by what they were.
+                            if let planTitle = sessionTitle(for: pastWorkoutExercise.workout) {
+                                Text(planTitle)
+                                    .font(.caption2)
+                                    .foregroundColor(.forgeSecondaryLabel)
+                                    .lineLimit(1)
+                            }
                         }
                         Spacer()
                         Image(systemName: "chevron.right")

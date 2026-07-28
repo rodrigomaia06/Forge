@@ -21,10 +21,6 @@ struct GeneralSettingsView: View {
         }
     }
 
-    private var selectedAccent: ForgeAccent {
-        ForgeAccent(rawValue: settingsStore.accentIdentifier) ?? .graphite
-    }
-
     private var appearance: Binding<ForgeAppearance> {
         Binding(
             get: { ForgeAppearance(rawValue: settingsStore.appearance) ?? .dark },
@@ -35,41 +31,16 @@ struct GeneralSettingsView: View {
     private var appearanceSection: some View {
         Section(
             header: Text("Appearance"),
-            footer: Text("Theme sets light or dark, or follows the system. Accent tints buttons, links, and the selected tab. Graphite is the default monochrome look.")
+            footer: Text("Theme sets light or dark, or follows the system.")
         ) {
             Picker("Theme", selection: appearance) {
                 ForEach(ForgeAppearance.allCases) { option in
                     Text(option.title).tag(option)
                 }
             }
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: Theme.Spacing.s)], spacing: Theme.Spacing.s) {
-                ForEach(ForgeAccent.allCases) { accent in
-                    let isSelected = accent == selectedAccent
-                    Button {
-                        Haptics.selection()
-                        settingsStore.accentIdentifier = accent.rawValue
-                    } label: {
-                        Circle()
-                            .fill(accent.color)
-                            .frame(width: 30, height: 30)
-                            // Hairline so the monochrome graphite swatch stays visible on any surface.
-                            .overlay(Circle().strokeBorder(Color.forgeSeparator, lineWidth: accent == .graphite ? 1 : 0))
-                            .padding(5)
-                            .overlay(Circle().strokeBorder(isSelected ? Color.forgeLabel : .clear, lineWidth: 2))
-                            .frame(minHeight: Theme.Layout.minTapTarget)
-                            .frame(maxWidth: .infinity)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(accent.title)
-                    .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-                }
-            }
-            .padding(.vertical, Theme.Spacing.xs)
         }
     }
-    
+
     private var calendarSection: some View {
         Section(header: Text("Calendar")) {
             Picker("First day of week", selection: $settingsStore.firstWeekday) {

@@ -100,17 +100,6 @@ final class SettingsStore: ObservableObject {
         }
     }
 
-    /// Selected accent theme. Stored by identifier; defaults to graphite (the monochrome look).
-    var accentIdentifier: String {
-        get {
-            userDefaults.accentIdentifier
-        }
-        set {
-            self.objectWillChange.send()
-            userDefaults.accentIdentifier = newValue
-        }
-    }
-
     var unfinishedWorkoutReminderEnabled: Bool {
         get {
             userDefaults.unfinishedWorkoutReminderEnabled

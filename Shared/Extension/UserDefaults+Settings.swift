@@ -18,7 +18,6 @@ extension UserDefaults {
         case maxRepetitionsOneRepMax
         case autoBackup
         case firstWeekday
-        case accentIdentifier
         case unfinishedWorkoutReminderEnabled
         case unfinishedWorkoutReminderDelay
         case showPersonalRecords
@@ -56,12 +55,6 @@ extension UserDefaults {
     var showRPE: Bool {
         set { self.set(newValue, forKey: SettingsKeys.showRPE.rawValue) }
         get { self.value(forKey: SettingsKeys.showRPE.rawValue) as? Bool ?? false }
-    }
-
-    /// Identifier of the selected accent theme (see ForgeAccent). Empty string means the default.
-    var accentIdentifier: String {
-        set { self.set(newValue, forKey: SettingsKeys.accentIdentifier.rawValue) }
-        get { self.string(forKey: SettingsKeys.accentIdentifier.rawValue) ?? "" }
     }
 
     /// Whether to schedule one reminder after backgrounding a workout with completed sets.

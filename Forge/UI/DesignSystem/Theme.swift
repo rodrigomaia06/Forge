@@ -62,57 +62,15 @@ extension Color {
     /// Hairlines and dividers.
     static let forgeSeparator = forgeGrey(light: (0.0, 0.10), dark: (1.0, 0.12))
 
-    /// The current accent — signals interactivity and the current action. Reads the
-    /// user's choice (see ForgeAccent); defaults to the high-contrast monochrome graphite.
-    static var forgeAccent: Color { ForgeAccent.current.color }
+    /// The accent that signals interactivity and the current action. A single high-contrast
+    /// monochrome tint (near-white in dark, near-black in light) rather than a colour, so the app
+    /// stays standard and quiet.
+    static let forgeAccent = forgeGrey(light: (0.11, 1), dark: (0.98, 1))
 
     // Meaning, not decoration — pair with a label/icon, never colour alone.
     static let forgeSuccess = Color(.systemGreen)
     static let forgeWarning = Color(.systemOrange)
     static let forgeDestructive = Color(.systemRed)
-}
-
-// MARK: - Accent theme
-
-/// User-selectable accent. Graphite is the default monochrome look; the rest are system hues
-/// picked to stay legible on Forge's near-black canvas and its light appearance. The selection
-/// drives `Color.forgeAccent` and the app-wide `.tint`, so it recolours interactive elements
-/// everywhere without per-view changes.
-enum ForgeAccent: String, CaseIterable, Identifiable {
-    case graphite, orange, red, green, blue, indigo, purple, teal
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .graphite: return "Graphite"
-        case .orange: return "Orange"
-        case .red: return "Red"
-        case .green: return "Green"
-        case .blue: return "Blue"
-        case .indigo: return "Indigo"
-        case .purple: return "Purple"
-        case .teal: return "Teal"
-        }
-    }
-
-    var color: Color {
-        switch self {
-        case .graphite: return forgeGrey(light: (0.11, 1), dark: (0.98, 1))
-        case .orange: return Color(.systemOrange)
-        case .red: return Color(.systemRed)
-        case .green: return Color(.systemGreen)
-        case .blue: return Color(.systemBlue)
-        case .indigo: return Color(.systemIndigo)
-        case .purple: return Color(.systemPurple)
-        case .teal: return Color(.systemTeal)
-        }
-    }
-
-    /// The accent chosen in Settings (falls back to graphite).
-    static var current: ForgeAccent {
-        ForgeAccent(rawValue: SettingsStore.shared.accentIdentifier) ?? .graphite
-    }
 }
 
 /// Light, dark, or follow the system. Forge is dark-first, so dark is the default.

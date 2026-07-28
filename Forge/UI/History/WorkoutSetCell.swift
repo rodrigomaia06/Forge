@@ -62,15 +62,15 @@ struct WorkoutSetCell: View {
                             .font(.forgeCaption)
                             .foregroundColor(.forgeSecondaryLabel)
                     }
+                }
 
-                    if let target = targetWeightString {
-                        // A target logged here is a plan for the next time this exercise is done, so
-                        // say so rather than showing a bare weight that reads like a recorded value.
-                        Text("\(Image(systemName: "target")) next workout \(target)")
-                            .font(.forgeCaption)
-                            .foregroundColor(.forgeSecondaryLabel)
-                            .accessibilityLabel("Target for next workout: \(target)")
-                    }
+                // Target and comment each get their own line so a set can carry both without crowding
+                // the value. A target here is a plan for next time, not a recorded value.
+                if let target = targetWeightString {
+                    Text("\(Image(systemName: "target")) next workout \(target)")
+                        .font(.forgeCaption)
+                        .foregroundColor(.forgeSecondaryLabel)
+                        .accessibilityLabel("Target for next workout: \(target)")
                 }
 
                 if let comment = workoutSet.comment {
