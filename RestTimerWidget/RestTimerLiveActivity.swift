@@ -56,16 +56,16 @@ struct RestTimerLiveActivity: Widget {
                 Image(systemName: "timer")
                     .foregroundStyle(.white)
             } compactTrailing: {
+                // No fixed frame: the island reserves the right width for the timer itself; a fixed
+                // width was clipping it to "1:...". Scale down as a safety instead of truncating.
                 Text(timerInterval: context.state.startDate...context.state.endDate, countsDown: true)
-                    .monospacedDigit()
+                    .font(.caption2.monospacedDigit())
                     .foregroundStyle(.white)
-                    .multilineTextAlignment(.trailing)
-                    .frame(minWidth: 44, maxWidth: 56)
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
             } minimal: {
-                Text(timerInterval: context.state.startDate...context.state.endDate, countsDown: true)
-                    .monospacedDigit()
+                Image(systemName: "timer")
                     .foregroundStyle(.white)
-                    .frame(maxWidth: 44)
             }
         }
     }
