@@ -350,19 +350,27 @@ struct WorkoutExerciseDetailView : View {
         managedObjectContext.saveOrCrash()
     }
 
-    /// The exercise name and options menu, shown as the header of the embedded (in-workout) card.
+    /// The exercise name (with its note as a small line right under it) and the options menu.
     private var exerciseHeaderRow: some View {
-        HStack {
-            Text(exerciseTitle)
-                .font(.forgeHeadline)
-                .foregroundColor(.forgeLabel)
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(exerciseTitle)
+                    .font(.forgeHeadline)
+                    .foregroundColor(.forgeLabel)
+                if hasExerciseNote {
+                    Text(workoutExercise.comment ?? "")
+                        .font(.forgeCaption.italic())
+                        .foregroundColor(.forgeSecondaryLabel)
+                        .lineLimit(2)
+                        .onTapGesture { showExerciseNote = true }
+                }
+            }
             Spacer()
             Menu {
                 exerciseMenuItems
             } label: {
                 Image(systemName: "ellipsis")
-                    // Green when the exercise has a note, so it is the single note indicator.
-                    .foregroundColor(hasExerciseNote ? .forgeSuccess : .forgeSecondaryLabel)
+                    .foregroundColor(.forgeSecondaryLabel)
                     .frame(width: 34, height: 30)
                     .contentShape(Rectangle())
             }
@@ -409,7 +417,13 @@ struct WorkoutExerciseDetailView : View {
                 NavigationStack {
                     SetMoreView(workoutSet: set, weightUnit: settingsStore.weightUnit, showRPE: settingsStore.showRPE)
                         .navigationBarTitle(Text(set.displayTitle(weightUnit: settingsStore.weightUnit)), displayMode: .inline)
-                        .navigationBarItems(trailing: Button("Done") { moreSheetSet = nil })
+                        .navigationBarItems(
+                            leading: Button("Delete set", role: .destructive) {
+                                moreSheetSet = nil
+                                deleteSet(set)
+                            },
+                            trailing: Button("Done") { moreSheetSet = nil }
+                        )
                 }
                 .presentationDetents([.medium, .large])
             }
@@ -438,7 +452,6 @@ struct WorkoutExerciseDetailView : View {
     private var embeddedBody: some View {
         Section {
             attachingSheets(to: exerciseHeaderRow)
-            exerciseNoteSubtitle
             setsHeader
             currentWorkoutSets
             addSetButton
@@ -468,7 +481,6 @@ struct WorkoutExerciseDetailView : View {
                     exerciseMenuItems
                 } label: {
                     Image(systemName: "ellipsis")
-                        .foregroundColor(hasExerciseNote ? .forgeSuccess : nil)
                         .imageScale(.large)
                 }
                 EditButton()
@@ -494,6 +506,16 @@ struct WorkoutExerciseDetailView : View {
         } else {
             return nil
         }
+    }
+}
+
+/// A small monochrome dot (label color, hairline in the canvas color) that marks a note.
+private struct NoteDot: View {
+    var body: some View {
+        Circle()
+            .fill(Color.forgeLabel)
+            .frame(width: 7, height: 7)
+            .overlay(Circle().strokeBorder(Color.forgeBackground, lineWidth: 1))
     }
 }
 
@@ -529,8 +551,8 @@ private struct ActiveSetRow: View {
         )
     }
 
-    // The set number sits in a filled chip tinted by the set type (failure, drop set); a green dot
-    // marks a set that has a note. Tapping the chip opens the options sheet (tag, note, target, RPE).
+    // The set number sits in a filled chip tinted by the set type (failure, drop set); a dot marks a
+    // set that has a note. Tapping the chip opens the options sheet (tag, note, target, RPE).
     private var numberChip: some View {
         let tint = workoutSet.tagValue?.color
         return Text("\(index)")
@@ -539,9 +561,7 @@ private struct ActiveSetRow: View {
             .frame(width: 28, height: 28)
             .background(Circle().fill((tint ?? .forgeSecondaryLabel).opacity(tint == nil ? 0.14 : 0.22)))
             .overlay(alignment: .topTrailing) {
-                if hasNote {
-                    Circle().fill(Color.forgeSuccess).frame(width: 7, height: 7)
-                }
+                if hasNote { NoteDot() }
             }
     }
 

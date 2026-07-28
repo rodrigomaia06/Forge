@@ -33,7 +33,13 @@ extension View {
 extension View {
     @ViewBuilder
     func listStyleCompat_InsetGroupedListStyle() -> some View {
-        if #available(iOS 14.0, *) {
+        if #available(iOS 16.0, *) {
+            // Hide the system grouped background and use the dashboard canvas, so every screen shares
+            // the same near-black instead of the system's pure-black grouped background.
+            listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
+                .background(Color.forgeBackground.ignoresSafeArea())
+        } else if #available(iOS 14.0, *) {
             listStyle(InsetGroupedListStyle())
         } else {
             listStyle(GroupedListStyle())

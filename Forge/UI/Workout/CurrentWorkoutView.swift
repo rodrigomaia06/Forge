@@ -13,7 +13,9 @@ import os.log
 
 struct CurrentWorkoutView: View {
     @Environment(\.managedObjectContext) var managedObjectContext
-    @Environment(\.editMode) private var editMode
+    // Owned here (not read from the environment) and injected into the List below, so the Edit/Done
+    // toggle and the reorder view stay in sync — the ambient editMode is a different scope.
+    @State private var editMode: EditMode = .inactive
     @EnvironmentObject var restTimerStore: RestTimerStore
     @EnvironmentObject var exerciseStore: ExerciseStore
     @EnvironmentObject var settingsStore: SettingsStore
@@ -171,7 +173,14 @@ struct CurrentWorkoutView: View {
             }
         }
     }
-    
+
+    // Edit collapses the exercises to a reorderable list of names; Done returns to the inline cards.
+    private var reorderButton: some View {
+        Button(editMode == .active ? "Done" : "Edit") {
+            withAnimation { editMode = editMode == .active ? .inactive : .active }
+        }
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -197,7 +206,7 @@ struct CurrentWorkoutView: View {
                     // In edit mode the exercises collapse to a plain, reorderable list of names (drag to
                     // reorder, swipe/– to remove). Otherwise each exercise is a full card with its set
                     // table inline, so logging never leaves this screen.
-                    if editMode?.wrappedValue.isEditing == true {
+                    if editMode == .active {
                         Section(header: Text("Reorder exercises".uppercased())) {
                             ForEach(workoutExercises) { workoutExercise in
                                 Text(workoutExercise.exercise(in: exerciseStore.exercises)?.title ?? "Exercise")
@@ -244,9 +253,10 @@ struct CurrentWorkoutView: View {
                     }
                 }
                 .listStyleCompat_InsetGroupedListStyle()
+                .environment(\.editMode, $editMode)
             }
             .navigationBarTitle(Text(workout.displayTitle(in: exerciseStore.exercises)), displayMode: .inline)
-            .navigationBarItems(leading: cancelButton, trailing: EditButton())
+            .navigationBarItems(leading: cancelButton, trailing: reorderButton)
         }
         .sheet(item: $activeSheet) { type in
             self.sheetView(type: type)
