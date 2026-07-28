@@ -333,6 +333,9 @@ struct WorkoutExerciseDetailView : View {
                     .navigationBarTitle(Text("Note"), displayMode: .inline)
                     .navigationBarItems(trailing: Button("Done") { noteSheetSet = nil })
             }
+            // A compact sheet so the note editor does not take the whole screen.
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showExerciseNote) {
             NavigationStack {
@@ -340,6 +343,8 @@ struct WorkoutExerciseDetailView : View {
                     .navigationBarTitle(Text("Exercise note"), displayMode: .inline)
                     .navigationBarItems(trailing: Button("Done") { showExerciseNote = false })
             }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
         .navigationBarTitle(Text(workoutExercise.exercise(in: exerciseStore.exercises)?.title ?? ""), displayMode: .inline)
         .navigationBarItems(trailing:
@@ -494,16 +499,8 @@ private struct ActiveSetRow: View {
                 }
             }
             .foregroundColor(workoutSet.isCompleted ? .forgeLabel : .forgeSecondaryLabel)
-
-            // A per-set note logged during the workout reads right under its numbers.
-            if let comment = workoutSet.comment, !comment.isEmpty {
-                Text(comment)
-                    .font(.forgeCaption)
-                    .italic()
-                    .foregroundColor(.forgeSecondaryLabel)
-                    .lineLimit(2)
-                    .padding(.leading, 22)
-            }
+            // The note itself is not shown under the row during a workout; the green note icon is
+            // enough to signal a set has one. Tap it to read or edit.
         }
         // The rail fills the full row cell flush to the card edge; the row content keeps its normal
         // insets, so the numbers never sit on top of the rail.
