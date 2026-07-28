@@ -106,32 +106,10 @@ class NotificationManager: NSObject {
         }
     }
     
-    func requestStartedWorkoutFromBackgroundNotification() {
-        notificationCenter.getNotificationSettings { settings in
-            guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }
-            
-            let content = UNMutableNotificationContent()
-            content.title = "Your workout was started"
-            content.body = "Open Iron to launch the Apple Watch companion."
-            if #available(iOS 15.0, *) {
-                content.interruptionLevel = .timeSensitive
-            }
-            
-            let request = UNNotificationRequest(identifier: NotificationIdentifier.startedWorkout.rawValue, content: content, trigger: nil)
-            
-            self.notificationCenter.add(request) { (error) in
-                if let error = error {
-                    print("error \(String(describing: error))")
-                }
-            }
-        }
-    }
-    
     enum NotificationIdentifier: String {
         case unfinishedWorkout
         case unfinishedTraining // TODO: remove unfinishedTraining in future version
         case restTimerUp
-        case startedWorkout
     }
     
     enum NotificationCategoryIdentifier: String {

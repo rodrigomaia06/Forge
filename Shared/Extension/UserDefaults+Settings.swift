@@ -17,7 +17,6 @@ extension UserDefaults {
         case keepRestTimerRunning
         case maxRepetitionsOneRepMax
         case autoBackup
-        case watchCompanion
         case firstWeekday
         case exerciseRestTimes
         case accentIdentifier
@@ -99,15 +98,6 @@ extension UserDefaults {
         }
     }
     
-    var watchCompanion: Bool {
-        set {
-            self.set(newValue, forKey: SettingsKeys.watchCompanion.rawValue)
-        }
-        get {
-            self.value(forKey: SettingsKeys.watchCompanion.rawValue) as? Bool ?? true // default true
-        }
-    }
-
     /// Calendar first weekday: 1 = Sunday, 2 = Monday. Defaults to the locale's.
     var firstWeekday: Int {
         set {

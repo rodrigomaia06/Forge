@@ -11,7 +11,7 @@ import WorkoutDataKit
 import os.log
 
 extension Workout {
-    // TODO: would be better when SettingsStore, WatchConnectionManager, RestTimerStore etc are injected
+    // TODO: would be better when SettingsStore and RestTimerStore etc are injected
     
     func start() throws {
         guard let context = managedObjectContext else {

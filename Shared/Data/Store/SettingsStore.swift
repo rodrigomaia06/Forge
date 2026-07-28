@@ -89,16 +89,6 @@ final class SettingsStore: ObservableObject {
         }
     }
     
-    var watchCompanion: Bool {
-        get {
-            userDefaults.watchCompanion
-        }
-        set {
-            self.objectWillChange.send()
-            userDefaults.watchCompanion = newValue
-        }
-    }
-
     /// Calendar first weekday: 1 = Sunday, 2 = Monday.
     var firstWeekday: Int {
         get {
