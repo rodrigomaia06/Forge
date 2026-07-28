@@ -17,7 +17,4 @@ struct RestTimerAttributes: ActivityAttributes {
         /// When the rest timer reaches zero.
         var endDate: Date
     }
-
-    /// The exercise the rest belongs to, if known.
-    var exerciseName: String?
 }

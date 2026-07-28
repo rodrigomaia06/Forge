@@ -37,7 +37,7 @@ final class RestTimerLiveActivityController {
         } else {
             do {
                 activity = try Activity.request(
-                    attributes: RestTimerAttributes(exerciseName: nil),
+                    attributes: RestTimerAttributes(),
                     content: content,
                     pushType: nil
                 )
