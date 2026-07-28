@@ -101,6 +101,7 @@ struct RestTimerView: View {
     }
     
     private func startTimer(duration: TimeInterval) {
+        Haptics.impact(.light)
         restTimerStore.restTimerStart = Date()
         restTimerStore.restTimerDuration = duration
         

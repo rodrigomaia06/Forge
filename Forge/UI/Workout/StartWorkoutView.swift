@@ -26,55 +26,64 @@ struct StartWorkoutView: View {
         return request
     }
     
+    // Start a workout, or create a plan. The plus is the single entry point (no separate button).
+    private var addMenu: some View {
+        Menu {
+            Button {
+                Haptics.impact(.medium)
+                Workout.create(context: self.managedObjectContext).startOrCrash()
+            } label: {
+                Label("New workout", systemImage: "figure.strengthtraining.traditional")
+            }
+            Button {
+                self.newWorkoutPlan()
+            } label: {
+                Label("New workout plan", systemImage: "list.bullet.rectangle")
+            }
+        } label: {
+            Image(systemName: "plus")
+                .imageScale(.large)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Add")
+    }
+
     var body: some View {
         NavigationStack {
-            List {
-                Button {
-                    Haptics.success()
-                    Workout.create(context: self.managedObjectContext).startOrCrash()
-                } label: {
-                    Text("Start workout")
+            VStack(spacing: 0) {
+                // A big title with the plus on the right, matching the dashboard header.
+                HStack(alignment: .center) {
+                    Text("Workout")
+                        .font(.forgeGreeting)
+                        .foregroundColor(.forgeLabel)
+                    Spacer()
+                    addMenu
                 }
-                .buttonStyle(ForgePrimaryButtonStyle())
-                .listRowBackground(Color.clear)
-                .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
-                
-                ForEach(workoutPlans) { workoutPlan in
-                    Section {
-                        WorkoutPlanCell(workoutPlan: workoutPlan)
-                        WorkoutPlanRoutines(workoutPlan: workoutPlan)
-                            .deleteDisabled(true)
+                .padding(.horizontal, Theme.Spacing.l)
+                .padding(.top, Theme.Spacing.xxl)
+                .padding(.bottom, Theme.Spacing.m)
+
+                List {
+                    ForEach(workoutPlans) { workoutPlan in
+                        Section {
+                            WorkoutPlanCell(workoutPlan: workoutPlan)
+                            WorkoutPlanRoutines(workoutPlan: workoutPlan)
+                                .deleteDisabled(true)
+                        }
+                    }
+                    .onDelete { offsets in
+                        if self.needsConfirmBeforeDelete(offsets: offsets) {
+                            self.offsetsToDelete = offsets
+                        } else {
+                            self.deleteAt(offsets: offsets)
+                        }
                     }
                 }
-                .onDelete { offsets in
-                    if self.needsConfirmBeforeDelete(offsets: offsets) {
-                        self.offsetsToDelete = offsets
-                    } else {
-                        self.deleteAt(offsets: offsets)
-                    }
-                }
+                .listStyleCompat_InsetGroupedListStyle()
             }
-            .listStyleCompat_InsetGroupedListStyle()
-            .navigationBarTitle("Workout", displayMode: .inline)
-            .navigationBarItems(trailing:
-                Menu {
-                    Button {
-                        Haptics.success()
-                        Workout.create(context: self.managedObjectContext).startOrCrash()
-                    } label: {
-                        Label("New workout", systemImage: "figure.strengthtraining.traditional")
-                    }
-                    Button {
-                        self.newWorkoutPlan()
-                    } label: {
-                        Label("New workout plan", systemImage: "list.bullet.rectangle")
-                    }
-                } label: {
-                    Image(systemName: "plus")
-                        .imageScale(.large)
-                }
-                .accessibilityLabel("Add")
-            )
+            .background(Color.forgeBackground.ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
             .confirmationDialog("This cannot be undone.", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } }), titleVisibility: .visible, presenting: offsetsToDelete) { offsets in
                 Button("Delete workout plan", role: .destructive) {
                     self.deleteAt(offsets: offsets)
@@ -152,6 +161,7 @@ private struct WorkoutPlanRoutines: View {
     var body: some View {
         ForEach(workoutRoutines) { workoutRoutine in
             Button(action: {
+                Haptics.impact(.medium)
                 workoutRoutine.createWorkout(context: self.managedObjectContext).startOrCrash()
             }) {
                 VStack(alignment: .leading) {

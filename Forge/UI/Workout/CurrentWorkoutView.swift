@@ -156,11 +156,9 @@ struct CurrentWorkoutView: View {
     }
 
     private func cancelWorkout() {
+        // Discarding is destructive, so a warning haptic rather than a success one.
+        Haptics.warning()
         workout.cancelOrCrash()
-        
-        let feedbackGenerator = UINotificationFeedbackGenerator()
-        feedbackGenerator.prepare()
-        feedbackGenerator.notificationOccurred(.success)
     }
     
     private var cancelButton: some View {

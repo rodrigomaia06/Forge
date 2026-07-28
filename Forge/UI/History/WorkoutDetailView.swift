@@ -216,8 +216,9 @@ extension WorkoutDetailView {
             return
         }
         
+        Haptics.impact(.medium)
         newWorkout.startOrCrash()
-        
+
         sceneState.selectedTab = .workout
     }
     
@@ -232,8 +233,9 @@ extension WorkoutDetailView {
             return
         }
         
+        Haptics.impact(.medium)
         newWorkout.startOrCrash()
-        
+
         sceneState.selectedTab = .workout
     }
 }
