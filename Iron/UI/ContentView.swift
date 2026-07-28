@@ -2,11 +2,9 @@
 //  ContentView.swift
 //  Forge
 //
-//  Root screen: a horizontally-paged ScrollView (swipe between tabs) with the custom
-//  floating dock (ForgeTabBar) overlaid. This is the reliable iOS-17 pattern for swipeable
-//  pages alongside nav-heavy screens (paging TabView fights NavigationView/List): a
-//  horizontal ScrollView with .scrollTargetBehavior(.paging) + .scrollPosition, two-way
-//  bound to the dock's selection. Also hosts the .sqlite import flow.
+//  Root screen: a reliably swipeable pager (SwipeTabView / UIPageViewController) with the
+//  custom floating dock (ForgeTabBar) overlaid so page content sits behind it — that's what
+//  gives the dock real frosted glass. Also hosts the .sqlite import flow.
 //
 
 import SwiftUI
@@ -17,7 +15,6 @@ let NAVIGATION_BAR_SPACING: CGFloat = 16
 struct ContentView : View {
     @EnvironmentObject private var sceneState: SceneState
 
-    @State private var scrolledTab: SceneState.Tab?
     @State private var pendingImportURL: IdentifiableHolder<URL>?
     @State private var importResult: ImportResult?
 
@@ -28,43 +25,39 @@ struct ContentView : View {
     }
 
     private let tabs: [SceneState.Tab] = [.feed, .history, .workout, .settings]
+    /// Room reserved inside each page (above the home indicator) so content clears the dock.
+    private let dockInset: CGFloat = 64
 
     var body: some View {
-        GeometryReader { geo in
-            ScrollView(.horizontal) {
-                HStack(spacing: 0) {
-                    ForEach(tabs, id: \.self) { tab in
-                        page(for: tab)
-                            .frame(width: geo.size.width, height: geo.size.height)
-                            .id(tab)
-                    }
-                }
-                .scrollTargetLayout()
+        ZStack(alignment: .bottom) {
+            SwipeTabView(
+                selection: Binding(
+                    get: { tabs.firstIndex(of: sceneState.selectedTab) ?? 0 },
+                    set: { sceneState.selectedTab = tabs[$0] }
+                ),
+                count: tabs.count,
+                bottomInset: dockInset
+            ) { index in
+                AnyView(
+                    page(for: tabs[index])
+                        .environmentObject(SettingsStore.shared)
+                        .environmentObject(RestTimerStore.shared)
+                        .environmentObject(ExerciseStore.shared)
+                        .environmentObject(sceneState)
+                        .environment(\.managedObjectContext, WorkoutDataStorage.shared.persistentContainer.viewContext)
+                )
             }
-            .scrollTargetBehavior(.paging)
-            .scrollPosition(id: $scrolledTab)
-            .scrollIndicators(.hidden)
-            .productionEnvironment()
-        }
-        .background(Color.forgeBackground.ignoresSafeArea())
-        .safeAreaInset(edge: .bottom) {
+            .ignoresSafeArea()
+
             ForgeTabBar(selection: Binding(
                 get: { sceneState.selectedTab },
-                set: { select($0) }
+                set: { sceneState.selectedTab = $0 }
             ))
             .padding(.horizontal, Theme.Spacing.l)
-            .padding(.top, Theme.Spacing.xs)
+            .padding(.bottom, Theme.Spacing.xs)
         }
-        .preferredColorScheme(.dark)
-        .onAppear {
-            if scrolledTab == nil { scrolledTab = sceneState.selectedTab }
-        }
-        .onChange(of: scrolledTab) { _, newValue in
-            // Swiping updates the scroll position -> reflect it in the dock.
-            if let newValue, newValue != sceneState.selectedTab {
-                sceneState.selectedTab = newValue
-            }
-        }
+        .background(Color.forgeBackground.ignoresSafeArea())
+        .preferredColorScheme(.dark) // Forge is dark-first (matches the design direction)
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name.RestoreFromBackup)) { output in
             guard let url = output.userInfo?[restoreFromBackupDataUserInfoKey] as? URL else { return }
             self.pendingImportURL = IdentifiableHolder(value: url)
@@ -80,13 +73,6 @@ struct ContentView : View {
         .alert(item: $importResult) { result in
             Alert(title: Text(result.title), message: Text(result.message))
         }
-    }
-
-    /// Dock tap -> update selection and animate the pager to that page.
-    private func select(_ tab: SceneState.Tab) {
-        guard tab != sceneState.selectedTab else { return }
-        sceneState.selectedTab = tab
-        withAnimation(.snappy(duration: 0.3)) { scrolledTab = tab }
     }
 
     @ViewBuilder private func page(for tab: SceneState.Tab) -> some View {
@@ -106,16 +92,6 @@ struct ContentView : View {
         } catch {
             importResult = ImportResult(title: "Import Failed", message: error.localizedDescription)
         }
-    }
-}
-
-private extension View {
-    func productionEnvironment() -> some View {
-        self
-            .environmentObject(SettingsStore.shared)
-            .environmentObject(RestTimerStore.shared)
-            .environmentObject(ExerciseStore.shared)
-            .environment(\.managedObjectContext, WorkoutDataStorage.shared.persistentContainer.viewContext)
     }
 }
 
