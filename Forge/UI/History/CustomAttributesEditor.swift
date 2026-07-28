@@ -39,7 +39,9 @@ struct CustomAttributesEditor: View {
                         }
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    // Borderless, not plain: a plain button's tap is swallowed once the enclosing List
+                    // enters edit mode, so the row could not be tapped to edit an existing attribute.
+                    .buttonStyle(.borderless)
                 }
                 .onDelete(perform: isEditable ? deleteAttributes : nil)
 

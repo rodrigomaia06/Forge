@@ -113,9 +113,14 @@ extension View {
         toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") {
+                Button {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                } label: {
+                    // The keyboard-down chevron is the standard dismiss affordance and reads as part of
+                    // the keyboard, unlike a lone "Done" word floating above the number pad.
+                    Image(systemName: "keyboard.chevron.compact.down")
                 }
+                .accessibilityLabel("Dismiss keyboard")
             }
         }
     }

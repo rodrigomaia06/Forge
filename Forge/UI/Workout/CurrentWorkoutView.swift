@@ -219,6 +219,9 @@ struct CurrentWorkoutView: View {
                         Section(header: Text("Reorder exercises".uppercased())) {
                             ForEach(workoutExercises) { workoutExercise in
                                 Text(workoutExercise.exercise(in: exerciseStore.exercises)?.title ?? "Exercise")
+                                    // The lifted drag preview has rounded corners; without an explicit row
+                                    // background the corners reveal the black window behind the list.
+                                    .listRowBackground(Color.forgeSurface)
                             }
                             .onMove { source, destination in
                                 var exercises = self.workoutExercises
