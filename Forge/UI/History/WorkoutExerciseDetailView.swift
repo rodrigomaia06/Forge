@@ -23,6 +23,7 @@ struct WorkoutExerciseDetailView : View {
     @ObservedObject var workoutExercise: WorkoutExercise
 
     @State private var moreSheetSet: WorkoutSet? = nil
+    @State private var noteSheetSet: WorkoutSet? = nil
     
     @State private var showExerciseInfo = false
     
@@ -186,7 +187,8 @@ struct WorkoutExerciseDetailView : View {
                 isUpNext: firstUncompletedSet == workoutSet,
                 showRPE: settingsStore.showRPE,
                 onToggleComplete: { toggleComplete(workoutSet) },
-                onMore: { moreSheetSet = workoutSet }
+                onMore: { moreSheetSet = workoutSet },
+                onNote: { noteSheetSet = workoutSet }
             )
         }
         .onDelete { offsets in
@@ -314,6 +316,13 @@ struct WorkoutExerciseDetailView : View {
                     .navigationBarItems(trailing: Button("Done") { moreSheetSet = nil })
             }
         }
+        .sheet(item: $noteSheetSet) { set in
+            NavigationStack {
+                SetNoteEditor(workoutSet: set)
+                    .navigationBarTitle(Text("Note"), displayMode: .inline)
+                    .navigationBarItems(trailing: Button("Done") { noteSheetSet = nil })
+            }
+        }
         .navigationBarTitle(Text(workoutExercise.exercise(in: exerciseStore.exercises)?.title ?? ""), displayMode: .inline)
         .navigationBarItems(trailing:
             HStack(spacing: NAVIGATION_BAR_SPACING) {
@@ -358,6 +367,9 @@ private struct ActiveSetRow: View {
     let showRPE: Bool
     var onToggleComplete: () -> Void
     var onMore: () -> Void
+    var onNote: () -> Void
+
+    private var hasNote: Bool { !(workoutSet.comment ?? "").isEmpty }
 
     @FocusState private var focus: Field?
     private enum Field { case weight, reps }
@@ -432,6 +444,16 @@ private struct ActiveSetRow: View {
                         .foregroundColor(.forgeSecondaryLabel)
                 }
 
+                // Per-set note: green once the set has one, so it reads at a glance which sets are annotated.
+                Button(action: onNote) {
+                    Image(systemName: hasNote ? "text.bubble.fill" : "text.bubble")
+                        .foregroundColor(hasNote ? .forgeSuccess : .forgeSecondaryLabel)
+                        .frame(width: 28, height: 30)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(hasNote ? "Edit set note" : "Add set note")
+
                 Button(action: onMore) {
                     Image(systemName: "ellipsis")
                         .foregroundColor(.forgeSecondaryLabel)
@@ -478,6 +500,33 @@ private struct ActiveSetRow: View {
                     .frame(width: 3)
             }
         )
+    }
+}
+
+/// A focused editor for a single set's note, opened from the note icon on the row. It writes straight
+/// to the set so the row's note text and green icon update as you type, and persists when it closes.
+private struct SetNoteEditor: View {
+    @ObservedObject var workoutSet: WorkoutSet
+
+    private var noteBinding: Binding<String> {
+        Binding(
+            get: { workoutSet.comment ?? "" },
+            set: { workoutSet.comment = $0.isEmpty ? nil : $0 }
+        )
+    }
+
+    var body: some View {
+        Form {
+            Section(footer: Text("A note for this set only.")) {
+                TextField("Note", text: noteBinding, axis: .vertical)
+                    .lineLimit(3...8)
+            }
+        }
+        .onDisappear {
+            let trimmed = (workoutSet.comment ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            workoutSet.comment = trimmed.isEmpty ? nil : trimmed
+            workoutSet.managedObjectContext?.saveOrCrash()
+        }
     }
 }
 
