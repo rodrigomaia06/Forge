@@ -57,7 +57,9 @@ struct ForgeSetRow: View {
                 HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.s) {
                     Text(value)
                         .font(.forgeValue)
-                        .foregroundColor(status == .done ? .forgeLabel : .forgeSecondaryLabel)
+                        // The active (up-next) and completed sets read at full contrast; only
+                        // not-yet-reached sets are muted, so the current set stands out at a glance.
+                        .foregroundColor(status == .pending ? .forgeSecondaryLabel : .forgeLabel)
                     if let target {
                         Text(target)
                             .font(.forgeCaption)

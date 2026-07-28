@@ -29,6 +29,10 @@ final class ScreenshotTests: XCTestCase {
         try capture(ForgeSetRowGallery(), named: "set-rows")
     }
 
+    func testCaptureExerciseView() throws {
+        try capture(ForgeExerciseView(), named: "exercise-view")
+    }
+
     // MARK: - Helpers
 
     private func capture<V: View>(_ view: V, named name: String) throws {
