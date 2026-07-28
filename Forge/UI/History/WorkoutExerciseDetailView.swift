@@ -237,36 +237,42 @@ struct WorkoutExerciseDetailView : View {
         }
     }
     
-    private var historyWorkoutSets: some View {
-        ForEach(workoutExerciseHistory) { pastWorkoutExercise in
-            Section {
-                // Tap the date to open that session in the History tab. The whole workout opens there,
-                // so notes and every exercise from that day are visible in one place.
-                Button {
-                    guard let workout = pastWorkoutExercise.workout else { return }
-                    sceneState.historyWorkoutToOpen = workout
-                    sceneState.selectedTab = .history
-                } label: {
-                    HStack {
-                        WorkoutExerciseSectionHeader(workoutExercise: pastWorkoutExercise)
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(.forgeSecondaryLabel)
+    @ViewBuilder private var historyWorkoutSets: some View {
+        if !workoutExerciseHistory.isEmpty {
+            // All previous sessions live in one section so they read as a compact list instead of a
+            // stack of spaced-out cards. Each date is a header row that opens that workout in History.
+            Section(header: Text("Previous sessions")) {
+                ForEach(workoutExerciseHistory) { pastWorkoutExercise in
+                    Button {
+                        guard let workout = pastWorkoutExercise.workout else { return }
+                        sceneState.historyWorkoutToOpen = workout
+                        sceneState.selectedTab = .history
+                    } label: {
+                        HStack(spacing: Theme.Spacing.xs) {
+                            Text(Workout.dateFormatter.string(from: pastWorkoutExercise.workout?.start, fallback: "Unknown date"))
+                                .font(.forgeCaption.weight(.semibold))
+                                .foregroundColor(.forgeSecondaryLabel)
+                            if let comment = pastWorkoutExercise.comment, !comment.isEmpty {
+                                Text(comment)
+                                    .font(.forgeCaption.italic())
+                                    .foregroundColor(.forgeSecondaryLabel)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundColor(.forgeSeparator)
+                        }
+                        .contentShape(Rectangle())
                     }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityHint("Opens this workout in the History tab")
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Opens this workout in the History tab")
+                    .listRowInsets(EdgeInsets(top: Theme.Spacing.s, leading: Theme.Spacing.m, bottom: Theme.Spacing.xxs, trailing: Theme.Spacing.m))
 
-                pastWorkoutExercise.comment.map {
-                    Text($0.enquoted)
-                        .lineLimit(1)
-                        .font(Font.body.italic())
-                        .foregroundColor(.secondary)
-                }
-                ForEach(self.indexedWorkoutSets(for: pastWorkoutExercise), id: \.1.id) { (index, workoutSet) in
-                    WorkoutSetCell(workoutSet: workoutSet, index: index, colorMode: .disabled)
+                    ForEach(self.indexedWorkoutSets(for: pastWorkoutExercise), id: \.1.id) { (index, workoutSet) in
+                        WorkoutSetCell(workoutSet: workoutSet, index: index, colorMode: .disabled)
+                            .listRowInsets(EdgeInsets(top: 1, leading: Theme.Spacing.m, bottom: 1, trailing: Theme.Spacing.m))
+                    }
                 }
             }
         }
@@ -465,7 +471,7 @@ private struct ActiveSetRow: View {
             ZStack(alignment: .leading) {
                 Color(.secondarySystemGroupedBackground)
                 if workoutSet.isCompleted {
-                    Color.forgeSuccess.opacity(0.08)
+                    Color.forgeSuccess.opacity(0.03)
                 }
                 Rectangle()
                     .fill(railColor)
