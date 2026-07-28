@@ -29,7 +29,10 @@ class WorkoutDataMigrationTests: XCTestCase {
     }
     
     func testMigrateFromV1() throws {
-        prepareMigrationTest(workoutData: "modelv1_ironv1.0.0", allowInferMappingModel: false)
+        // Inference is allowed because the additive v5/v6 hops (new entities and new WorkoutSet
+        // attributes) migrate lightweight, matching production. Core Data still uses the explicit
+        // V1->V4 mapping model for that hop, so the heavyweight id->uuid transform is exercised.
+        prepareMigrationTest(workoutData: "modelv1_ironv1.0.0", allowInferMappingModel: true)
         
         let expectation = XCTestExpectation(description: "Load persistent stores")
         persistentContainer.loadPersistentStores { (description, error) in
@@ -46,7 +49,7 @@ class WorkoutDataMigrationTests: XCTestCase {
     }
     
     func testMigrateFromV2() throws {
-        prepareMigrationTest(workoutData: "modelv2_ironv1.0.7", allowInferMappingModel: false)
+        prepareMigrationTest(workoutData: "modelv2_ironv1.0.7", allowInferMappingModel: true)
         
         let expectation = XCTestExpectation(description: "Load persistent stores")
         persistentContainer.loadPersistentStores { (description, error) in
@@ -63,7 +66,7 @@ class WorkoutDataMigrationTests: XCTestCase {
     }
     
     func testMigrateFromV3() throws {
-        prepareMigrationTest(workoutData: "modelv3_ironv1.1.0", allowInferMappingModel: false)
+        prepareMigrationTest(workoutData: "modelv3_ironv1.1.0", allowInferMappingModel: true)
         
         let expectation = XCTestExpectation(description: "Load persistent stores")
         persistentContainer.loadPersistentStores { (description, error) in

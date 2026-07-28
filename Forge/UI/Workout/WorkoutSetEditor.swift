@@ -20,8 +20,6 @@ struct WorkoutSetEditor : View {
     @EnvironmentObject var exerciseStore: ExerciseStore
     
     @ObservedObject var workoutSet: WorkoutSet
-    /// The same set from the previous session, shown as an inline "last time" reference.
-    var previousSet: WorkoutSet? = nil
     var onDone: () -> Void = {}
     
     @State private var showHelpAlert = false
@@ -245,11 +243,6 @@ struct WorkoutSetEditor : View {
     var body: some View {
         VStack { /// no spacing to the keyboard
             VStack(spacing: 24) {
-                if let previousSet = previousSet, previousSet.isCompleted {
-                    Text("Last time  \(previousSet.displayTitle(weightUnit: settingsStore.weightUnit))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
                 HStack(spacing: 16) {
                     /**
                      NOTE: the draggers shouldn't be too low because
