@@ -24,26 +24,9 @@ struct WorkoutExerciseDetailView : View {
 
     @State private var moreSheetSet: WorkoutSet? = nil
     @State private var noteSheetSet: WorkoutSet? = nil
+    @State private var showExerciseNote = false
     
     @State private var showExerciseInfo = false
-    
-    @State private var workoutExerciseCommentInput: String? = nil
-    private var workoutExerciseComment: Binding<String> {
-        Binding(
-            get: {
-                return self.workoutExerciseCommentInput ?? self.workoutExercise.comment ?? ""
-            },
-            set: { newValue in
-                self.workoutExerciseCommentInput = newValue
-            }
-        )
-    }
-    private func adjustAndSaveWorkoutExerciseCommentInput() {
-        guard let newValue = workoutExerciseCommentInput?.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
-        workoutExerciseCommentInput = newValue
-        workoutExercise.comment = newValue.isEmpty ? nil : newValue
-        self.managedObjectContext.saveOrCrash()
-    }
     
     init(workoutExercise: WorkoutExercise) {
         self.workoutExercise = workoutExercise
@@ -177,6 +160,35 @@ struct WorkoutExerciseDetailView : View {
         }
     }
     
+    private var hasExerciseNote: Bool { !(workoutExercise.comment ?? "").isEmpty }
+
+    private var exerciseNoteSubtitle: some View {
+        Button {
+            showExerciseNote = true
+        } label: {
+            HStack(spacing: Theme.Spacing.xs) {
+                if hasExerciseNote {
+                    Text(workoutExercise.comment ?? "")
+                        .font(.forgeCaption.italic())
+                        .lineLimit(2)
+                } else {
+                    Image(systemName: "plus")
+                        .font(.caption2.weight(.semibold))
+                    Text("Add a note")
+                        .font(.forgeCaption)
+                }
+            }
+            .foregroundColor(.forgeSecondaryLabel)
+            .frame(maxWidth: .infinity)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, Theme.Spacing.l)
+            .padding(.vertical, Theme.Spacing.s)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(hasExerciseNote ? "Exercise note: \(workoutExercise.comment ?? "")" : "Add a note for this exercise")
+    }
+
     private var currentWorkoutSets: some View {
         ForEach(indexedWorkoutSets(for: workoutExercise), id: \.1.id) { (index, workoutSet) in
             ActiveSetRow(
@@ -240,42 +252,43 @@ struct WorkoutExerciseDetailView : View {
     }
     
     @ViewBuilder private var historyWorkoutSets: some View {
-        if !workoutExerciseHistory.isEmpty {
-            // All previous sessions live in one section so they read as a compact list instead of a
-            // stack of spaced-out cards. Each date is a header row that opens that workout in History.
-            Section(header: Text("Previous sessions")) {
-                ForEach(workoutExerciseHistory) { pastWorkoutExercise in
-                    Button {
-                        guard let workout = pastWorkoutExercise.workout else { return }
-                        sceneState.historyWorkoutToOpen = workout
-                        sceneState.selectedTab = .history
-                    } label: {
-                        HStack(spacing: Theme.Spacing.xs) {
-                            Text(Workout.dateFormatter.string(from: pastWorkoutExercise.workout?.start, fallback: "Unknown date"))
-                                .font(.forgeCaption.weight(.semibold))
+        // Each past session is its own card so different days read as clearly separate, not one merged
+        // list. The date header opens that whole workout in the History tab.
+        ForEach(Array(workoutExerciseHistory.enumerated()), id: \.element.objectID) { offset, pastWorkoutExercise in
+            Section {
+                Button {
+                    guard let workout = pastWorkoutExercise.workout else { return }
+                    sceneState.historyWorkoutToOpen = workout
+                    sceneState.selectedTab = .history
+                } label: {
+                    HStack(spacing: Theme.Spacing.xs) {
+                        Text(Workout.dateFormatter.string(from: pastWorkoutExercise.workout?.start, fallback: "Unknown date"))
+                            .font(.forgeCaption.weight(.semibold))
+                            .foregroundColor(.forgeSecondaryLabel)
+                        if let comment = pastWorkoutExercise.comment, !comment.isEmpty {
+                            Text(comment)
+                                .font(.forgeCaption.italic())
                                 .foregroundColor(.forgeSecondaryLabel)
-                            if let comment = pastWorkoutExercise.comment, !comment.isEmpty {
-                                Text(comment)
-                                    .font(.forgeCaption.italic())
-                                    .foregroundColor(.forgeSecondaryLabel)
-                                    .lineLimit(1)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundColor(.forgeSeparator)
+                                .lineLimit(1)
                         }
-                        .contentShape(Rectangle())
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(.forgeSeparator)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityHint("Opens this workout in the History tab")
-                    .listRowInsets(EdgeInsets(top: Theme.Spacing.s, leading: Theme.Spacing.m, bottom: Theme.Spacing.xxs, trailing: Theme.Spacing.m))
-
-                    ForEach(self.indexedWorkoutSets(for: pastWorkoutExercise), id: \.1.id) { (index, workoutSet) in
-                        WorkoutSetCell(workoutSet: workoutSet, index: index, colorMode: .disabled)
-                            .listRowInsets(EdgeInsets(top: 1, leading: Theme.Spacing.m, bottom: 1, trailing: Theme.Spacing.m))
-                    }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens this workout in the History tab")
+                .listRowInsets(EdgeInsets(top: Theme.Spacing.s, leading: Theme.Spacing.m, bottom: Theme.Spacing.xxs, trailing: Theme.Spacing.m))
+
+                ForEach(self.indexedWorkoutSets(for: pastWorkoutExercise), id: \.1.id) { (index, workoutSet) in
+                    WorkoutSetCell(workoutSet: workoutSet, index: index, colorMode: .disabled)
+                        .listRowInsets(EdgeInsets(top: 2, leading: Theme.Spacing.m, bottom: 2, trailing: Theme.Spacing.m))
+                }
+            } header: {
+                // A single umbrella label above the first card keeps the "these are past" context.
+                if offset == 0 { Text("Previous sessions") }
             }
         }
     }
@@ -289,22 +302,16 @@ struct WorkoutExerciseDetailView : View {
     
     var body: some View {
         VStack(spacing: 0) {
-            List {
-                Section {
-                    TextField("Comment", text: workoutExerciseComment, onEditingChanged: { isEditingTextField in
-                        if !isEditingTextField {
-                            self.adjustAndSaveWorkoutExerciseCommentInput()
-                        }
-                    })
-                }
+            // The exercise note reads as a subtitle under the title rather than a floating card, so it
+            // clearly belongs to this exercise. Tapping it opens an editor.
+            exerciseNoteSubtitle
 
-                // A labeled section for the sets being logged now, so they read as clearly separate
-                // from the muted "Previous sessions" list below.
+            List {
                 Section(header: Text("This session")) {
                     currentWorkoutSets
                     addSetButton
                 }
-                
+
                 historyWorkoutSets
             }
             .listStyleCompat_InsetGroupedListStyle()
@@ -325,6 +332,13 @@ struct WorkoutExerciseDetailView : View {
                 SetNoteEditor(workoutSet: set)
                     .navigationBarTitle(Text("Note"), displayMode: .inline)
                     .navigationBarItems(trailing: Button("Done") { noteSheetSet = nil })
+            }
+        }
+        .sheet(isPresented: $showExerciseNote) {
+            NavigationStack {
+                ExerciseNoteEditor(workoutExercise: workoutExercise)
+                    .navigationBarTitle(Text("Exercise note"), displayMode: .inline)
+                    .navigationBarItems(trailing: Button("Done") { showExerciseNote = false })
             }
         }
         .navigationBarTitle(Text(workoutExercise.exercise(in: exerciseStore.exercises)?.title ?? ""), displayMode: .inline)
@@ -530,6 +544,32 @@ private struct SetNoteEditor: View {
             let trimmed = (workoutSet.comment ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             workoutSet.comment = trimmed.isEmpty ? nil : trimmed
             workoutSet.managedObjectContext?.saveOrCrash()
+        }
+    }
+}
+
+/// A focused editor for the whole exercise's note in this session, opened from the subtitle.
+private struct ExerciseNoteEditor: View {
+    @ObservedObject var workoutExercise: WorkoutExercise
+
+    private var noteBinding: Binding<String> {
+        Binding(
+            get: { workoutExercise.comment ?? "" },
+            set: { workoutExercise.comment = $0.isEmpty ? nil : $0 }
+        )
+    }
+
+    var body: some View {
+        Form {
+            Section(footer: Text("A note for this exercise in this session.")) {
+                TextField("Note", text: noteBinding, axis: .vertical)
+                    .lineLimit(3...8)
+            }
+        }
+        .onDisappear {
+            let trimmed = (workoutExercise.comment ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            workoutExercise.comment = trimmed.isEmpty ? nil : trimmed
+            workoutExercise.managedObjectContext?.saveOrCrash()
         }
     }
 }
