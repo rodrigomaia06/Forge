@@ -21,12 +21,13 @@ struct CurrentWorkoutView: View {
     @ObservedObject var workout: Workout
     
     @State private var showingCancelActionSheet = false
+    @State private var showingFinishConfirmation = false
+    @State private var showingCannotFinish = false
     @State private var activeSheet: SheetType?
     
     private enum SheetType: Identifiable {
         case exerciseSelector
-        case finish
-        
+
         var id: Self { self }
     }
     
@@ -47,8 +48,6 @@ struct CurrentWorkoutView: View {
                     self.managedObjectContext.saveOrCrash()
                 }
             ).typeErased
-        case .finish:
-            return self.finishWorkoutSheet.typeErased
         }
     }
     
@@ -165,54 +164,37 @@ struct CurrentWorkoutView: View {
         }
     }
 
-    private var closeSheetButton: some View {
-        Button("Close") {
-            self.activeSheet = nil
+    /// The finish button routes here: block an empty workout, otherwise confirm before finishing.
+    private func requestFinish() {
+        Haptics.impact(.medium)
+        if workout.hasCompletedSets == true {
+            showingFinishConfirmation = true
+        } else {
+            showingCannotFinish = true
         }
     }
-    
+
+    /// Message shown in the finish confirmation. Warns when unfinished sets will be dropped.
+    private var finishConfirmationMessage: String {
+        if workout.isCompleted == false {
+            return "Sets you haven't completed will be removed. This can't be undone."
+        }
+        return "This ends and saves your workout."
+    }
+
     private func finishWorkout() {
         workout.finishOrCrash()
-        
+
         // haptic feedback
         let feedbackGenerator = UINotificationFeedbackGenerator()
         feedbackGenerator.prepare()
         feedbackGenerator.notificationOccurred(.success)
         AudioServicesPlaySystemSound(1103) // Tink sound
 
-        // Switch to the dashboard first, then dismiss the summary. The sheet slides down and reveals
-        // the dashboard already in place, so finishing lands the user back home.
-        withAnimation { sceneState.selectedTab = .feed }
-        activeSheet = nil
+        // Land back on the dashboard. Native tab selection does not animate on its own.
+        sceneState.selectedTab = .feed
     }
-    
-    @State private var finishWorkoutSheetActivityItems: [Any]?
-    private var finishWorkoutSheet: some View {
-        NavigationStack {
-            WorkoutLog(workout: self.workout)
-                .navigationBarTitle("Summary", displayMode: .inline)
-                .navigationBarItems(
-                    leading: closeSheetButton,
-                    trailing:
-                    HStack(spacing: NAVIGATION_BAR_SPACING) {
-                        Button(action: {
-                            guard let logText = self.workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit) else { return }
-                            self.finishWorkoutSheetActivityItems = [logText]
-                        }) {
-                            Image(systemName: "square.and.arrow.up")
-                        }
-                        
-                        Button("Finish") {
-                            self.finishWorkout()
-                        }
-                    }
-                )
-                .overlay(ActivitySheet(activityItems: $finishWorkoutSheetActivityItems))
-                .environmentObject(settingsStore)
-                .environmentObject(exerciseStore)
-        }
-    }
-    
+
     private func cancelWorkout() {
         workout.cancelOrCrash()
         
@@ -283,8 +265,7 @@ struct CurrentWorkoutView: View {
                     }
                     Section {
                         Button("Finish workout") {
-                            Haptics.impact(.medium)
-                            self.activeSheet = .finish
+                            self.requestFinish()
                         }
                         .buttonStyle(ForgePrimaryButtonStyle())
                         .listRowInsets(EdgeInsets())
@@ -304,6 +285,17 @@ struct CurrentWorkoutView: View {
             Button("Keep going", role: .cancel) { }
         } message: {
             Text("This cannot be undone.")
+        }
+        .alert("Finish workout?", isPresented: $showingFinishConfirmation) {
+            Button("Finish") { self.finishWorkout() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text(finishConfirmationMessage)
+        }
+        .alert("No completed sets", isPresented: $showingCannotFinish) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Complete at least one set before finishing this workout.")
         }
     }
 }

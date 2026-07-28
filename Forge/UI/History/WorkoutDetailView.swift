@@ -173,8 +173,9 @@ struct WorkoutDetailView : View {
                 Button(action: {
                     self.showingOptionsMenu = true
                 }) {
+                    // No asymmetric padding: it pushed the icon off-center next to Edit.
                     Image(systemName: "ellipsis")
-                        .padding([.leading, .top, .bottom])
+                        .imageScale(.large)
                 }
                 EditButton()
             }

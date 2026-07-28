@@ -97,7 +97,6 @@ struct FeedView: View {
         HStack(spacing: Theme.Spacing.m) {
             statTile("\(count(in: .weekOfYear))", "This week")
             statTile("\(count(in: .month))", "This month")
-            statTile(shortVolume(monthVolume), "Volume")
         }
     }
 
@@ -116,13 +115,6 @@ struct FeedView: View {
             guard let s = w.start else { return false }
             return cal.isDate(s, equalTo: Date(), toGranularity: unit)
         }.count
-    }
-
-    private var monthVolume: Double {
-        workouts.reduce(0.0) { total, w in
-            guard let s = w.start, cal.isDate(s, equalTo: Date(), toGranularity: .month) else { return total }
-            return total + volume(of: w)
-        }
     }
 
     // MARK: Activity calendar (month <-> year)
@@ -431,8 +423,6 @@ struct FeedView: View {
         return (exercises.count, sets.count, volume)
     }
 
-    private func volume(of workout: Workout) -> Double { stats(workout).volume }
-
     private func dateLabel(_ date: Date?) -> String {
         guard let date = date else { return "" }
         let f = DateFormatter(); f.dateFormat = "MMM d"
@@ -447,15 +437,6 @@ struct FeedView: View {
         return "\(number) \(unit.unit.symbol)"
     }
 
-    private func shortVolume(_ kg: Double) -> String {
-        let unit = settingsStore.weightUnit
-        let value = WeightUnit.convert(weight: kg, from: .metric, to: unit)
-        let symbol = unit.unit.symbol
-        if value >= 1000 {
-            return String(format: "%.1fk %@", value / 1000, symbol)
-        }
-        return "\(Int(value)) \(symbol)"
-    }
 }
 
 #if DEBUG
