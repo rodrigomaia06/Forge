@@ -275,7 +275,7 @@ struct WorkoutExerciseDetailView : View {
         }
         .sheet(item: $moreSheetSet) { set in
             NavigationStack {
-                MoreView(workoutSet: set, weightUnit: settingsStore.weightUnit)
+                SetMoreView(workoutSet: set, weightUnit: settingsStore.weightUnit)
                     .navigationBarTitle(Text(set.displayTitle(weightUnit: settingsStore.weightUnit)), displayMode: .inline)
                     .navigationBarItems(trailing: Button("Done") { moreSheetSet = nil })
             }

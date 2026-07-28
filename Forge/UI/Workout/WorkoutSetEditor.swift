@@ -182,7 +182,7 @@ struct WorkoutSetEditor : View {
     
     private var moreSheet: some View {
         NavigationStack {
-            MoreView(workoutSet: workoutSet, weightUnit: settingsStore.weightUnit)
+            SetMoreView(workoutSet: workoutSet, weightUnit: settingsStore.weightUnit)
                 .navigationBarTitle(Text(workoutSet.displayTitle(weightUnit: settingsStore.weightUnit)), displayMode: .inline)
                 .navigationBarItems(leading:
                     Button("Close") {
@@ -299,7 +299,7 @@ struct WorkoutSetEditor : View {
     }
 }
 
-struct MoreView: View {
+struct SetMoreView: View {
     @ObservedObject var workoutSet: WorkoutSet
     var weightUnit: WeightUnit = .metric
 
@@ -485,7 +485,7 @@ struct WorkoutSetEditor_Previews : PreviewProvider {
                 .previewDisplayName("Imperial")
                 .previewLayout(.sizeThatFits)
             
-            MoreView(workoutSet: MockWorkoutData.metricRandom.workoutSet, weightUnit: .metric)
+            SetMoreView(workoutSet: MockWorkoutData.metricRandom.workoutSet, weightUnit: .metric)
                 .mockEnvironment(weightUnit: .metric)
                 .previewLayout(.sizeThatFits)
                 .listStyle(GroupedListStyle())
