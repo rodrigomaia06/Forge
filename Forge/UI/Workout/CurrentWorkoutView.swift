@@ -120,49 +120,6 @@ struct CurrentWorkoutView: View {
         workout.title = newValue.isEmpty ? nil : newValue
     }
     
-    private func currentWorkoutExerciseDetailView(workoutExercise: WorkoutExercise) -> some View {
-        VStack(spacing: 0) {
-            // on the iPad we have two columns at once so we already have a TimerBannerView
-            if UIDevice.current.userInterfaceIdiom != .pad {
-                if #available(iOS 15.0, *) {
-                    Divider()
-                }
-                TimerBannerView(workout: workout)
-                Divider()
-            }
-            WorkoutExerciseDetailView(workoutExercise: workoutExercise)
-                .layoutPriority(1)
-                .environmentObject(settingsStore)
-        }
-    }
-
-    private func workoutExerciseCell(workoutExercise: WorkoutExercise) -> some View {
-        let totalSets = workoutExercise.workoutSets?.count ?? 0
-        let completedSets = workoutExercise.numberOfCompletedSets ?? 0
-        let isCompleted = workoutExercise.isCompleted ?? false
-
-        return NavigationLink(destination: currentWorkoutExerciseDetailView(workoutExercise: workoutExercise)) {
-            HStack(spacing: Theme.Spacing.m) {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                    Text(workoutExercise.exercise(in: exerciseStore.exercises)?.title ?? "Unknown Exercise")
-                        .font(.forgeHeadline)
-                        .foregroundColor(isCompleted ? .forgeSecondaryLabel : .forgeLabel)
-                    if totalSets > 0 {
-                        Text("\(completedSets) of \(totalSets) sets")
-                            .font(.forgeCaption)
-                            .foregroundColor(.forgeSecondaryLabel)
-                    }
-                }
-                .layoutPriority(1)
-                Spacer(minLength: Theme.Spacing.s)
-                if isCompleted {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.forgeSuccess)
-                }
-            }
-            .padding(.vertical, Theme.Spacing.xxs)
-        }
-    }
 
     /// The finish button routes here: block an empty workout, otherwise confirm before finishing.
     private func requestFinish() {
@@ -236,30 +193,19 @@ struct CurrentWorkoutView: View {
                             }
                         })
                     }
-                    Section(header: Text("Exercises".uppercased())) {
-                        ForEach(workoutExercises) { workoutExercise in
-                            self.workoutExerciseCell(workoutExercise: workoutExercise)
-                        }
-                        .onDelete { offsets in
-                            let workoutExercises = self.workoutExercises
-                            for i in offsets {
-                                let workoutExercise = workoutExercises[i]
-                                self.managedObjectContext.delete(workoutExercise)
-                                workoutExercise.workout?.removeFromWorkoutExercises(workoutExercise)
-                            }
-                        }
-                        .onMove { source, destination in
-                            var workoutExercises = self.workoutExercises
-                            workoutExercises.move(fromOffsets: source, toOffset: destination)
-                            self.workout.workoutExercises = NSOrderedSet(array: workoutExercises)
-                        }
-                        
+                    // Each exercise is a card with its set table inline, so logging never leaves this
+                    // screen. Remove an exercise from its card's ... menu.
+                    ForEach(workoutExercises) { workoutExercise in
+                        WorkoutExerciseDetailView(workoutExercise: workoutExercise, embedded: true)
+                    }
+
+                    Section {
                         Button(action: {
                             self.activeSheet = .exerciseSelector
                         }) {
                             HStack {
                                 Image(systemName: "plus")
-                                Text("Add Exercises")
+                                Text("Add exercise")
                             }
                         }
                     }

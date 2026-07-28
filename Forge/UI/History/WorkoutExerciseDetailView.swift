@@ -35,9 +35,14 @@ struct WorkoutExerciseDetailView : View {
     }
     
     @State private var showExerciseInfo = false
-    
-    init(workoutExercise: WorkoutExercise) {
+
+    /// When true, renders as a card embedded in the current-workout list (name header + set table,
+    /// no navigation bar). When false, renders as the pushed full-screen view used from history.
+    let embedded: Bool
+
+    init(workoutExercise: WorkoutExercise, embedded: Bool = false) {
         self.workoutExercise = workoutExercise
+        self.embedded = embedded
         _workoutExerciseHistory = FetchRequest(fetchRequest: workoutExercise.historyFetchRequest)
     }
 
@@ -218,6 +223,14 @@ struct WorkoutExerciseDetailView : View {
         return sets[index].displayTitle(weightUnit: settingsStore.weightUnit)
     }
 
+    private func deleteSet(_ workoutSet: WorkoutSet) {
+        managedObjectContext.delete(workoutSet)
+        workoutSet.workoutExercise?.removeFromWorkoutSets(workoutSet)
+        DispatchQueue.main.async { // iOS 14 beta crashes if this is not async
+            self.managedObjectContext.saveOrCrash()
+        }
+    }
+
     private var currentWorkoutSets: some View {
         ForEach(indexedWorkoutSets(for: workoutExercise), id: \.1.id) { (index, workoutSet) in
             ActiveSetRow(
@@ -232,34 +245,16 @@ struct WorkoutExerciseDetailView : View {
                 onMore: { moreSheetSet = workoutSet },
                 onNote: { noteSheetSet = workoutSet }
             )
-        }
-        .onDelete { offsets in
-            let workoutSets = self.workoutSets(for: self.workoutExercise)
-            for i in offsets {
-                let workoutSet = workoutSets[i]
-                self.managedObjectContext.delete(workoutSet)
-                workoutSet.workoutExercise?.removeFromWorkoutSets(workoutSet)
-            }
-            DispatchQueue.main.async { // iOS 14 beta crashes if this is not async
-                self.managedObjectContext.saveOrCrash()
+            // Native trailing swipe rather than onDelete, so the delete action fills the row height
+            // cleanly instead of leaving a black square against the custom row background.
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    deleteSet(workoutSet)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
             }
         }
-        // TODO: move is yet too buggy
-        //                        .onMove { source, destination in
-        //                            guard source.first != destination || source.count > 1 else { return }
-        //                            // make sure the destination is completed
-        //                            guard (self.workoutExercise.workoutSets![destination] as! WorkoutSet).isCompleted else { return }
-        //                            // make sure all sources are completed
-        //                            guard source.reduce(true, { (allCompleted, index) in
-        //                                allCompleted && (self.workoutExercise.workoutSets![index] as! WorkoutSet).isCompleted
-        //                            }) else { return }
-        //
-        //                            // TODO: replace with swift 5.1 move() function when available
-        //                            guard let index = source.first else { return }
-        //                            guard let workoutSet = self.workoutExercise.workoutSets?[index] as? WorkoutSet else { return }
-        //                            self.workoutExercise.removeFromWorkoutSets(at: index)
-        //                            self.workoutExercise.insertIntoWorkoutSets(workoutSet, at: destination)
-        //                        }
     }
     
     private var addSetButton: some View {
@@ -353,73 +348,128 @@ struct WorkoutExerciseDetailView : View {
         return settingsStore.defaultRestTime
     }
     
-    var body: some View {
-        VStack(spacing: 0) {
-            // The exercise note reads as a subtitle under the title rather than a floating card, so it
-            // clearly belongs to this exercise. Tapping it opens an editor.
-            exerciseNoteSubtitle
+    private var exerciseTitle: String {
+        workoutExercise.exercise(in: exerciseStore.exercises)?.title ?? ""
+    }
 
-            List {
-                Section(header: Text("This session")) {
-                    setsHeader
-                    currentWorkoutSets
-                    addSetButton
+    private func removeExercise() {
+        let workout = workoutExercise.workout
+        managedObjectContext.delete(workoutExercise)
+        workout?.removeFromWorkoutExercises(workoutExercise)
+        managedObjectContext.saveOrCrash()
+    }
+
+    /// The exercise name and options menu, shown as the header of the embedded (in-workout) card.
+    private var exerciseHeaderRow: some View {
+        HStack {
+            Text(exerciseTitle)
+                .font(.forgeHeadline)
+                .foregroundColor(.forgeLabel)
+            Spacer()
+            Menu {
+                Button { showHistory = true } label: {
+                    Label("Previous sessions", systemImage: "clock.arrow.circlepath")
+                }
+                if workoutExercise.exercise(in: exerciseStore.exercises) != nil {
+                    Button { showExerciseInfo = true } label: {
+                        Label("Exercise info", systemImage: "info.circle")
+                    }
+                }
+                Button(role: .destructive) { removeExercise() } label: {
+                    Label("Remove exercise", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .frame(width: 34, height: 30)
+                    .contentShape(Rectangle())
+            }
+        }
+    }
+
+    /// Sheets, the exercise-info push, and the on-appear pre-fill, shared by both layouts.
+    private func attachingSheets<V: View>(to content: V) -> some View {
+        content
+            .background(
+                Group {
+                    if let exercise = workoutExercise.exercise(in: exerciseStore.exercises) {
+                        NavigationLink(destination: ExerciseDetailView(exercise: exercise).environmentObject(self.settingsStore), isActive: $showExerciseInfo) { EmptyView() }
+                    }
+                }
+            )
+            .sheet(item: $moreSheetSet) { set in
+                NavigationStack {
+                    SetMoreView(workoutSet: set, weightUnit: settingsStore.weightUnit, showRPE: settingsStore.showRPE)
+                        .navigationBarTitle(Text(set.displayTitle(weightUnit: settingsStore.weightUnit)), displayMode: .inline)
+                        .navigationBarItems(trailing: Button("Done") { moreSheetSet = nil })
+                }
+                .presentationDetents([.medium, .large])
+            }
+            .sheet(item: $noteSheetSet) { set in
+                NavigationStack {
+                    SetNoteEditor(workoutSet: set)
+                        .navigationBarTitle(Text("Note"), displayMode: .inline)
+                        .navigationBarItems(trailing: Button("Done") { noteSheetSet = nil })
+                }
+                .presentationDetents([.medium])
+            }
+            .sheet(isPresented: $showHistory) {
+                NavigationStack {
+                    List {
+                        historyWorkoutSets
+                    }
+                    .listStyleCompat_InsetGroupedListStyle()
+                    .navigationBarTitle("Previous sessions", displayMode: .inline)
+                    .navigationBarItems(trailing: Button("Done") { showHistory = false })
                 }
             }
-            .listStyleCompat_InsetGroupedListStyle()
+            .sheet(isPresented: $showExerciseNote) {
+                NavigationStack {
+                    ExerciseNoteEditor(workoutExercise: workoutExercise)
+                        .navigationBarTitle(Text("Exercise note"), displayMode: .inline)
+                        .navigationBarItems(trailing: Button("Done") { showExerciseNote = false })
+                }
+                .presentationDetents([.medium])
+            }
+            .onAppear { self.prefillPlaceholders() }
+    }
 
-            if let exercise = workoutExercise.exercise(in: exerciseStore.exercises) {
-                NavigationLink(destination: ExerciseDetailView(exercise: exercise).environmentObject(self.settingsStore), isActive: $showExerciseInfo) { EmptyView() }
-            }
+    /// One card per exercise, embedded directly in the current-workout list (no push).
+    private var embeddedBody: some View {
+        Section {
+            attachingSheets(to: exerciseHeaderRow)
+            exerciseNoteSubtitle
+            setsHeader
+            currentWorkoutSets
+            addSetButton
         }
-        .sheet(item: $moreSheetSet) { set in
-            NavigationStack {
-                SetMoreView(workoutSet: set, weightUnit: settingsStore.weightUnit, showRPE: settingsStore.showRPE)
-                    .navigationBarTitle(Text(set.displayTitle(weightUnit: settingsStore.weightUnit)), displayMode: .inline)
-                    .navigationBarItems(trailing: Button("Done") { moreSheetSet = nil })
-            }
-            // A compact sheet, not a full screen; expandable for the longer options.
-            .presentationDetents([.medium, .large])
-        }
-        .sheet(item: $noteSheetSet) { set in
-            NavigationStack {
-                SetNoteEditor(workoutSet: set)
-                    .navigationBarTitle(Text("Note"), displayMode: .inline)
-                    .navigationBarItems(trailing: Button("Done") { noteSheetSet = nil })
-            }
-            .presentationDetents([.medium])
-        }
-        .sheet(isPresented: $showHistory) {
-            NavigationStack {
+    }
+
+    /// The pushed, full-screen layout used when viewing an exercise from history.
+    private var standaloneBody: some View {
+        attachingSheets(to:
+            VStack(spacing: 0) {
+                exerciseNoteSubtitle
+
                 List {
-                    historyWorkoutSets
+                    Section(header: Text("This session")) {
+                        setsHeader
+                        currentWorkoutSets
+                        addSetButton
+                    }
                 }
                 .listStyleCompat_InsetGroupedListStyle()
-                .navigationBarTitle("Previous sessions", displayMode: .inline)
-                .navigationBarItems(trailing: Button("Done") { showHistory = false })
             }
-        }
-        .sheet(isPresented: $showExerciseNote) {
-            NavigationStack {
-                ExerciseNoteEditor(workoutExercise: workoutExercise)
-                    .navigationBarTitle(Text("Exercise note"), displayMode: .inline)
-                    .navigationBarItems(trailing: Button("Done") { showExerciseNote = false })
-            }
-            .presentationDetents([.medium])
-        }
-        .navigationBarTitle(Text(workoutExercise.exercise(in: exerciseStore.exercises)?.title ?? ""), displayMode: .inline)
+        )
+        .navigationBarTitle(Text(exerciseTitle), displayMode: .inline)
         .navigationBarItems(trailing:
             HStack(spacing: NAVIGATION_BAR_SPACING) {
                 Menu {
-                    Button {
-                        showHistory = true
-                    } label: {
+                    Button { showHistory = true } label: {
                         Label("Previous sessions", systemImage: "clock.arrow.circlepath")
                     }
                     if workoutExercise.exercise(in: exerciseStore.exercises) != nil {
-                        Button {
-                            showExerciseInfo = true
-                        } label: {
+                        Button { showExerciseInfo = true } label: {
                             Label("Exercise info", systemImage: "info.circle")
                         }
                     }
@@ -430,11 +480,16 @@ struct WorkoutExerciseDetailView : View {
                 EditButton()
             }
         )
-        .onAppear {
-            self.prefillPlaceholders()
-        }
         .onDisappear {
             self.managedObjectContext.saveOrCrash()
+        }
+    }
+
+    var body: some View {
+        if embedded {
+            embeddedBody
+        } else {
+            standaloneBody
         }
     }
     
