@@ -112,7 +112,14 @@ struct WorkoutExerciseDetailView : View {
         }
         if let previousSet = previousSet {
             set.repetitionsValue = previousSet.repetitionsValue
-            set.weightValue = previousSet.weightValue
+            if let target = previousSet.targetWeightValue {
+                // A target planned last time carries forward: pre-fill the weight from it and keep
+                // the target on this set so the row can mark it as planned.
+                set.weightValue = target
+                set.targetWeightValue = target
+            } else {
+                set.weightValue = previousSet.weightValue
+            }
         } else {
             // TODO: let the user configure default repetitions and weight
             set.repetitionsValue = 5
@@ -230,15 +237,23 @@ struct WorkoutExerciseDetailView : View {
     }
     
     private var historyWorkoutSets: some View {
-        ForEach(workoutExerciseHistory) { workoutExercise in
-            Section(header: WorkoutExerciseSectionHeader(workoutExercise: workoutExercise)) {
-                workoutExercise.comment.map {
+        ForEach(workoutExerciseHistory) { pastWorkoutExercise in
+            Section {
+                // Tap the date to open that session's version of this exercise (notes and sets),
+                // pushed within the current tab.
+                NavigationLink {
+                    WorkoutExerciseDetailView(workoutExercise: pastWorkoutExercise)
+                } label: {
+                    WorkoutExerciseSectionHeader(workoutExercise: pastWorkoutExercise)
+                }
+
+                pastWorkoutExercise.comment.map {
                     Text($0.enquoted)
                         .lineLimit(1)
                         .font(Font.body.italic())
                         .foregroundColor(.secondary)
                 }
-                ForEach(self.indexedWorkoutSets(for: workoutExercise), id: \.1.id) { (index, workoutSet) in
+                ForEach(self.indexedWorkoutSets(for: pastWorkoutExercise), id: \.1.id) { (index, workoutSet) in
                     WorkoutSetCell(workoutSet: workoutSet, index: index, colorMode: .disabled)
                 }
             }
@@ -360,6 +375,14 @@ private struct ActiveSetRow: View {
                 .font(.forgeCaption)
                 .foregroundColor(.forgeSecondaryLabel)
 
+            // Marks a value pre-filled from a target planned last session.
+            if !workoutSet.isCompleted, workoutSet.targetWeightValue != nil {
+                Image(systemName: "target")
+                    .font(.caption2)
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .accessibilityLabel("Planned target")
+            }
+
             Text("×").foregroundColor(.forgeSecondaryLabel)
 
             TextField("0", value: repsField, format: .number)
@@ -379,6 +402,23 @@ private struct ActiveSetRow: View {
                     .font(.forgeCaption)
                     .foregroundColor(.forgeSecondaryLabel)
             }
+
+            Menu {
+                ForEach(WorkoutSetTag.allCases, id: \.self) { tag in
+                    Button {
+                        workoutSet.tagValue = (workoutSet.tagValue == tag) ? nil : tag
+                        workoutSet.managedObjectContext?.saveOrCrash()
+                    } label: {
+                        Label(tag.title.capitalized, systemImage: workoutSet.tagValue == tag ? "checkmark" : "circle")
+                    }
+                }
+            } label: {
+                Image(systemName: "tag")
+                    .foregroundColor(workoutSet.tagValue?.color ?? .forgeSecondaryLabel)
+                    .frame(width: 30, height: 40)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Set tag")
 
             Button(action: onMore) {
                 Image(systemName: "ellipsis")

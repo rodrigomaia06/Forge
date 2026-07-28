@@ -433,7 +433,7 @@ struct SetMoreView: View {
                 })
             }
 
-            Section(header: Text("Target".uppercased()), footer: Text("Optional planned weight and effort for this set. Leave the weight at 0 for no target.")) {
+            Section(header: Text("Next-time target".uppercased()), footer: Text("A target for the next time you do this exercise. It pre-fills that set (marked as planned); it doesn't change this set. Leave the weight at 0 for no target.")) {
                 HStack {
                     Text("Weight")
                     Spacer()
