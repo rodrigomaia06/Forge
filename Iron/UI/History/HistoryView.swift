@@ -47,7 +47,7 @@ struct HistoryView : View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 ForEach(workouts) { workout in
                     NavigationLink(destination: WorkoutDetailView(workout: workout)
@@ -98,12 +98,7 @@ struct HistoryView : View {
                             .padding()
             )
             .navigationBarTitle(Text("History"))
-            
-            // Placeholder
-            Text("No workout selected")
-                .foregroundColor(.secondary)
         }
-        .padding(.leading, UIDevice.current.userInterfaceIdiom == .pad ? 1 : 0) // hack that makes the master view show on iPad on portrait mode
         .overlay(ActivitySheet(activityItems: self.$activityItems))
     }
 }

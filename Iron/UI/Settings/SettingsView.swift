@@ -83,10 +83,10 @@ struct SettingsView : View {
     #endif
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 mainSection
-                
+
                 aboutRatingAndSupportSection
 
                 #if DEBUG
@@ -95,7 +95,6 @@ struct SettingsView : View {
             }
             .navigationBarTitle(Text("Settings"))
         }
-        .padding(.leading, UIDevice.current.userInterfaceIdiom == .pad ? 1 : 0) // hack that makes the master view show on iPad on portrait mode
     }
     
     // select the general tab by default on iPad

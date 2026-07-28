@@ -27,7 +27,7 @@ struct StartWorkoutView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 if #available(iOS 15.0, *) {
                     Button {
@@ -96,9 +96,8 @@ struct StartWorkoutView: View {
                 ])
             }
         }
-        .navigationViewStyle(StackNavigationViewStyle())
     }
-    
+
     private func newWorkoutPlan() {
         _ = WorkoutPlan.create(context: managedObjectContext)
         managedObjectContext.saveOrCrash()

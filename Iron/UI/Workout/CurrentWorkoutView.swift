@@ -193,7 +193,7 @@ struct CurrentWorkoutView: View {
     
     @State private var finishWorkoutSheetActivityItems: [Any]?
     private var finishWorkoutSheet: some View {
-        NavigationView {
+        NavigationStack {
             WorkoutLog(workout: self.workout)
                 .navigationBarTitle("Summary", displayMode: .inline)
                 .navigationBarItems(
@@ -216,7 +216,6 @@ struct CurrentWorkoutView: View {
                 .environmentObject(settingsStore)
                 .environmentObject(exerciseStore)
         }
-        .navigationViewStyle(StackNavigationViewStyle())
     }
     
     private func cancelWorkout() {
@@ -243,7 +242,7 @@ struct CurrentWorkoutView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 if #available(iOS 15.0, *) {
                     Divider()
@@ -306,11 +305,7 @@ struct CurrentWorkoutView: View {
             }
             .navigationBarTitle(Text(workout.displayTitle(in: exerciseStore.exercises)), displayMode: .inline)
             .navigationBarItems(leading: cancelButton, trailing: EditButton())
-            
-            Text("No exercise selected")
-                .foregroundColor(.secondary)
         }
-        .padding(.leading, UIDevice.current.userInterfaceIdiom == .pad ? 1 : 0) // hack that makes the master view show on iPad on portrait mode
         .sheet(item: $activeSheet) { type in
             self.sheetView(type: type)
         }
