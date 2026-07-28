@@ -23,8 +23,8 @@ struct WorkoutExerciseDetailView : View {
     @ObservedObject var workoutExercise: WorkoutExercise
 
     @State private var moreSheetSet: WorkoutSet? = nil
-    @State private var noteSheetSet: WorkoutSet? = nil
     @State private var showExerciseNote = false
+    @State private var showHistory = false
     @State private var showAllHistory = false
 
     /// Past sessions to show. Capped at the most recent few until the user asks for more.
@@ -196,6 +196,27 @@ struct WorkoutExerciseDetailView : View {
         .accessibilityLabel(hasExerciseNote ? "Exercise note: \(workoutExercise.comment ?? "")" : "Add a note for this exercise")
     }
 
+    /// Column headers above the set rows (Set, Previous, kg, Reps).
+    private var setsHeader: some View {
+        HStack(spacing: Theme.Spacing.s) {
+            Text("Set").frame(width: 36)
+            Text("Previous").frame(maxWidth: .infinity, alignment: .leading)
+            Text(settingsStore.weightUnit.unit.symbol).frame(width: 68)
+            Text("Reps").frame(width: 60)
+            if isCurrentWorkout { Color.clear.frame(width: 34, height: 0) }
+        }
+        .font(.forgeCaption)
+        .foregroundColor(.forgeSecondaryLabel)
+    }
+
+    /// The matching set from the most recent previous session, formatted (e.g. "42.5 kg × 4").
+    private func previousPerformance(atZeroBased index: Int) -> String? {
+        guard index >= 0,
+              let sets = workoutExerciseHistory.first?.workoutSets?.array as? [WorkoutSet],
+              index < sets.count else { return nil }
+        return sets[index].displayTitle(weightUnit: settingsStore.weightUnit)
+    }
+
     private var currentWorkoutSets: some View {
         ForEach(indexedWorkoutSets(for: workoutExercise), id: \.1.id) { (index, workoutSet) in
             ActiveSetRow(
@@ -205,9 +226,9 @@ struct WorkoutExerciseDetailView : View {
                 isCurrentWorkout: isCurrentWorkout,
                 isUpNext: firstUncompletedSet == workoutSet,
                 showRPE: settingsStore.showRPE,
+                previousText: previousPerformance(atZeroBased: index - 1),
                 onToggleComplete: { toggleComplete(workoutSet) },
-                onMore: { moreSheetSet = workoutSet },
-                onNote: { noteSheetSet = workoutSet }
+                onMore: { moreSheetSet = workoutSet }
             )
         }
         .onDelete { offsets in
@@ -274,6 +295,7 @@ struct WorkoutExerciseDetailView : View {
             Section {
                 Button {
                     guard let workout = pastWorkoutExercise.workout else { return }
+                    showHistory = false
                     sceneState.historyWorkoutToOpen = workout
                     sceneState.selectedTab = .history
                 } label: {
@@ -306,9 +328,6 @@ struct WorkoutExerciseDetailView : View {
                     WorkoutSetCell(workoutSet: workoutSet, index: index, colorMode: .disabled)
                         .listRowInsets(EdgeInsets(top: 2, leading: Theme.Spacing.m, bottom: 2, trailing: Theme.Spacing.m))
                 }
-            } header: {
-                // A single umbrella label above the first card keeps the "these are past" context.
-                if offset == 0 { Text("Previous sessions") }
             }
         }
 
@@ -340,11 +359,10 @@ struct WorkoutExerciseDetailView : View {
 
             List {
                 Section(header: Text("This session")) {
+                    setsHeader
                     currentWorkoutSets
                     addSetButton
                 }
-
-                historyWorkoutSets
             }
             .listStyleCompat_InsetGroupedListStyle()
 
@@ -361,14 +379,15 @@ struct WorkoutExerciseDetailView : View {
             // A compact sheet, not a full screen; expandable for the longer options.
             .presentationDetents([.medium, .large])
         }
-        .sheet(item: $noteSheetSet) { set in
+        .sheet(isPresented: $showHistory) {
             NavigationStack {
-                SetNoteEditor(workoutSet: set)
-                    .navigationBarTitle(Text("Note"), displayMode: .inline)
-                    .navigationBarItems(trailing: Button("Done") { noteSheetSet = nil })
+                List {
+                    historyWorkoutSets
+                }
+                .listStyleCompat_InsetGroupedListStyle()
+                .navigationBarTitle("Previous sessions", displayMode: .inline)
+                .navigationBarItems(trailing: Button("Done") { showHistory = false })
             }
-            // Compact, and no drag indicator: the nav bar Done reads as the native way to dismiss.
-            .presentationDetents([.medium])
         }
         .sheet(isPresented: $showExerciseNote) {
             NavigationStack {
@@ -381,15 +400,22 @@ struct WorkoutExerciseDetailView : View {
         .navigationBarTitle(Text(workoutExercise.exercise(in: exerciseStore.exercises)?.title ?? ""), displayMode: .inline)
         .navigationBarItems(trailing:
             HStack(spacing: NAVIGATION_BAR_SPACING) {
-                if workoutExercise.exercise(in: exerciseStore.exercises) != nil {
-                    // Use Button because NavigationLink in navigation bar works unreliable (iOS 14)
-                    Button(action: {
-                        showExerciseInfo = true
-                    }, label: {
-                        // No asymmetric padding: it pushed the icon off-center next to Edit.
-                        Image(systemName: "info.circle")
-                            .imageScale(.large)
-                    })
+                Menu {
+                    Button {
+                        showHistory = true
+                    } label: {
+                        Label("Previous sessions", systemImage: "clock.arrow.circlepath")
+                    }
+                    if workoutExercise.exercise(in: exerciseStore.exercises) != nil {
+                        Button {
+                            showExerciseInfo = true
+                        } label: {
+                            Label("Exercise info", systemImage: "info.circle")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .imageScale(.large)
                 }
                 EditButton()
             }
@@ -412,8 +438,8 @@ struct WorkoutExerciseDetailView : View {
     }
 }
 
-/// A single set row with inline-editable weight and reps, a "more" button (tag / comment / RPE /
-/// targets), and a checkmark to complete the set. Replaces the old bottom editor panel.
+/// A single set row laid out as a table: number chip (tap for options), the previous session's
+/// result, editable weight and reps, and a checkmark to complete it.
 private struct ActiveSetRow: View {
     @ObservedObject var workoutSet: WorkoutSet
     let index: Int
@@ -421,9 +447,9 @@ private struct ActiveSetRow: View {
     let isCurrentWorkout: Bool
     let isUpNext: Bool
     let showRPE: Bool
+    let previousText: String?
     var onToggleComplete: () -> Void
     var onMore: () -> Void
-    var onNote: () -> Void
 
     private var hasNote: Bool { !(workoutSet.comment ?? "").isEmpty }
 
@@ -444,98 +470,63 @@ private struct ActiveSetRow: View {
         )
     }
 
-    // The leading rail carries the set's state at a glance: its type color when tagged, otherwise
-    // The set number sits in a filled chip tinted by the set type (failure, drop set). Untagged sets
-    // keep a neutral chip. The type is set from the more (...) sheet; completion is the right-hand check.
+    // The set number sits in a filled chip tinted by the set type (failure, drop set); a green dot
+    // marks a set that has a note. Tapping the chip opens the options sheet (tag, note, target, RPE).
     private var numberChip: some View {
         let tint = workoutSet.tagValue?.color
         return Text("\(index)")
             .font(.forgeCaption)
             .foregroundColor(tint ?? .forgeSecondaryLabel)
-            .frame(width: 26, height: 26)
+            .frame(width: 28, height: 28)
             .background(Circle().fill((tint ?? .forgeSecondaryLabel).opacity(tint == nil ? 0.14 : 0.22)))
-            .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title)" } ?? "Set \(index)")
+            .overlay(alignment: .topTrailing) {
+                if hasNote {
+                    Circle().fill(Color.forgeSuccess).frame(width: 7, height: 7)
+                }
+            }
+    }
+
+    private func setField(_ binding: Binding<Double>, field: Field, keyboard: UIKeyboardType, width: CGFloat) -> some View {
+        TextField("0", value: binding, format: .number)
+            .keyboardType(keyboard)
+            .focused($focus, equals: field)
+            .multilineTextAlignment(.center)
+            .font(.forgeValue)
+            .padding(.vertical, 7)
+            .frame(width: width)
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: Theme.Spacing.s) {
-                numberChip
+        HStack(spacing: Theme.Spacing.s) {
+            Button(action: onMore) { numberChip }
+                .buttonStyle(.plain)
+                .frame(width: 36)
+                .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title). Options" } ?? "Set \(index). Options")
 
-                TextField("0", value: weightField, format: .number)
-                    .keyboardType(.decimalPad)
-                    .focused($focus, equals: .weight)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: 70)
-                    .font(.forgeValue)
-                Text(weightUnit.unit.symbol)
-                    .font(.forgeCaption)
-                    .foregroundColor(.forgeSecondaryLabel)
+            Text(previousText ?? "—")
+                .font(.forgeCaption)
+                .foregroundColor(.forgeSecondaryLabel)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Marks a value pre-filled from a target planned last session.
-                if !workoutSet.isCompleted, workoutSet.targetWeightValue != nil {
-                    Image(systemName: "target")
-                        .font(.caption2)
-                        .foregroundColor(.forgeSecondaryLabel)
-                        .accessibilityLabel("Planned target")
-                }
+            setField(weightField, field: .weight, keyboard: .decimalPad, width: 68)
+            setField(repsField, field: .reps, keyboard: .numberPad, width: 60)
 
-                Text("×").foregroundColor(.forgeSecondaryLabel)
-
-                TextField("0", value: repsField, format: .number)
-                    .keyboardType(.numberPad)
-                    .focused($focus, equals: .reps)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: 40)
-                    .font(.forgeValue)
-                Text("reps")
-                    .font(.forgeCaption)
-                    .foregroundColor(.forgeSecondaryLabel)
-
-                Spacer(minLength: Theme.Spacing.xs)
-
-                if showRPE, let rpe = workoutSet.rpeValue {
-                    Text(String(format: "%.1f", rpe))
-                        .font(.forgeCaption)
-                        .foregroundColor(.forgeSecondaryLabel)
-                }
-
-                // Per-set note: green once the set has one, so it reads at a glance which sets are annotated.
-                Button(action: onNote) {
-                    Image(systemName: hasNote ? "text.bubble.fill" : "text.bubble")
-                        .foregroundColor(hasNote ? .forgeSuccess : .forgeSecondaryLabel)
-                        .frame(width: 28, height: 30)
+            if isCurrentWorkout {
+                Button(action: onToggleComplete) {
+                    Image(systemName: workoutSet.isCompleted ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 23))
+                        .foregroundColor(workoutSet.isCompleted ? .forgeSuccess : (isUpNext ? .forgeLabel : .forgeSecondaryLabel))
+                        .frame(width: 34, height: 34)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(hasNote ? "Edit set note" : "Add set note")
-
-                Button(action: onMore) {
-                    Image(systemName: "ellipsis")
-                        .foregroundColor(.forgeSecondaryLabel)
-                        .frame(width: 28, height: 30)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("More options")
-
-                if isCurrentWorkout {
-                    Button(action: onToggleComplete) {
-                        Image(systemName: workoutSet.isCompleted ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: 23))
-                            .foregroundColor(workoutSet.isCompleted ? .forgeSuccess : (isUpNext ? .forgeLabel : .forgeSecondaryLabel))
-                            .frame(width: 34, height: 34)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(workoutSet.isCompleted ? "Set completed" : "Complete set")
-                }
+                .accessibilityLabel(workoutSet.isCompleted ? "Set completed" : "Complete set")
             }
-            .foregroundColor(workoutSet.isCompleted ? .forgeLabel : .forgeSecondaryLabel)
-            // The note itself is not shown under the row during a workout; the green note icon is
-            // enough to signal a set has one. Tap it to read or edit.
         }
-        // Completed sets get a green wash; the type now reads from the number chip, not a rail.
+        .foregroundColor(workoutSet.isCompleted ? .forgeLabel : .forgeSecondaryLabel)
+        // Completed sets get a green wash; the type reads from the number chip.
         .listRowBackground(
             ZStack {
                 Color(.secondarySystemGroupedBackground)
@@ -544,33 +535,6 @@ private struct ActiveSetRow: View {
                 }
             }
         )
-    }
-}
-
-/// A focused editor for a single set's note, opened from the note icon on the row. It writes straight
-/// to the set so the row's note text and green icon update as you type, and persists when it closes.
-private struct SetNoteEditor: View {
-    @ObservedObject var workoutSet: WorkoutSet
-
-    private var noteBinding: Binding<String> {
-        Binding(
-            get: { workoutSet.comment ?? "" },
-            set: { workoutSet.comment = $0.isEmpty ? nil : $0 }
-        )
-    }
-
-    var body: some View {
-        Form {
-            Section(footer: Text("A note for this set only.")) {
-                TextField("Note", text: noteBinding, axis: .vertical)
-                    .lineLimit(3...8)
-            }
-        }
-        .onDisappear {
-            let trimmed = (workoutSet.comment ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            workoutSet.comment = trimmed.isEmpty ? nil : trimmed
-            workoutSet.managedObjectContext?.saveOrCrash()
-        }
     }
 }
 
