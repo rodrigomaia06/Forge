@@ -90,8 +90,15 @@ struct WorkoutDetailView : View {
             Section {
                 WorkoutDetailBannerView(workout: workout)
                     .padding([.top, .bottom])
-                    .listRowBackground(workout.muscleGroupColor(in: self.exerciseStore.exercises))
-                    .environment(\.colorScheme, .dark) // TODO: check whether accent color is actually dark
+                    .frame(maxWidth: .infinity)
+                    // The stats sit on the normal surface. A thin rule in the muscle-group color keeps
+                    // the "which muscles" cue without a full colored block behind the numbers.
+                    .overlay(alignment: .bottom) {
+                        Capsule()
+                            .fill(workout.muscleGroupColor(in: self.exerciseStore.exercises))
+                            .frame(height: 3)
+                            .padding(.horizontal, Theme.Spacing.m)
+                    }
             }
             
             // editMode still doesn't work in 13.1 beta2

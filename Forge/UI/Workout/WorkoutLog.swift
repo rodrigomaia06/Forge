@@ -45,8 +45,14 @@ struct WorkoutLog: View {
             Section {
                 WorkoutLogBannerView(workout: workout)
                     .padding([.top, .bottom])
-                    .listRowBackground(workout.muscleGroupColor(in: exerciseStore.exercises))
-                    .environment(\.colorScheme, .dark) // TODO: check whether accent color is actually dark
+                    .frame(maxWidth: .infinity)
+                    // Match the workout detail: stats on the normal surface with a thin muscle-group rule.
+                    .overlay(alignment: .bottom) {
+                        Capsule()
+                            .fill(workout.muscleGroupColor(in: exerciseStore.exercises))
+                            .frame(height: 3)
+                            .padding(.horizontal, Theme.Spacing.m)
+                    }
             }
             Section {
                 ForEach(workout.workoutExercisesWhereNotAllSetsAreUncompleted ?? []) {
