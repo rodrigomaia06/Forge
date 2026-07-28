@@ -9,7 +9,7 @@
 import XCTest
 import CoreData
 import WorkoutDataKit
-@testable import Iron
+@testable import Forge
 
 class ExportImportWorkoutDataTests: XCTestCase {
     var persistenContainer: NSPersistentContainer!

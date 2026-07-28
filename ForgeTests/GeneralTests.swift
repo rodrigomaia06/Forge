@@ -8,7 +8,7 @@
 
 import XCTest
 import WorkoutDataKit
-@testable import Iron
+@testable import Forge
 
 class GeneralTests: XCTestCase {
     

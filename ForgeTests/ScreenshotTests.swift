@@ -13,7 +13,7 @@
 
 import XCTest
 import SwiftUI
-@testable import Iron
+@testable import Forge
 
 @MainActor
 final class ScreenshotTests: XCTestCase {
