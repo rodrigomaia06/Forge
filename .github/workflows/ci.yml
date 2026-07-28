@@ -3,8 +3,9 @@ name: CI
 # Builds/tests Forge and produces artifacts (UI screenshots + an unsigned .ipa) on a
 # GitHub-hosted macOS runner — the only build environment (the maintainer has no Mac).
 #
-# Xcode 16+ is required: XcodeGen emits the Xcode-16 project format (objectVersion 77),
-# which Xcode 15.x cannot open. The .xcodeproj is generated from project.yml each run.
+# Built with Xcode 26 (the newest installed on the runner) so the app links against the iOS 26
+# SDK and the native UI adopts Liquid Glass on iOS 26 devices. Deployment target stays iOS 17,
+# so it still runs on iOS 17+. The .xcodeproj is generated from project.yml each run.
 
 on:
   push:
@@ -17,21 +18,22 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  XCODE_VERSION: "16.2"
-  SIMULATOR_NAME: "iPhone 16"
-
 jobs:
   build-test:
     name: Build, test & screenshots (iOS Simulator)
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+      - name: Select newest Xcode (26 for Liquid Glass)
+        run: |
+          set -euo pipefail
+          XPATH="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)"
+          echo "Selecting $XPATH"
+          sudo xcode-select -s "$XPATH"
+          xcodebuild -version
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -41,10 +43,13 @@ jobs:
 
       - name: Build & test
         run: |
+          set -euo pipefail
+          DEVICE="$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ {gsub(/^ +| +$/, "", $1); print $1; exit}')"
+          echo "Testing on: $DEVICE"
           xcodebuild test \
             -project Iron.xcodeproj \
             -scheme Iron \
-            -destination "platform=iOS Simulator,name=${SIMULATOR_NAME},OS=latest" \
+            -destination "platform=iOS Simulator,name=$DEVICE,OS=latest" \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
@@ -59,14 +64,19 @@ jobs:
 
   package-ipa:
     name: Package unsigned .ipa (AltStore / SideStore)
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+      - name: Select newest Xcode (26 for Liquid Glass)
+        run: |
+          set -euo pipefail
+          XPATH="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)"
+          echo "Selecting $XPATH"
+          sudo xcode-select -s "$XPATH"
+          xcodebuild -version
 
       - name: Install XcodeGen
         run: brew install xcodegen
