@@ -29,29 +29,32 @@ struct ForgeTabBar: View {
         HStack(spacing: 0) {
             ForEach(items, id: \.tab) { item in
                 Button {
+                    guard selection != item.tab else { return }
+                    Haptics.selection()
                     selection = item.tab
                 } label: {
-                    VStack(spacing: Theme.Spacing.xxs) {
+                    VStack(spacing: Theme.Spacing.xs) {
                         Image(systemName: item.icon)
-                            .font(.system(size: 18, weight: .medium))
+                            .font(.system(size: 20, weight: .medium))
                         Text(item.title)
                             .font(.system(size: 10, weight: .medium))
                     }
                     .foregroundColor(selection == item.tab ? .forgeLabel : .forgeSecondaryLabel)
                     .frame(maxWidth: .infinity)
-                    .frame(minHeight: Theme.Layout.minTapTarget)
+                    .frame(height: 52)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(item.title)
             }
         }
+        .padding(.vertical, Theme.Spacing.s)
         .padding(.horizontal, Theme.Spacing.s)
         .background(
             Capsule(style: .continuous)
-                .fill(Color.forgeSurface)
+                .fill(.ultraThinMaterial) // frosted glass
                 .overlay(Capsule(style: .continuous).strokeBorder(Color.forgeSeparator, lineWidth: 0.5))
-                .shadow(color: Color.black.opacity(0.35), radius: 16, y: 6)
+                .shadow(color: Color.black.opacity(0.4), radius: 20, y: 8)
         )
     }
 }

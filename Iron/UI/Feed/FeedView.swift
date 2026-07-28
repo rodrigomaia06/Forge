@@ -1,204 +1,168 @@
 //
 //  FeedView.swift
-//  Sunrise Fit
+//  Forge
 //
-//  Created by Karim Abou Zeid on 19.06.19.
-//  Copyright © 2019 Karim Abou Zeid Software. All rights reserved.
+//  The Home tab: a calm greeting, an activity heat-grid for the current month, and quiet
+//  recent-workout cards — all from real data, on Forge's dark canvas.
 //
 
 import SwiftUI
 import CoreData
-import Combine
 import WorkoutDataKit
 
-struct FeedView : View {
-    @EnvironmentObject var exerciseStore: ExerciseStore
-    @ObservedObject private var pinnedChartsStore = PinnedChartsStore.shared
-    
-    @State private var activeSheet: SheetType?
-    
-    private enum SheetType: Identifiable {
-        case pinnedChartSelector
-        case pinnedChartEditor
-        
-        var id: Self { self }
-    }
-    
-    private func sheetView(type: SheetType) -> AnyView {
-        switch type {
-        case .pinnedChartSelector:
-            return PinnedChartSelectorSheet(exercises: self.exerciseStore.shownExercises) { pinnedChart in
-                self.pinnedChartsStore.pinnedCharts.append(pinnedChart)
-            }
-            .environmentObject(self.pinnedChartsStore)
-            .typeErased
-        case .pinnedChartEditor:
-            return PinnedChartEditSheet()
-                .environmentObject(pinnedChartsStore)
-                .environmentObject(exerciseStore)
-                .typeErased
-        }
+struct FeedView: View {
+    @Environment(\.managedObjectContext) private var context
+    @EnvironmentObject private var settingsStore: SettingsStore
+    @EnvironmentObject private var sceneState: SceneState
+
+    @FetchRequest private var workouts: FetchedResults<Workout>
+
+    init() {
+        let request: NSFetchRequest<Workout> = Workout.fetchRequest()
+        request.predicate = NSPredicate(format: "\(#keyPath(Workout.isCurrentWorkout)) != %@", NSNumber(value: true))
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \Workout.start, ascending: false)]
+        _workouts = FetchRequest(fetchRequest: request)
     }
 
     var body: some View {
-        NavigationView {
-            List {
-                Section {
-                    ActivityCalendarViewCell()
-                }
-                
-                Section {
-                    ActivityWorkoutsPerWeekCell()
-                }
-                
-                Section {
-                    ActivitySummaryLast7DaysCell()
-                }
-                
-                ForEach(pinnedChartsStore.pinnedCharts, id: \.self) { chart in
-                    if let exercise = self.exerciseStore.find(with: chart.exerciseUuid) {
-                        Section {
-                            ExerciseChartViewCell(exercise: exercise, measurementType: chart.measurementType)
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                header
+                calendar
+                recent
+            }
+            .padding(.horizontal, Theme.Spacing.l)
+            .padding(.top, Theme.Spacing.xxl)
+            .padding(.bottom, Theme.Spacing.l)
+        }
+        .background(Color.forgeBackground.ignoresSafeArea())
+    }
+
+    // MARK: Header
+
+    private var header: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                Text(greeting).font(.forgeGreeting).foregroundColor(.forgeLabel)
+                Text("Ready to train?").font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)
+            }
+            Spacer()
+            Button {
+                Haptics.impact()
+                sceneState.selectedTab = .workout
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.forgeBackground)
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(Color.forgeAccent))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Start workout")
+        }
+    }
+
+    private var greeting: String {
+        switch Calendar.current.component(.hour, from: Date()) {
+        case 5..<12: return "Good morning"
+        case 12..<18: return "Good afternoon"
+        default: return "Good evening"
+        }
+    }
+
+    // MARK: Activity heat-grid
+
+    private var calendar: some View {
+        let cal = Calendar.current
+        let now = Date()
+        let days = cal.range(of: .day, in: .month, for: now)?.count ?? 30
+        let active: Set<Int> = Set(workouts.compactMap { w in
+            guard let start = w.start, cal.isDate(start, equalTo: now, toGranularity: .month) else { return nil }
+            return cal.component(.day, from: start)
+        })
+        let rows = Int(ceil(Double(days) / 7.0))
+
+        return VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            Text(monthLabel).font(.forgeSectionLabel).tracking(2).foregroundColor(.forgeSecondaryLabel)
+            VStack(spacing: Theme.Spacing.s) {
+                ForEach(0..<rows, id: \.self) { row in
+                    HStack(spacing: Theme.Spacing.s) {
+                        ForEach(0..<7, id: \.self) { col in
+                            let day = row * 7 + col + 1
+                            Circle()
+                                .fill(day <= days ? (active.contains(day) ? Color.forgeAccent : Color.forgeSurface) : Color.clear)
+                                .frame(width: 9, height: 9)
+                                .frame(maxWidth: .infinity)
                         }
                     }
                 }
-                
-                Button(action: {
-                    activeSheet = .pinnedChartSelector
-                }) {
-                    HStack {
-                        Image(systemName: "plus")
-                        Text("Pin Chart")
-                    }
-                }
-            }
-            .listStyleCompat_InsetGroupedListStyle()
-            .navigationBarTitle(Text("Feed"))
-            .navigationBarItems(trailing: Button("Edit") { activeSheet = .pinnedChartEditor })
-            .sheet(item: $activeSheet) { type in
-                sheetView(type: type)
             }
         }
-        .navigationViewStyle(StackNavigationViewStyle())
     }
-}
 
-private struct PinnedChartEditSheet: View {
-    @EnvironmentObject var pinnedChartsStore: PinnedChartsStore
-    @EnvironmentObject var exerciseStore: ExerciseStore
-    
-    @Environment(\.presentationMode) var presentationMode
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            SheetBar(title: "Edit Charts", leading: Button("Close") { self.presentationMode.wrappedValue.dismiss() }, trailing: EmptyView()).padding()
-            
-            Divider()
-            
-            List {
-                ForEach(pinnedChartsStore.pinnedCharts, id: \.self) { chart in
-                    Text((exerciseStore.find(with: chart.exerciseUuid)?.title ?? "Unknown Exercise") + " (\(chart.measurementType.title))")
-                }
-                .onDelete { offsets in
-                    self.pinnedChartsStore.pinnedCharts.remove(atOffsets: offsets)
-                }
-                .onMove { source, destination in
-                    self.pinnedChartsStore.pinnedCharts.move(fromOffsets: source, toOffset: destination)
-                }
-            }
-            .listStyleCompat_InsetGroupedListStyle()
-            .placeholder(show: pinnedChartsStore.pinnedCharts.isEmpty,
-                         VStack {
-                            Spacer()
-                            
-                            Text("You don't have any charts pinned.")
-                                .multilineTextAlignment(.center)
-                                .foregroundColor(.secondary)
-                                .padding()
-                            
-                            Spacer()
-                         }
-            )
-        }
-        .environment(\.editMode, .constant(.active))
+    private var monthLabel: String {
+        let f = DateFormatter(); f.dateFormat = "MMMM yyyy"
+        return f.string(from: Date()).uppercased()
     }
-}
 
-private struct PinnedChartSelectorSheet: View {
-    @EnvironmentObject var pinnedChartsStore: PinnedChartsStore
-    
-    @Environment(\.presentationMode) var presentationMode
+    // MARK: Recent workouts
 
-    let onSelection: (PinnedChart) -> Void
-    
-    @State private var selectedExercise: Exercise? = nil
-
-    @ObservedObject private var filter: ExerciseGroupFilter
-    
-    init(exercises: [Exercise], onSelection: @escaping (PinnedChart) -> Void) {
-        filter = ExerciseGroupFilter(exerciseGroups: ExerciseStore.splitIntoMuscleGroups(exercises: exercises))
-        self.onSelection = onSelection
-    }
-    
-    private func resetAndDismiss() {
-        self.presentationMode.wrappedValue.dismiss()
-        self.filter.filter = ""
-    }
-    
-    private func actionButtons(exercise: Exercise) -> [ActionSheet.Button] {
-        WorkoutExerciseChartData.MeasurementType.allCases.compactMap { measurementType in
-            let pinnedChart = PinnedChart(exerciseUuid: exercise.uuid, measurementType: measurementType)
-            if self.pinnedChartsStore.pinnedCharts.contains(pinnedChart) {
-                return nil
+    private var recent: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            Text("RECENT").font(.forgeSectionLabel).tracking(2).foregroundColor(.forgeSecondaryLabel)
+            if workouts.isEmpty {
+                Text("No workouts yet.")
+                    .font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)
+                    .padding(.vertical, Theme.Spacing.m)
             } else {
-                return .default(Text(measurementType.title)) {
-                    self.onSelection(pinnedChart)
-                    self.resetAndDismiss()
+                ForEach(Array(workouts.prefix(6)), id: \.objectID) { workout in
+                    workoutCard(workout)
                 }
             }
-        } + [.cancel()]
+        }
     }
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: 0) {
-                SheetBar(title: "Pin Chart", leading: Button("Cancel") { self.resetAndDismiss() }, trailing: EmptyView())
-                TextField("Search", text: $filter.filter)
-                    .textFieldStyle(SearchTextFieldStyle(text: $filter.filter))
-                    .padding(.top)
-            }.padding()
-            
-            Divider()
-            
-            ExerciseSingleSelectionView(exerciseGroups: filter.exerciseGroups) { exercise in
-                guard UIDevice.current.userInterfaceIdiom != .pad else { // TODO: actionSheet not supported on iPad yet (13.2)
-                    // for now just add the first measuremnt type
-                    for measurementType in WorkoutExerciseChartData.MeasurementType.allCases {
-                        let pinnedChart = PinnedChart(exerciseUuid: exercise.uuid, measurementType: measurementType)
-                        if !self.pinnedChartsStore.pinnedCharts.contains(pinnedChart) {
-                            self.onSelection(pinnedChart)
-                            self.resetAndDismiss()
-                            return
-                        }
-                    }
-                    return
-                }
-                self.selectedExercise = exercise
-            }
+
+    private func workoutCard(_ workout: Workout) -> some View {
+        let s = stats(workout)
+        return VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Text(dateLabel(workout.start)).font(.forgeSectionLabel).tracking(1).foregroundColor(.forgeSecondaryLabel)
+            Text(workout.title ?? "Workout").font(.forgeHeadline).foregroundColor(.forgeLabel)
+            Text("\(s.exercises) exercises · \(s.sets) sets · \(volumeString(s.volume))")
+                .font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)
         }
-        .actionSheet(item: $selectedExercise) { exercise in
-            ActionSheet(title: Text(exercise.title), message: nil, buttons: actionButtons(exercise: exercise))
-        }
+        .padding(Theme.Spacing.l)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous).fill(Color.forgeSurface))
+    }
+
+    private func stats(_ workout: Workout) -> (exercises: Int, sets: Int, volume: Double) {
+        let exercises = (workout.workoutExercises?.array as? [WorkoutExercise]) ?? []
+        let sets = exercises.flatMap { ($0.workoutSets?.array as? [WorkoutSet]) ?? [] }
+        let volume = sets.reduce(0.0) { $0 + $1.weightValue * Double($1.repetitionsValue) }
+        return (exercises.count, sets.count, volume)
+    }
+
+    private func dateLabel(_ date: Date?) -> String {
+        guard let date = date else { return "" }
+        let f = DateFormatter(); f.dateFormat = "MMM d"
+        return f.string(from: date).uppercased()
+    }
+
+    private func volumeString(_ kg: Double) -> String {
+        let unit = settingsStore.weightUnit
+        let value = WeightUnit.convert(weight: kg, from: .metric, to: unit)
+        let f = NumberFormatter(); f.numberStyle = .decimal; f.maximumFractionDigits = 0
+        let number = f.string(from: NSNumber(value: value)) ?? String(Int(value))
+        return "\(number) \(unit.unit.symbol)"
     }
 }
 
 #if DEBUG
-struct FeedView_Previews : PreviewProvider {
+struct FeedView_Previews: PreviewProvider {
     static var previews: some View {
-        Group {
-            FeedView()
-                .mockEnvironment(weightUnit: .metric)
-        }
+        FeedView()
+            .mockEnvironment(weightUnit: .metric)
+            .preferredColorScheme(.dark)
     }
 }
 #endif
