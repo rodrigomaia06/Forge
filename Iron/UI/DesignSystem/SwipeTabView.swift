@@ -2,11 +2,11 @@
 //  SwipeTabView.swift
 //  Forge
 //
-//  A reliable horizontally-swipeable pager backed by UIPageViewController — SwiftUI's
-//  paged TabView / ScrollView paging don't register swipes through NavigationView/List,
-//  so we bridge to UIKit (which Instagram/Reddit-style apps use). Pages are built once and
-//  kept alive (state preserved); `bottomInset` reserves room under the floating dock while
-//  still letting content render behind it (so the dock's glass has something to blur).
+//  Reliable horizontally-swipeable pager backed by UIPageViewController (the canonical
+//  Apple "Interfacing with UIKit" pattern) — SwiftUI's paged TabView / ScrollView paging
+//  don't register swipes through NavigationView/List. Child controllers are built once in
+//  the coordinator (state preserved), forced dark, with a bottom safe-area inset so content
+//  clears the floating dock while still rendering behind it (so the dock's glass blurs).
 //
 
 import SwiftUI
@@ -14,9 +14,8 @@ import UIKit
 
 struct SwipeTabView: UIViewControllerRepresentable {
     @Binding var selection: Int
-    let count: Int
-    let bottomInset: CGFloat
-    let content: (Int) -> AnyView
+    var bottomInset: CGFloat
+    var pages: [AnyView]
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -25,39 +24,33 @@ struct SwipeTabView: UIViewControllerRepresentable {
         pager.dataSource = context.coordinator
         pager.delegate = context.coordinator
         pager.view.backgroundColor = .clear
-        context.coordinator.build()
-        if context.coordinator.controllers.indices.contains(selection) {
-            pager.setViewControllers([context.coordinator.controllers[selection]], direction: .forward, animated: false)
-        }
         return pager
     }
 
     func updateUIViewController(_ pager: UIPageViewController, context: Context) {
         context.coordinator.parent = self
-        guard let current = pager.viewControllers?.first,
-              let currentIndex = context.coordinator.controllers.firstIndex(of: current),
-              currentIndex != selection,
-              context.coordinator.controllers.indices.contains(selection)
-        else { return }
+        let controllers = context.coordinator.controllers
+        guard controllers.indices.contains(selection) else { return }
+        let currentIndex = pager.viewControllers?.first.flatMap { controllers.firstIndex(of: $0) }
+        guard currentIndex != selection else { return }
         pager.setViewControllers(
-            [context.coordinator.controllers[selection]],
-            direction: selection > currentIndex ? .forward : .reverse,
-            animated: true
+            [controllers[selection]],
+            direction: (currentIndex ?? 0) <= selection ? .forward : .reverse,
+            animated: currentIndex != nil
         )
     }
 
     final class Coordinator: NSObject, UIPageViewControllerDataSource, UIPageViewControllerDelegate {
         var parent: SwipeTabView
-        var controllers: [UIViewController] = []
+        let controllers: [UIViewController]
 
-        init(_ parent: SwipeTabView) { self.parent = parent }
-
-        func build() {
-            controllers = (0..<parent.count).map { index in
-                let host = UIHostingController(rootView: parent.content(index))
+        init(_ parent: SwipeTabView) {
+            self.parent = parent
+            controllers = parent.pages.map { page in
+                let host = UIHostingController(rootView: page)
                 host.view.backgroundColor = .clear
                 host.overrideUserInterfaceStyle = .dark
-                host.additionalSafeAreaInsets = UIEdgeInsets(top: 0, left: 0, bottom: parent.bottomInset, right: 0)
+                host.additionalSafeAreaInsets.bottom = parent.bottomInset
                 return host
             }
         }

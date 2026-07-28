@@ -35,18 +35,18 @@ struct ContentView : View {
                     get: { tabs.firstIndex(of: sceneState.selectedTab) ?? 0 },
                     set: { sceneState.selectedTab = tabs[$0] }
                 ),
-                count: tabs.count,
-                bottomInset: dockInset
-            ) { index in
-                AnyView(
-                    page(for: tabs[index])
-                        .environmentObject(SettingsStore.shared)
-                        .environmentObject(RestTimerStore.shared)
-                        .environmentObject(ExerciseStore.shared)
-                        .environmentObject(sceneState)
-                        .environment(\.managedObjectContext, WorkoutDataStorage.shared.persistentContainer.viewContext)
-                )
-            }
+                bottomInset: dockInset,
+                pages: tabs.map { tab in
+                    AnyView(
+                        page(for: tab)
+                            .environmentObject(SettingsStore.shared)
+                            .environmentObject(RestTimerStore.shared)
+                            .environmentObject(ExerciseStore.shared)
+                            .environmentObject(sceneState)
+                            .environment(\.managedObjectContext, WorkoutDataStorage.shared.persistentContainer.viewContext)
+                    )
+                }
+            )
             .ignoresSafeArea()
 
             ForgeTabBar(selection: Binding(

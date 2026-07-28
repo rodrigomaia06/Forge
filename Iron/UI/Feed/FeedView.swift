@@ -25,6 +25,10 @@ struct FeedView: View {
     @FetchRequest private var workouts: FetchedResults<Workout>
     @State private var calendarExpanded = false
     @State private var filter: ActivityFilter?
+    /// When set (from the year view), the calendar drills into this single month's detailed grid.
+    @State private var zoomedMonth: MonthRef?
+
+    private struct MonthRef: Equatable { let year: Int; let month: Int }
 
     private var cal: Calendar {
         var c = Calendar.current
@@ -128,6 +132,37 @@ struct FeedView: View {
 
     private var activitySection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            activityHeader
+
+            if let zoom = zoomedMonth {
+                monthGrid(firstOfMonth: firstOf(year: zoom.year, month: zoom.month))
+            } else if calendarExpanded {
+                yearCalendar
+            } else {
+                monthGrid(firstOfMonth: currentFirstOfMonth)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var activityHeader: some View {
+        if let zoom = zoomedMonth {
+            // Zoomed into a single month: the header becomes a back affordance to the year.
+            Button {
+                Haptics.selection()
+                withAnimation(.snappy(duration: 0.28)) { zoomedMonth = nil }
+            } label: {
+                HStack(spacing: Theme.Spacing.xs) {
+                    Image(systemName: "chevron.left").font(.caption.weight(.semibold))
+                    Text(monthTitle(zoom).uppercased()).font(.forgeSectionLabel).tracking(2)
+                    Spacer()
+                }
+                .foregroundColor(.forgeSecondaryLabel)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Back to year")
+        } else {
             Button {
                 withAnimation(.snappy(duration: 0.28)) { calendarExpanded.toggle() }
             } label: {
@@ -143,13 +178,20 @@ struct FeedView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-
-            if calendarExpanded {
-                yearCalendar
-            } else {
-                monthCalendar
-            }
         }
+    }
+
+    private var currentFirstOfMonth: Date {
+        cal.date(from: cal.dateComponents([.year, .month], from: Date())) ?? Date()
+    }
+
+    private func firstOf(year: Int, month: Int) -> Date {
+        cal.date(from: DateComponents(year: year, month: month, day: 1)) ?? Date()
+    }
+
+    private func monthTitle(_ ref: MonthRef) -> String {
+        let f = DateFormatter(); f.dateFormat = "MMMM yyyy"
+        return f.string(from: firstOf(year: ref.year, month: ref.month))
     }
 
     private var monthString: String {
@@ -165,8 +207,7 @@ struct FeedView: View {
         return Array(syms[start...] + syms[..<start])
     }
 
-    private var monthCalendar: some View {
-        let firstOfMonth = cal.date(from: cal.dateComponents([.year, .month], from: Date())) ?? Date()
+    private func monthGrid(firstOfMonth: Date) -> some View {
         let firstWeekday = (cal.component(.weekday, from: firstOfMonth) - cal.firstWeekday + 7) % 7
         let daysInMonth = cal.range(of: .day, in: .month, for: firstOfMonth)?.count ?? 30
         let active = activeDays(inSameMonthAs: firstOfMonth)
@@ -216,7 +257,11 @@ struct FeedView: View {
         return LazyVGrid(columns: columns, alignment: .leading, spacing: Theme.Spacing.l) {
             ForEach(1...12, id: \.self) { month in
                 Button {
-                    toggle(.month(year: year, month: month))
+                    Haptics.selection()
+                    withAnimation(.snappy(duration: 0.28)) {
+                        zoomedMonth = MonthRef(year: year, month: month)
+                        filter = .month(year: year, month: month)
+                    }
                 } label: {
                     miniMonth(year: year, month: month, selected: filter == .month(year: year, month: month))
                 }
