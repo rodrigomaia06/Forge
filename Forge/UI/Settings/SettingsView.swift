@@ -56,7 +56,7 @@ struct SettingsView : View {
                 developerSettings
                 #endif
             }
-            .navigationBarTitle(Text("Settings"))
+            .navigationBarTitle(Text("Settings"), displayMode: .inline)
         }
     }
     

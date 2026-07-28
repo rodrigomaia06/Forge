@@ -55,7 +55,7 @@ struct StartWorkoutView: View {
                 }
             }
             .listStyleCompat_InsetGroupedListStyle()
-            .navigationBarTitle("Workout")
+            .navigationBarTitle("Workout", displayMode: .inline)
             .navigationBarItems(trailing:
                 Button(action: {
                     self.newWorkoutPlan()

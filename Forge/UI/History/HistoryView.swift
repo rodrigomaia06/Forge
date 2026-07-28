@@ -137,7 +137,7 @@ struct HistoryView : View {
                             .foregroundColor(.secondary)
                             .padding()
             )
-            .navigationBarTitle(Text("History"))
+            .navigationBarTitle(Text("History"), displayMode: .inline)
         }
         .overlay(ActivitySheet(activityItems: self.$activityItems))
         // A deep-link from another tab (e.g. a past session tapped during a workout) lands here.
