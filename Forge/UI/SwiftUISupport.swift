@@ -93,3 +93,18 @@ extension View {
         }
     }
 }
+
+extension View {
+    /// A single "Done" above the keyboard that dismisses whatever field is focused (numbers or text).
+    /// Apply once per screen, not per field, or several Done buttons stack up.
+    func keyboardDoneToolbar() -> some View {
+        toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+            }
+        }
+    }
+}

@@ -188,9 +188,17 @@ struct CurrentWorkoutView: View {
                 TimerBannerView(workout: workout)
                 Divider()
                 List {
-                    Section {
-                        ClearableTextField(titleKey: "Title", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
-                        ClearableTextField(titleKey: "Comment", text: workoutComment, onCommit: { self.adjustAndSaveWorkoutCommentInput() })
+                    // The name and comment are editable only in edit mode, so a stray tap mid-workout
+                    // can't change them. Otherwise the comment shows read-only (the name is the title bar).
+                    if editMode == .active {
+                        Section {
+                            ClearableTextField(titleKey: "Title", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
+                            ClearableTextField(titleKey: "Comment", text: workoutComment, onCommit: { self.adjustAndSaveWorkoutCommentInput() })
+                        }
+                    } else if let comment = workout.comment, !comment.isEmpty {
+                        Section {
+                            Text(comment).foregroundColor(.forgeSecondaryLabel)
+                        }
                     }
                     // In edit mode the exercises collapse to a plain, reorderable list of names (drag to
                     // reorder, swipe/– to remove). Otherwise each exercise is a full card with its set
@@ -243,6 +251,7 @@ struct CurrentWorkoutView: View {
                 }
                 .listStyleCompat_InsetGroupedListStyle()
                 .environment(\.editMode, $editMode)
+                .keyboardDoneToolbar()
             }
             .navigationBarTitle(Text(workout.displayTitle(in: exerciseStore.exercises)), displayMode: .inline)
             .navigationBarItems(leading: cancelButton, trailing: reorderButton)

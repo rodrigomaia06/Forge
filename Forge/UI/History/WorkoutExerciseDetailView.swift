@@ -210,6 +210,8 @@ struct WorkoutExerciseDetailView : View {
         }
         .font(.forgeCaption)
         .foregroundColor(.forgeSecondaryLabel)
+        // Tight against the header above and the first set below.
+        .listRowInsets(EdgeInsets(top: 2, leading: Theme.Spacing.m, bottom: 2, trailing: Theme.Spacing.m))
     }
 
     /// The matching set from the most recent previous session, formatted (e.g. "42.5 kg × 4").
@@ -479,6 +481,7 @@ struct WorkoutExerciseDetailView : View {
                     }
                 }
                 .listStyleCompat_InsetGroupedListStyle()
+                .keyboardDoneToolbar()
             }
         )
         .navigationBarTitle(Text(exerciseTitle), displayMode: .inline)
@@ -634,13 +637,6 @@ private struct ActiveSetRow: View {
             }
         }
         .foregroundColor(workoutSet.isCompleted ? .forgeLabel : .forgeSecondaryLabel)
-        // A Done button above the number pad, which otherwise has no way to dismiss itself.
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") { focus = nil }
-            }
-        }
     }
 }
 

@@ -157,6 +157,7 @@ struct WorkoutDetailView : View {
             }
         }
         .listStyleCompat_InsetGroupedListStyle()
+        .keyboardDoneToolbar()
         .navigationBarTitle(Text(workout.displayTitle(in: exerciseStore.exercises)), displayMode: .inline)
         .navigationBarItems(trailing:
             HStack(spacing: NAVIGATION_BAR_SPACING) {
