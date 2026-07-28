@@ -41,13 +41,15 @@ public class ExerciseStore: ObservableObject {
     /// exercises; there the list is simply empty.
     private let context: NSManagedObjectContext?
 
-    private let userDefaults: UserDefaults
+    /// Cached per-exercise settings (rest time + hidden) keyed by exercise UUID, so the
+    /// frequently-called isHidden/restTime reads don't fetch from Core Data per exercise.
+    private var exerciseSettings: [UUID: (restTime: TimeInterval?, hidden: Bool)]
 
-    public init(builtInExercisesURL: URL = ExerciseStore.defaultBuiltInExercisesURL, context: NSManagedObjectContext? = nil, userDefaults: UserDefaults = UserDefaults.standard) {
-        self.userDefaults = userDefaults
+    public init(builtInExercisesURL: URL = ExerciseStore.defaultBuiltInExercisesURL, context: NSManagedObjectContext? = nil) {
         self.context = context
         builtInExercises = Self.loadBuiltInExercises(builtInExercisesURL: builtInExercisesURL)
         customExercises = Self.loadCustomExercises(context: context)
+        exerciseSettings = Self.loadExerciseSettings(context: context)
         assert(!customExercises.contains { !$0.isCustom }, "Loaded custom exercise that is not custom.")
     }
 
@@ -61,23 +63,69 @@ public class ExerciseStore: ObservableObject {
     }
 }
 
-// MARK: - Hidden Exercises
+// MARK: - Per-exercise settings: hidden + rest time (Core Data backed)
 extension ExerciseStore {
     public func show(exercise: Exercise) {
         assert(!exercise.isCustom, "Makes no sense to show custom exercise.")
-        self.objectWillChange.send()
-        userDefaults.hiddenExerciseUuids.removeAll { $0 == exercise.uuid }
+        guard let context = context, let entity = settingsEntity(for: exercise.uuid, in: context, createIfNeeded: false) else { return }
+        entity.isHidden = false
+        saveSettings(context)
     }
 
     public func hide(exercise: Exercise) {
         assert(!exercise.isCustom, "Makes no sense to hide custom exercise.")
-        guard !isHidden(exercise: exercise) else { return }
-        self.objectWillChange.send()
-        userDefaults.hiddenExerciseUuids.append(exercise.uuid)
+        guard !isHidden(exercise: exercise), let context = context else { return }
+        settingsEntity(for: exercise.uuid, in: context, createIfNeeded: true)?.isHidden = true
+        saveSettings(context)
     }
 
     public func isHidden(exercise: Exercise) -> Bool {
-        userDefaults.hiddenExerciseUuids.contains(exercise.uuid)
+        exerciseSettings[exercise.uuid]?.hidden ?? false
+    }
+
+    /// Per-exercise rest time override (nil = use the default rest time).
+    public func restTime(forExercise uuid: UUID) -> TimeInterval? {
+        exerciseSettings[uuid]?.restTime ?? nil
+    }
+
+    public func setRestTime(_ time: TimeInterval?, forExercise uuid: UUID) {
+        guard let context = context else { return }
+        settingsEntity(for: uuid, in: context, createIfNeeded: true)?.restTime = time.map { NSNumber(value: $0) }
+        saveSettings(context)
+    }
+
+    private func settingsEntity(for uuid: UUID, in context: NSManagedObjectContext, createIfNeeded: Bool) -> ExerciseSettings? {
+        let request = ExerciseSettings.fetchRequest()
+        request.predicate = NSPredicate(format: "exerciseUuid == %@", uuid as CVarArg)
+        request.fetchLimit = 1
+        if let existing = (try? context.fetch(request))?.first { return existing }
+        guard createIfNeeded else { return nil }
+        let entity = ExerciseSettings(context: context)
+        entity.exerciseUuid = uuid
+        return entity
+    }
+
+    private func saveSettings(_ context: NSManagedObjectContext) {
+        objectWillChange.send()
+        do {
+            try context.save()
+        } catch {
+            os_log("Could not save exercise settings: %@", log: .migration, type: .error, error.localizedDescription)
+            context.rollback()
+        }
+        exerciseSettings = Self.loadExerciseSettings(context: context)
+    }
+
+    fileprivate static func loadExerciseSettings(context: NSManagedObjectContext?) -> [UUID: (restTime: TimeInterval?, hidden: Bool)] {
+        guard let context = context else { return [:] }
+        let request = ExerciseSettings.fetchRequest()
+        let entities = (try? context.fetch(request)) ?? []
+        var result: [UUID: (restTime: TimeInterval?, hidden: Bool)] = [:]
+        for entity in entities {
+            guard let uuid = entity.exerciseUuid else { continue }
+            result[uuid] = (entity.restTime?.doubleValue, entity.isHidden)
+        }
+        return result
     }
 }
 

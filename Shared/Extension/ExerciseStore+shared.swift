@@ -10,10 +10,9 @@ import Foundation
 import WorkoutDataKit
 
 extension ExerciseStore {
-    // Custom exercises live in the workout database (CustomExercise entity), so the store reads
-    // and writes them through the shared Core Data context.
+    // Custom exercises and per-exercise settings live in the workout database, so the store
+    // reads and writes them through the shared Core Data context.
     static let shared = ExerciseStore(
-        context: WorkoutDataStorage.shared.persistentContainer.viewContext,
-        userDefaults: UserDefaults.appGroup
+        context: WorkoutDataStorage.shared.persistentContainer.viewContext
     )
 }

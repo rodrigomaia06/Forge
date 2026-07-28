@@ -241,7 +241,7 @@ struct WorkoutExerciseDetailView : View {
     }
     
     private var restTimerDuration: TimeInterval {
-        if let uuid = workoutExercise.exerciseUuid, let time = settingsStore.restTime(forExercise: uuid) {
+        if let uuid = workoutExercise.exerciseUuid, let time = exerciseStore.restTime(forExercise: uuid) {
             return time
         }
         return settingsStore.defaultRestTime

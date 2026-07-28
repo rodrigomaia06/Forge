@@ -110,18 +110,6 @@ final class SettingsStore: ObservableObject {
             userDefaults.accentIdentifier = newValue
         }
     }
-
-    /// Per-exercise rest time override (nil = use the default rest time).
-    func restTime(forExercise uuid: UUID) -> TimeInterval? {
-        userDefaults.exerciseRestTimes[uuid.uuidString]
-    }
-
-    func setRestTime(_ time: TimeInterval?, forExercise uuid: UUID) {
-        self.objectWillChange.send()
-        var times = userDefaults.exerciseRestTimes
-        times[uuid.uuidString] = time
-        userDefaults.exerciseRestTimes = times
-    }
 }
 
 #if DEBUG

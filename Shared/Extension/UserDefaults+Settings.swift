@@ -18,7 +18,6 @@ extension UserDefaults {
         case maxRepetitionsOneRepMax
         case autoBackup
         case firstWeekday
-        case exerciseRestTimes
         case accentIdentifier
     }
 
@@ -105,16 +104,6 @@ extension UserDefaults {
         }
         get {
             (self.value(forKey: SettingsKeys.firstWeekday.rawValue) as? Int) ?? Calendar.current.firstWeekday
-        }
-    }
-
-    /// Per-exercise rest time overrides, keyed by exercise UUID string (seconds).
-    var exerciseRestTimes: [String: TimeInterval] {
-        set {
-            self.set(newValue, forKey: SettingsKeys.exerciseRestTimes.rawValue)
-        }
-        get {
-            (self.dictionary(forKey: SettingsKeys.exerciseRestTimes.rawValue) as? [String: TimeInterval]) ?? [:]
         }
     }
 }

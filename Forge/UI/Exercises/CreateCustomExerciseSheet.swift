@@ -39,7 +39,7 @@ struct CreateCustomExerciseSheet: View {
             self.exerciseStore.createCustomExercise(title: title, description: description.isEmpty ? nil : description, primaryMuscle: primaryMuscle, secondaryMuscle: secondaryMuscle, type: self.exerciseValues.type)
             if let restTime = self.exerciseValues.restTime,
                let created = self.exerciseStore.customExercises.first(where: { $0.title == title }) {
-                SettingsStore.shared.setRestTime(restTime, forExercise: created.uuid)
+                self.exerciseStore.setRestTime(restTime, forExercise: created.uuid)
             }
             self.presentationMode.wrappedValue.dismiss()
             
