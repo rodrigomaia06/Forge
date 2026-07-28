@@ -21,7 +21,7 @@ struct WorkoutExerciseDetailView : View {
     @FetchRequest(fetchRequest: WorkoutExercise.fetchRequest()) var workoutExerciseHistory // will be overwritten in init()
     @ObservedObject var workoutExercise: WorkoutExercise
 
-    @State private var selectedWorkoutSet: WorkoutSet? = nil
+    @State private var moreSheetSet: WorkoutSet? = nil
     
     @State private var showExerciseInfo = false
     
@@ -64,19 +64,38 @@ struct WorkoutExerciseDetailView : View {
         workoutExercise.workoutSets?.first(where: { !($0 as! WorkoutSet).isCompleted }) as? WorkoutSet
     }
     
-    private func select(set: WorkoutSet?, forceNoAnimation: Bool = false) {
-        if let set = set, !set.isCompleted, set.repetitions == nil || set.weight == nil { // treat as uninitialized
-            initRepsAndWeight(for: set)
-        }
-        
-        // only animate if we would show/hide the editor
-        if !forceNoAnimation, set == nil && selectedWorkoutSet != nil || set != nil && selectedWorkoutSet == nil {
-            withAnimation {
-                selectedWorkoutSet = set
+    /// Pre-fill the values of uncompleted sets from the previous session so the user just edits
+    /// or confirms them inline (mirrors what the old editor did on selection).
+    private func prefillPlaceholders() {
+        for case let set as WorkoutSet in (workoutExercise.workoutSets?.array ?? []) where !set.isCompleted {
+            if set.repetitions == nil || set.weight == nil {
+                initRepsAndWeight(for: set)
             }
-        } else {
-            selectedWorkoutSet = set
         }
+    }
+
+    private func toggleComplete(_ set: WorkoutSet) {
+        if set.isCompleted {
+            set.isCompleted = false
+            Haptics.selection()
+            managedObjectContext.saveOrCrash()
+        } else {
+            completeSet(set)
+        }
+    }
+
+    private func completeSet(_ set: WorkoutSet) {
+        guard isCurrentWorkout else { return }
+        guard set.weightValue >= 0, set.repetitionsValue >= 0 else { return }
+        set.isCompleted = true
+        let workout = set.workoutExercise?.workout
+        workout?.start = workout?.start ?? Date()
+        moveWorkoutExerciseBehindLastBegun()
+        Haptics.success()
+        AudioServicesPlaySystemSound(1103) // Tink sound
+        restTimerStore.restTimerDuration = restTimerDuration
+        restTimerStore.restTimerStart = Date() // start the rest timer
+        managedObjectContext.saveOrCrash()
     }
     
     private func initRepsAndWeight(for set: WorkoutSet) {
@@ -138,10 +157,6 @@ struct WorkoutExerciseDetailView : View {
         }
     }
     
-    private func shouldHighlightRow(for set: WorkoutSet) -> Bool {
-        !self.isCurrentWorkout || set == self.firstUncompletedSet
-    }
-    
     private func rpe(rpe: Double) -> some View {
         VStack {
             Group {
@@ -155,35 +170,22 @@ struct WorkoutExerciseDetailView : View {
     
     private var currentWorkoutSets: some View {
         ForEach(indexedWorkoutSets(for: workoutExercise), id: \.1.id) { (index, workoutSet) in
-            WorkoutSetCell(workoutSet: workoutSet, index: index, colorMode: self.selectedWorkoutSet == workoutSet ? .selected : self.shouldHighlightRow(for: workoutSet) ? .activated : .deactivated, isPlaceholder: !workoutSet.isCompleted && workoutSet != self.firstUncompletedSet, showCompleted: self.isCurrentWorkout, showUpNextIndicator: self.firstUncompletedSet == workoutSet)
-//                .listRowBackground(self.selectedWorkoutSet == workoutSet && self.editMode?.wrappedValue != .active ? Color(UIColor.systemGray4) : nil)
-                .background(Color.fakeClear) // hack that allows tap gesture to work (13.1 beta2)
-                .onTapGesture {
-                    guard self.editMode?.wrappedValue != .active else { return }
-                    if self.selectedWorkoutSet?.hasChanges ?? false {
-                        self.managedObjectContext.saveOrCrash()
-                    }
-                    if self.selectedWorkoutSet == workoutSet {
-                        self.select(set: nil)
-                    } else if workoutSet.isCompleted || workoutSet == self.firstUncompletedSet {
-                        self.select(set: workoutSet)
-                    }
-                }
+            ActiveSetRow(
+                workoutSet: workoutSet,
+                index: index,
+                weightUnit: settingsStore.weightUnit,
+                isCurrentWorkout: isCurrentWorkout,
+                isUpNext: firstUncompletedSet == workoutSet,
+                onToggleComplete: { toggleComplete(workoutSet) },
+                onMore: { moreSheetSet = workoutSet }
+            )
         }
         .onDelete { offsets in
-            var deletedSelectedSet = false
             let workoutSets = self.workoutSets(for: self.workoutExercise)
             for i in offsets {
                 let workoutSet = workoutSets[i]
                 self.managedObjectContext.delete(workoutSet)
                 workoutSet.workoutExercise?.removeFromWorkoutSets(workoutSet)
-                
-                if workoutSet == self.selectedWorkoutSet {
-                    deletedSelectedSet = true
-                }
-            }
-            if deletedSelectedSet {
-                self.select(set: self.firstUncompletedSet)
             }
             DispatchQueue.main.async { // iOS 14 beta crashes if this is not async
                 self.managedObjectContext.saveOrCrash()
@@ -209,13 +211,14 @@ struct WorkoutExerciseDetailView : View {
     
     private var addSetButton: some View {
         Button(action: {
+            Haptics.impact(.light)
             let workoutSet = WorkoutSet.create(context: self.workoutExercise.managedObjectContext!)
             workoutSet.workoutExercise = self.workoutExercise
-            self.select(set: self.firstUncompletedSet)
             if !self.isCurrentWorkout {
                 // don't allow uncompleted sets if not in current workout
                 workoutSet.isCompleted = true
             }
+            self.prefillPlaceholders() // pre-fill the new set from the previous session
             self.managedObjectContext.saveOrCrash()
         }) {
             HStack {
@@ -248,42 +251,6 @@ struct WorkoutExerciseDetailView : View {
         return settingsStore.defaultRestTime
     }
     
-    private var workoutSetEditor: some View {
-        VStack(spacing: 0) {
-            Divider()
-            WorkoutSetEditor(workoutSet: self.selectedWorkoutSet!, onDone: {
-                guard let set = self.selectedWorkoutSet else { return }
-                
-                if !set.isCompleted {
-                     assert(self.isCurrentWorkout)
-                    // these preconditions should never ever happen, but just to be sure
-                    precondition(set.weightValue >= 0)
-                    precondition(set.repetitionsValue >= 0)
-                    set.isCompleted = true
-                    let workout = set.workoutExercise?.workout
-                    workout?.start = workout?.start ?? Date()
-                    
-                    if #available(iOS 14, *) { // fixed in iOS 14.0
-                        self.moveWorkoutExerciseBehindLastBegun() // this causes a "jump back" bug since iOS 13.4
-                    }
-                    
-                    let feedbackGenerator = UINotificationFeedbackGenerator()
-                    feedbackGenerator.prepare()
-                    feedbackGenerator.notificationOccurred(.success)
-                    AudioServicesPlaySystemSound(1103) // Tink sound
-                    
-                    self.restTimerStore.restTimerDuration = self.restTimerDuration
-                    self.restTimerStore.restTimerStart = Date() // start the rest timer
-                }
-                self.select(set: self.firstUncompletedSet)
-                
-                self.managedObjectContext.saveOrCrash()
-            })
-            .background(Color(.systemFill).opacity(0.5))
-        }
-        .transition(AnyTransition.move(edge: .bottom))
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             List {
@@ -301,15 +268,16 @@ struct WorkoutExerciseDetailView : View {
                 historyWorkoutSets
             }
             .listStyleCompat_InsetGroupedListStyle()
-            
-            if selectedWorkoutSet != nil &&
-                (self.workoutExercise.workoutSets?.contains(self.selectedWorkoutSet!) ?? false) &&
-                editMode?.wrappedValue != .active {
-                workoutSetEditor
-            } // TODO: else if workoutExercise is finished, show next exercise / finish workout button
-            
+
             if let exercise = workoutExercise.exercise(in: exerciseStore.exercises) {
                 NavigationLink(destination: ExerciseDetailView(exercise: exercise).environmentObject(self.settingsStore), isActive: $showExerciseInfo) { EmptyView() }
+            }
+        }
+        .sheet(item: $moreSheetSet) { set in
+            NavigationStack {
+                MoreView(workoutSet: set, weightUnit: settingsStore.weightUnit)
+                    .navigationBarTitle(Text(set.displayTitle(weightUnit: settingsStore.weightUnit)), displayMode: .inline)
+                    .navigationBarItems(trailing: Button("Done") { moreSheetSet = nil })
             }
         }
         .navigationBarTitle(Text(workoutExercise.exercise(in: exerciseStore.exercises)?.title ?? ""), displayMode: .inline)
@@ -328,8 +296,7 @@ struct WorkoutExerciseDetailView : View {
             }
         )
         .onAppear {
-            self.select(set: self.firstUncompletedSet, forceNoAnimation: true)
-//            self.fetchWorkoutExerciseHistory()
+            self.prefillPlaceholders()
         }
         .onDisappear {
             self.managedObjectContext.saveOrCrash()
@@ -343,6 +310,96 @@ struct WorkoutExerciseDetailView : View {
         } else {
             return nil
         }
+    }
+}
+
+/// A single set row with inline-editable weight and reps, a "more" button (tag / comment / RPE /
+/// targets), and a checkmark to complete the set. Replaces the old bottom editor panel.
+private struct ActiveSetRow: View {
+    @ObservedObject var workoutSet: WorkoutSet
+    let index: Int
+    let weightUnit: WeightUnit
+    let isCurrentWorkout: Bool
+    let isUpNext: Bool
+    var onToggleComplete: () -> Void
+    var onMore: () -> Void
+
+    @FocusState private var focus: Field?
+    private enum Field { case weight, reps }
+
+    private var weightField: Binding<Double> {
+        Binding(
+            get: { WeightUnit.convert(weight: workoutSet.weightValue, from: .metric, to: weightUnit) },
+            set: { workoutSet.weightValue = max(0, min(WeightUnit.convert(weight: $0, from: weightUnit, to: .metric), WorkoutSet.MAX_WEIGHT)) }
+        )
+    }
+
+    private var repsField: Binding<Double> {
+        Binding(
+            get: { Double(workoutSet.repetitionsValue) },
+            set: { workoutSet.repetitionsValue = Int16(max(0, min($0, Double(WorkoutSet.MAX_REPETITIONS)))) }
+        )
+    }
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.s) {
+            Text("\(index)")
+                .font(.forgeCaption)
+                .foregroundColor(.forgeSecondaryLabel)
+                .frame(minWidth: 16, alignment: .leading)
+
+            TextField("0", value: weightField, format: .number)
+                .keyboardType(.decimalPad)
+                .focused($focus, equals: .weight)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: 76)
+                .font(.forgeValue)
+            Text(weightUnit.unit.symbol)
+                .font(.forgeCaption)
+                .foregroundColor(.forgeSecondaryLabel)
+
+            Text("×").foregroundColor(.forgeSecondaryLabel)
+
+            TextField("0", value: repsField, format: .number)
+                .keyboardType(.numberPad)
+                .focused($focus, equals: .reps)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: 44)
+                .font(.forgeValue)
+            Text("reps")
+                .font(.forgeCaption)
+                .foregroundColor(.forgeSecondaryLabel)
+
+            Spacer(minLength: Theme.Spacing.s)
+
+            if let rpe = workoutSet.rpeValue {
+                Text(String(format: "%.1f", rpe))
+                    .font(.forgeCaption)
+                    .foregroundColor(.forgeSecondaryLabel)
+            }
+
+            Button(action: onMore) {
+                Image(systemName: "ellipsis")
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .frame(width: 30, height: 34)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("More options")
+
+            if isCurrentWorkout {
+                Button(action: onToggleComplete) {
+                    Image(systemName: workoutSet.isCompleted ? "checkmark.circle.fill" : "circle")
+                        .font(.title3)
+                        .foregroundColor(workoutSet.isCompleted ? .forgeAccent : (isUpNext ? .forgeLabel : .forgeSecondaryLabel))
+                        .frame(width: 34, height: 34)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(workoutSet.isCompleted ? "Set completed" : "Complete set")
+            }
+        }
+        .foregroundColor(workoutSet.isCompleted ? .forgeLabel : .forgeSecondaryLabel)
     }
 }
 

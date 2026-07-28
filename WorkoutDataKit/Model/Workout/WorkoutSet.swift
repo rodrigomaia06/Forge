@@ -9,7 +9,7 @@
 import CoreData
 import Combine
 
-extension WorkoutSet {
+extension WorkoutSet: Identifiable {
     public var id: NSManagedObjectID { self.objectID }
 }
 

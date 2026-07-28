@@ -299,7 +299,7 @@ struct WorkoutSetEditor : View {
     }
 }
 
-private struct MoreView: View {
+struct MoreView: View {
     @ObservedObject var workoutSet: WorkoutSet
     var weightUnit: WeightUnit = .metric
 

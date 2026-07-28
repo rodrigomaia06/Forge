@@ -30,6 +30,7 @@ struct StartWorkoutView: View {
         NavigationStack {
             List {
                 Button {
+                    Haptics.success()
                     Workout.create(context: self.managedObjectContext).startOrCrash()
                 } label: {
                     Text("Start workout")
