@@ -46,6 +46,16 @@ struct WorkoutRoutineView: View {
             }
         )
     }
+
+    private var routineCustomAttributes: Binding<[String: String]> {
+        Binding(
+            get: { self.workoutRoutine.customAttributes },
+            set: { newValue in
+                self.workoutRoutine.customAttributes = newValue
+                self.managedObjectContext.saveOrCrash()
+            }
+        )
+    }
     private func adjustAndSaveWorkoutRoutineCommentInput() {
         guard let newValue = workoutRoutineCommentInput?.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
         workoutRoutineCommentInput = newValue
@@ -87,6 +97,9 @@ struct WorkoutRoutineView: View {
                     }
                 })
             }
+
+            CustomAttributesEditor(attributes: routineCustomAttributes, isEditable: true)
+
             Section(header: Text("Exercises".uppercased())) {
                 ForEach(workoutRoutineExercises) { workoutRoutineExercise in
                     NavigationLink(destination: WorkoutRoutineExerciseView(workoutRoutineExercise: workoutRoutineExercise)) {
@@ -127,6 +140,7 @@ struct WorkoutRoutineView: View {
             }
         }
         .listStyleCompat_InsetGroupedListStyle()
+        .keyboardDoneToolbar()
         .navigationBarTitle(Text(workoutRoutine.displayTitle), displayMode: .inline)
         .navigationBarItems(trailing: EditButton())
         .sheet(isPresented: self.$showExerciseSelector) {

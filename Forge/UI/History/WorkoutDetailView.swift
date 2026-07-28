@@ -51,6 +51,16 @@ struct WorkoutDetailView : View {
             }
         )
     }
+
+    private var workoutCustomAttributes: Binding<[String: String]> {
+        Binding(
+            get: { self.workout.customAttributes },
+            set: { newValue in
+                self.workout.customAttributes = newValue
+                self.managedObjectContext.saveOrCrash()
+            }
+        )
+    }
     private func adjustAndSaveWorkoutTitleInput() {
         guard let newValue = workoutTitleInput?.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
         workoutTitleInput = newValue
@@ -123,6 +133,8 @@ struct WorkoutDetailView : View {
                         LabeledContent("End") { Text(workout.safeEnd.formatted(date: .abbreviated, time: .shortened)) }
                     }
                 }
+
+                CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: editMode?.wrappedValue.isEditing == true)
 
             Section {
                 ForEach(workoutExercises) { workoutExercise in
