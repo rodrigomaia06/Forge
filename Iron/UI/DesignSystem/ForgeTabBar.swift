@@ -2,14 +2,16 @@
 //  ForgeTabBar.swift
 //  Forge
 //
-//  The custom floating "dock" tab bar used as the app's real navigation (see ContentView).
-//  A rounded surface pill with icon + label items on the design tokens.
+//  The custom floating "dock" — a frosted-glass capsule with icon-only items and a sliding
+//  selection pill behind the active tab (Instagram-style). Used as the app's real navigation
+//  (see ContentView). Content scrolls behind it so the glass reads as glass.
 //
 
 import SwiftUI
 
 struct ForgeTabBar: View {
     @Binding var selection: SceneState.Tab
+    @Namespace private var pill
 
     private struct Item {
         let tab: SceneState.Tab
@@ -30,32 +32,35 @@ struct ForgeTabBar: View {
             ForEach(items, id: \.tab) { item in
                 Button {
                     guard selection != item.tab else { return }
-                    Haptics.selection()
+                    Haptics.impact(.medium)
                     selection = item.tab
                 } label: {
-                    VStack(spacing: Theme.Spacing.xs) {
+                    ZStack {
+                        if selection == item.tab {
+                            Capsule(style: .continuous)
+                                .fill(Color.forgeLabel.opacity(0.16))
+                                .matchedGeometryEffect(id: "pill", in: pill)
+                        }
                         Image(systemName: item.icon)
                             .font(.system(size: 20, weight: .medium))
-                        Text(item.title)
-                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(selection == item.tab ? .forgeLabel : .forgeSecondaryLabel)
                     }
-                    .foregroundColor(selection == item.tab ? .forgeLabel : .forgeSecondaryLabel)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .contentShape(Rectangle())
+                    .frame(width: 56, height: 38)
+                    .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
                 .accessibilityLabel(item.title)
             }
         }
-        .padding(.vertical, Theme.Spacing.s)
-        .padding(.horizontal, Theme.Spacing.s)
+        .padding(Theme.Spacing.xs)
         .background(
             Capsule(style: .continuous)
-                .fill(.ultraThinMaterial) // frosted glass
-                .overlay(Capsule(style: .continuous).strokeBorder(Color.forgeSeparator, lineWidth: 0.5))
-                .shadow(color: Color.black.opacity(0.4), radius: 20, y: 8)
+                .fill(.ultraThinMaterial)
+                .overlay(Capsule(style: .continuous).strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5))
+                .shadow(color: Color.black.opacity(0.35), radius: 18, y: 8)
         )
+        .animation(.snappy(duration: 0.28), value: selection)
     }
 }
 
