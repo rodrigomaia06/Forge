@@ -23,7 +23,6 @@ struct WorkoutExerciseDetailView : View {
     @ObservedObject var workoutExercise: WorkoutExercise
 
     @State private var moreSheetSet: WorkoutSet? = nil
-    @State private var noteSheetSet: WorkoutSet? = nil
     @State private var showExerciseNote = false
     @State private var showHistory = false
     @State private var showAllHistory = false
@@ -175,31 +174,24 @@ struct WorkoutExerciseDetailView : View {
     
     private var hasExerciseNote: Bool { !(workoutExercise.comment ?? "").isEmpty }
 
-    private var exerciseNoteSubtitle: some View {
-        Button {
-            showExerciseNote = true
-        } label: {
-            HStack(spacing: Theme.Spacing.xs) {
-                if hasExerciseNote {
-                    Text(workoutExercise.comment ?? "")
-                        .font(.forgeCaption.italic())
-                        .lineLimit(2)
-                } else {
-                    Image(systemName: "square.and.pencil")
-                        .font(.caption2)
-                    Text("Add a note for this exercise")
-                        .font(.forgeCaption)
-                }
+    // Only shown when there is a note. Adding a note is in the ... menu, so nothing is displayed by
+    // default (an always-visible "Add a note" row read as off-center clutter).
+    @ViewBuilder private var exerciseNoteSubtitle: some View {
+        if hasExerciseNote {
+            Button {
+                showExerciseNote = true
+            } label: {
+                Text(workoutExercise.comment ?? "")
+                    .font(.forgeCaption.italic())
+                    .lineLimit(2)
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, Theme.Spacing.xs)
+                    .contentShape(Rectangle())
             }
-            .foregroundColor(.forgeSecondaryLabel)
-            .frame(maxWidth: .infinity)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, Theme.Spacing.l)
-            .padding(.vertical, Theme.Spacing.s)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .accessibilityLabel("Exercise note: \(workoutExercise.comment ?? "")")
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(hasExerciseNote ? "Exercise note: \(workoutExercise.comment ?? "")" : "Add a note for this exercise")
     }
 
     /// Column headers above the set rows (Set, Previous, kg, Reps).
@@ -242,8 +234,7 @@ struct WorkoutExerciseDetailView : View {
                 showRPE: settingsStore.showRPE,
                 previousText: previousPerformance(atZeroBased: index - 1),
                 onToggleComplete: { toggleComplete(workoutSet) },
-                onMore: { moreSheetSet = workoutSet },
-                onNote: { noteSheetSet = workoutSet }
+                onMore: { moreSheetSet = workoutSet }
             )
             // Native trailing swipe rather than onDelete, so the delete action fills the row height
             // cleanly instead of leaving a black square against the custom row background.
@@ -367,36 +358,53 @@ struct WorkoutExerciseDetailView : View {
                 .foregroundColor(.forgeLabel)
             Spacer()
             Menu {
-                Button { showHistory = true } label: {
-                    Label("Previous sessions", systemImage: "clock.arrow.circlepath")
-                }
-                if workoutExercise.exercise(in: exerciseStore.exercises) != nil {
-                    Button { showExerciseInfo = true } label: {
-                        Label("Exercise info", systemImage: "info.circle")
-                    }
-                }
-                Button(role: .destructive) { removeExercise() } label: {
-                    Label("Remove exercise", systemImage: "trash")
-                }
+                exerciseMenuItems
             } label: {
                 Image(systemName: "ellipsis")
-                    .foregroundColor(.forgeSecondaryLabel)
+                    // Green when the exercise has a note, so it is the single note indicator.
+                    .foregroundColor(hasExerciseNote ? .forgeSuccess : .forgeSecondaryLabel)
                     .frame(width: 34, height: 30)
                     .contentShape(Rectangle())
             }
         }
     }
 
-    /// Sheets, the exercise-info push, and the on-appear pre-fill, shared by both layouts.
+    @ViewBuilder private var exerciseMenuItems: some View {
+        Button { showExerciseNote = true } label: {
+            Label(hasExerciseNote ? "Edit note" : "Add note", systemImage: "square.and.pencil")
+        }
+        Button { showHistory = true } label: {
+            Label("Previous sessions", systemImage: "clock.arrow.circlepath")
+        }
+        if workoutExercise.exercise(in: exerciseStore.exercises) != nil {
+            Button { showExerciseInfo = true } label: {
+                Label("Exercise info", systemImage: "info.circle")
+            }
+        }
+        if embedded {
+            Button(role: .destructive) { removeExercise() } label: {
+                Label("Remove exercise", systemImage: "trash")
+            }
+        }
+    }
+
+    /// Sheets, the exercise-info sheet, and the on-appear pre-fill, shared by both layouts. Exercise
+    /// info is a sheet (not a hidden NavigationLink) so the card row shows no stray disclosure chevron.
     private func attachingSheets<V: View>(to content: V) -> some View {
         content
-            .background(
-                Group {
-                    if let exercise = workoutExercise.exercise(in: exerciseStore.exercises) {
-                        NavigationLink(destination: ExerciseDetailView(exercise: exercise).environmentObject(self.settingsStore), isActive: $showExerciseInfo) { EmptyView() }
+            .sheet(isPresented: $showExerciseInfo) {
+                if let exercise = workoutExercise.exercise(in: exerciseStore.exercises) {
+                    NavigationStack {
+                        ExerciseDetailView(exercise: exercise)
+                            .environmentObject(self.settingsStore)
+                            .toolbar {
+                                ToolbarItem(placement: .cancellationAction) {
+                                    Button("Done") { showExerciseInfo = false }
+                                }
+                            }
                     }
                 }
-            )
+            }
             .sheet(item: $moreSheetSet) { set in
                 NavigationStack {
                     SetMoreView(workoutSet: set, weightUnit: settingsStore.weightUnit, showRPE: settingsStore.showRPE)
@@ -404,14 +412,6 @@ struct WorkoutExerciseDetailView : View {
                         .navigationBarItems(trailing: Button("Done") { moreSheetSet = nil })
                 }
                 .presentationDetents([.medium, .large])
-            }
-            .sheet(item: $noteSheetSet) { set in
-                NavigationStack {
-                    SetNoteEditor(workoutSet: set)
-                        .navigationBarTitle(Text("Note"), displayMode: .inline)
-                        .navigationBarItems(trailing: Button("Done") { noteSheetSet = nil })
-                }
-                .presentationDetents([.medium])
             }
             .sheet(isPresented: $showHistory) {
                 NavigationStack {
@@ -465,16 +465,10 @@ struct WorkoutExerciseDetailView : View {
         .navigationBarItems(trailing:
             HStack(spacing: NAVIGATION_BAR_SPACING) {
                 Menu {
-                    Button { showHistory = true } label: {
-                        Label("Previous sessions", systemImage: "clock.arrow.circlepath")
-                    }
-                    if workoutExercise.exercise(in: exerciseStore.exercises) != nil {
-                        Button { showExerciseInfo = true } label: {
-                            Label("Exercise info", systemImage: "info.circle")
-                        }
-                    }
+                    exerciseMenuItems
                 } label: {
                     Image(systemName: "ellipsis")
+                        .foregroundColor(hasExerciseNote ? .forgeSuccess : nil)
                         .imageScale(.large)
                 }
                 EditButton()
@@ -515,7 +509,6 @@ private struct ActiveSetRow: View {
     let previousText: String?
     var onToggleComplete: () -> Void
     var onMore: () -> Void
-    var onNote: () -> Void
 
     private var hasNote: Bool { !(workoutSet.comment ?? "").isEmpty }
 
@@ -579,17 +572,6 @@ private struct ActiveSetRow: View {
             setField(weightField, field: .weight, keyboard: .decimalPad, width: 68)
             setField(repsField, field: .reps, keyboard: .numberPad, width: 60)
 
-            // Quick per-set note: green once the set has one. The chip opens the full options sheet.
-            Button(action: onNote) {
-                Image(systemName: hasNote ? "text.bubble.fill" : "text.bubble")
-                    .font(.footnote)
-                    .foregroundColor(hasNote ? .forgeSuccess : .forgeSecondaryLabel)
-                    .frame(width: 26, height: 30)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(hasNote ? "Edit set note" : "Add set note")
-
             if isCurrentWorkout {
                 Button(action: onToggleComplete) {
                     Image(systemName: workoutSet.isCompleted ? "checkmark.circle.fill" : "circle")
@@ -615,33 +597,7 @@ private struct ActiveSetRow: View {
     }
 }
 
-/// A focused editor for a single set's note, opened from the note icon on the row.
-private struct SetNoteEditor: View {
-    @ObservedObject var workoutSet: WorkoutSet
-
-    private var noteBinding: Binding<String> {
-        Binding(
-            get: { workoutSet.comment ?? "" },
-            set: { workoutSet.comment = $0.isEmpty ? nil : $0 }
-        )
-    }
-
-    var body: some View {
-        Form {
-            Section(footer: Text("A note for this set only.")) {
-                TextField("Note", text: noteBinding, axis: .vertical)
-                    .lineLimit(3...8)
-            }
-        }
-        .onDisappear {
-            let trimmed = (workoutSet.comment ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            workoutSet.comment = trimmed.isEmpty ? nil : trimmed
-            workoutSet.managedObjectContext?.saveOrCrash()
-        }
-    }
-}
-
-/// A focused editor for the whole exercise's note in this session, opened from the subtitle.
+/// A focused editor for the whole exercise's note in this session, opened from the ... menu.
 private struct ExerciseNoteEditor: View {
     @ObservedObject var workoutExercise: WorkoutExercise
 

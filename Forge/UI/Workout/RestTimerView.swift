@@ -34,7 +34,9 @@ struct RestTimerView: View {
             Circle()
                 .trim(from: 0, to: remainingTimeInPercent)
                 .stroke(Color.accentColor, lineWidth: 8)
-                .animation(.default)
+                // Animate only the progress change, not every layout pass (the old implicit
+                // .animation(.default) made opening and adjusting the timer janky).
+                .animation(.default, value: remainingTimeInPercent)
         }
         .rotationEffect(.degrees(-90))
 //        .shadow(radius: 4)
@@ -179,9 +181,9 @@ struct RestTimerView: View {
     var body: some View {
         Group {
             if restTimerStore.restTimerRemainingTime != nil {
-                runningTimerView.animation(.default)
+                runningTimerView
             } else {
-                stoppedTimerView.animation(.default)
+                stoppedTimerView
             }
         }
     }

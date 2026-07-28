@@ -13,6 +13,7 @@ import os.log
 
 struct CurrentWorkoutView: View {
     @Environment(\.managedObjectContext) var managedObjectContext
+    @Environment(\.editMode) private var editMode
     @EnvironmentObject var restTimerStore: RestTimerStore
     @EnvironmentObject var exerciseStore: ExerciseStore
     @EnvironmentObject var settingsStore: SettingsStore
@@ -193,10 +194,33 @@ struct CurrentWorkoutView: View {
                             }
                         })
                     }
-                    // Each exercise is a card with its set table inline, so logging never leaves this
-                    // screen. Remove an exercise from its card's ... menu.
-                    ForEach(workoutExercises) { workoutExercise in
-                        WorkoutExerciseDetailView(workoutExercise: workoutExercise, embedded: true)
+                    // In edit mode the exercises collapse to a plain, reorderable list of names (drag to
+                    // reorder, swipe/– to remove). Otherwise each exercise is a full card with its set
+                    // table inline, so logging never leaves this screen.
+                    if editMode?.wrappedValue.isEditing == true {
+                        Section(header: Text("Reorder exercises".uppercased())) {
+                            ForEach(workoutExercises) { workoutExercise in
+                                Text(workoutExercise.exercise(in: exerciseStore.exercises)?.title ?? "Exercise")
+                            }
+                            .onMove { source, destination in
+                                var exercises = self.workoutExercises
+                                exercises.move(fromOffsets: source, toOffset: destination)
+                                self.workout.workoutExercises = NSOrderedSet(array: exercises)
+                                self.managedObjectContext.saveOrCrash()
+                            }
+                            .onDelete { offsets in
+                                let exercises = self.workoutExercises
+                                for i in offsets {
+                                    self.managedObjectContext.delete(exercises[i])
+                                    exercises[i].workout?.removeFromWorkoutExercises(exercises[i])
+                                }
+                                self.managedObjectContext.saveOrCrash()
+                            }
+                        }
+                    } else {
+                        ForEach(workoutExercises) { workoutExercise in
+                            WorkoutExerciseDetailView(workoutExercise: workoutExercise, embedded: true)
+                        }
                     }
 
                     Section {
