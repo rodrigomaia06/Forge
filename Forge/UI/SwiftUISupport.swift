@@ -95,6 +95,18 @@ extension View {
 }
 
 extension View {
+    /// Circular translucent backing for a header icon button. Uses Liquid Glass on iOS 26 and a
+    /// system material circle on earlier versions, so the plus reads as a native control on both.
+    @ViewBuilder func forgeGlassCircle() -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.interactive(), in: Circle())
+        } else {
+            self.background(.ultraThinMaterial, in: Circle())
+        }
+    }
+}
+
+extension View {
     /// A single "Done" above the keyboard that dismisses whatever field is focused (numbers or text).
     /// Apply once per screen, not per field, or several Done buttons stack up.
     func keyboardDoneToolbar() -> some View {

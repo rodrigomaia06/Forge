@@ -79,9 +79,15 @@ class NotificationManager: NSObject {
             
             guard let remainingTime = remainingTime, remainingTime > 0 else {
                 self.removePendingNotificationRequests(withIdentifiers: [.restTimerUp])
+                self.removeDeliveredNotification(withIdentifiers: [.restTimerUp])
                 return
             }
-            
+
+            // Clear any earlier rest-timer banner still sitting in Notification Center so repeated rests
+            // in one session replace the last alert instead of stacking up. The Live Activity in the
+            // Dynamic Island carries the live countdown; this notification is only the end-of-rest alert.
+            self.removeDeliveredNotification(withIdentifiers: [.restTimerUp])
+
             let content = UNMutableNotificationContent()
             content.title = "You've rested enough!"
             if let totalTime = totalTime, let totalTimeString = restTimerDurationFormatter.string(from: totalTime) {
@@ -89,12 +95,9 @@ class NotificationManager: NSObject {
             }
             content.body = "Back to work."
             if settings.soundSetting == .enabled, SettingsStore.shared.restTimerSound {
-                content.sound = UNNotificationSound.default
+                content.sound = UNNotificationSound(named: UNNotificationSoundName("alarm.wav"))
             }
             content.categoryIdentifier = NotificationCategoryIdentifier.restTimerUp.rawValue
-            if #available(iOS 15.0, *) {
-                content.interruptionLevel = .timeSensitive
-            }
             
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: remainingTime, repeats: false)
             
@@ -124,20 +127,30 @@ class NotificationManager: NSObject {
     }
 }
 
+extension NotificationManager {
+    /// The bundled alarm.wav as a system sound, for playing in-app when the timer ends in the foreground.
+    static let restAlarmSoundID: SystemSoundID = {
+        var soundID: SystemSoundID = 0
+        if let url = Bundle.main.url(forResource: "alarm", withExtension: "wav") {
+            AudioServicesCreateSystemSoundID(url as CFURL, &soundID)
+        }
+        return soundID
+    }()
+}
+
 extension NotificationManager: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         guard notification.request.identifier == NotificationIdentifier.restTimerUp.rawValue else {
             completionHandler([])
             return
         }
-        // The rest timer ended while Forge is in the foreground. Fire the configured haptic, and play
-        // the classic iPhone tri-tone alert in-app. The notification carries no sound here so it does
-        // not double up. (Background notifications can only use the system default; see the request.)
+        // The rest timer ended while Forge is in the foreground. Fire the configured haptic and play the
+        // bundled alarm in-app; the notification carries no sound here so it does not double up.
         if SettingsStore.shared.restTimerHaptic {
             DispatchQueue.main.async { Haptics.success() }
         }
         if SettingsStore.shared.restTimerSound {
-            DispatchQueue.main.async { AudioServicesPlaySystemSound(1007) } // 1007 = classic tri-tone
+            DispatchQueue.main.async { AudioServicesPlaySystemSound(Self.restAlarmSoundID) }
         }
         completionHandler([.alert])
     }

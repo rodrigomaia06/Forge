@@ -56,8 +56,6 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.rodrigomaia.forge
         INFOPLIST_FILE: Forge/Info.plist
-        # Time-sensitive rest-timer alert so it can break through Focus / Do Not Disturb.
-        CODE_SIGN_ENTITLEMENTS: Forge/Forge.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: "YES"
     sources:

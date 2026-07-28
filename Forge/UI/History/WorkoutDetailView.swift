@@ -110,12 +110,18 @@ struct WorkoutDetailView : View {
                     }
             }
             
-            // editMode still doesn't work in 13.1 beta2
-//            if editMode?.wrappedValue == .active {
+            // Title and comment are editable only in edit mode, so browsing a finished workout cannot
+            // change what was recorded. Read mode shows the comment when there is one.
+            if editMode?.wrappedValue.isEditing == true {
                 Section {
                     ClearableTextField(titleKey: "Title", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
                     ClearableTextField(titleKey: "Comment", text: workoutComment, onCommit: { self.adjustAndSaveWorkoutCommentInput() })
                 }
+            } else if let comment = workout.comment, !comment.isEmpty {
+                Section {
+                    Text(comment)
+                }
+            }
                 
                 Section {
                     // The start and end are editable only in edit mode, so a stray tap while browsing
@@ -158,12 +164,14 @@ struct WorkoutDetailView : View {
                     self.managedObjectContext.saveOrCrash()
                 }
                 
-                Button(action: {
-                    self.showingExerciseSelectorSheet = true
-                }) {
-                    HStack {
-                        Image(systemName: "plus")
-                        Text("Add Exercises")
+                if editMode?.wrappedValue.isEditing == true {
+                    Button(action: {
+                        self.showingExerciseSelectorSheet = true
+                    }) {
+                        HStack {
+                            Image(systemName: "plus")
+                            Text("Add Exercises")
+                        }
                     }
                 }
             }

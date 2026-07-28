@@ -75,7 +75,8 @@ struct FeedView: View {
                 Image(systemName: "plus")
                     .imageScale(.large)
                     .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
+                    .contentShape(Circle())
+                    .forgeGlassCircle()
             }
             .accessibilityLabel("Start workout")
         }
@@ -397,7 +398,7 @@ struct FeedView: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text(dateLabel(workout.start)).font(.forgeSectionLabel).tracking(1).foregroundColor(.forgeSecondaryLabel)
                 Text(workout.title ?? "Workout").font(.forgeHeadline).foregroundColor(.forgeLabel)
-                Text("\(s.exercises) exercises · \(s.sets) sets · \(volumeString(s.volume))\(durationSuffix(workout))")
+                Text("\(s.exercises) exercises · \(s.sets) sets\(durationSuffix(workout))")
                     .font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)
             }
             .padding(Theme.Spacing.l)
@@ -414,25 +415,16 @@ struct FeedView: View {
         return " · \(text)"
     }
 
-    private func stats(_ workout: Workout) -> (exercises: Int, sets: Int, volume: Double) {
+    private func stats(_ workout: Workout) -> (exercises: Int, sets: Int) {
         let exercises = (workout.workoutExercises?.array as? [WorkoutExercise]) ?? []
         let sets = exercises.flatMap { ($0.workoutSets?.array as? [WorkoutSet]) ?? [] }
-        let volume = sets.reduce(0.0) { $0 + $1.weightValue * Double($1.repetitionsValue) }
-        return (exercises.count, sets.count, volume)
+        return (exercises.count, sets.count)
     }
 
     private func dateLabel(_ date: Date?) -> String {
         guard let date = date else { return "" }
         let f = DateFormatter(); f.dateFormat = "MMM d"
         return f.string(from: date).uppercased()
-    }
-
-    private func volumeString(_ kg: Double) -> String {
-        let unit = settingsStore.weightUnit
-        let value = WeightUnit.convert(weight: kg, from: .metric, to: unit)
-        let f = NumberFormatter(); f.numberStyle = .decimal; f.maximumFractionDigits = 0
-        let number = f.string(from: NSNumber(value: value)) ?? String(Int(value))
-        return "\(number) \(unit.unit.symbol)"
     }
 
 }

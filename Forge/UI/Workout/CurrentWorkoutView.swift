@@ -122,7 +122,17 @@ struct CurrentWorkoutView: View {
         workoutTitleInput = newValue
         workout.title = newValue.isEmpty ? nil : newValue
     }
-    
+
+    private var workoutCustomAttributes: Binding<[String: String]> {
+        Binding(
+            get: { self.workout.customAttributes },
+            set: { newValue in
+                self.workout.customAttributes = newValue
+                self.managedObjectContext.saveOrCrash()
+            }
+        )
+    }
+
 
     /// The finish button routes here: block an empty workout, otherwise confirm before finishing.
     private func requestFinish() {
@@ -200,6 +210,8 @@ struct CurrentWorkoutView: View {
                             Text(comment).foregroundColor(.forgeSecondaryLabel)
                         }
                     }
+                    // Custom fields like location or mood. Editable in edit mode, matching name and comment.
+                    CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: editMode == .active)
                     // In edit mode the exercises collapse to a plain, reorderable list of names (drag to
                     // reorder, swipe/– to remove). Otherwise each exercise is a full card with its set
                     // table inline, so logging never leaves this screen.
