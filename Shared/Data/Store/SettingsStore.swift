@@ -130,6 +130,16 @@ final class SettingsStore: ObservableObject {
             userDefaults.unfinishedWorkoutReminderDelay = newValue
         }
     }
+
+    var showPersonalRecords: Bool {
+        get {
+            userDefaults.showPersonalRecords
+        }
+        set {
+            self.objectWillChange.send()
+            userDefaults.showPersonalRecords = newValue
+        }
+    }
 }
 
 #if DEBUG

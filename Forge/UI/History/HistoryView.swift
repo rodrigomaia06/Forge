@@ -26,30 +26,53 @@ struct HistoryView : View {
     }
     
     @State private var activityItems: [Any]?
-    
+
     @State private var offsetsToDelete: IndexSet?
-    
-    /// Resturns `true` if at least one workout has workout exercises
+
+    @State private var filterActive = false
+    @State private var fromDate = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+    @State private var toDate = Date()
+
+    /// The workouts shown, filtered to the selected date range when the filter is on.
+    private var displayedWorkouts: [Workout] {
+        guard filterActive else { return Array(workouts) }
+        let cal = Calendar.current
+        let start = cal.startOfDay(for: fromDate)
+        let end = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: toDate)) ?? toDate
+        return workouts.filter { workout in
+            guard let s = workout.start else { return false }
+            return s >= start && s < end
+        }
+    }
+
+    /// Returns `true` if at least one of the workouts to delete has workout exercises.
     private func needsConfirmBeforeDelete(offsets: IndexSet) -> Bool {
+        let displayed = displayedWorkouts
         for index in offsets {
-            if workouts[index].workoutExercises?.count ?? 0 != 0 {
+            if displayed[index].workoutExercises?.count ?? 0 != 0 {
                 return true
             }
         }
         return false
     }
-    
+
     private func deleteAt(offsets: IndexSet) {
-        let workouts = self.workouts
+        let displayed = displayedWorkouts
         for i in offsets.sorted().reversed() {
-            workouts[i].deleteOrCrash()
+            displayed[i].deleteOrCrash()
         }
     }
 
     var body: some View {
         NavigationStack {
             List {
-                ForEach(workouts) { workout in
+                if filterActive {
+                    Section(footer: Text("Showing workouts from the first to the second date.")) {
+                        DatePicker("From", selection: $fromDate, in: ...toDate, displayedComponents: .date)
+                        DatePicker("To", selection: $toDate, in: fromDate..., displayedComponents: .date)
+                    }
+                }
+                ForEach(displayedWorkouts) { workout in
                     NavigationLink(destination: WorkoutDetailView(workout: workout)
                         .environmentObject(self.settingsStore)
                     ) {
@@ -81,7 +104,18 @@ struct HistoryView : View {
                 }
             }
             .listStyleCompat_InsetGroupedListStyle()
-            .navigationBarItems(trailing: EditButton())
+            .navigationBarItems(trailing:
+                HStack(spacing: NAVIGATION_BAR_SPACING) {
+                    Button {
+                        Haptics.selection()
+                        withAnimation { filterActive.toggle() }
+                    } label: {
+                        Image(systemName: filterActive ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                    }
+                    .accessibilityLabel(filterActive ? "Hide date filter" : "Filter by date")
+                    EditButton()
+                }
+            )
             .actionSheet(item: $offsetsToDelete) { offsets in
                 ActionSheet(title: Text("This cannot be undone."), buttons: [
                     .destructive(Text("Delete Workout"), action: {

@@ -84,7 +84,7 @@ struct WorkoutSetCell: View {
                 rpePill(rpe)
             }
 
-            if workoutSet.isPersonalRecord ?? false {
+            if settingsStore.showPersonalRecords, workoutSet.isPersonalRecord ?? false {
                 Image(systemName: "trophy.fill")
                     .font(.caption)
                     .foregroundColor(isMuted ? .forgeSecondaryLabel : .forgeWarning)

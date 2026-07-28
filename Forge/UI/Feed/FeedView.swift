@@ -404,7 +404,7 @@ struct FeedView: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text(dateLabel(workout.start)).font(.forgeSectionLabel).tracking(1).foregroundColor(.forgeSecondaryLabel)
                 Text(workout.title ?? "Workout").font(.forgeHeadline).foregroundColor(.forgeLabel)
-                Text("\(s.exercises) exercises · \(s.sets) sets · \(volumeString(s.volume))")
+                Text("\(s.exercises) exercises · \(s.sets) sets · \(volumeString(s.volume))\(durationSuffix(workout))")
                     .font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)
             }
             .padding(Theme.Spacing.l)
@@ -415,6 +415,11 @@ struct FeedView: View {
     }
 
     // MARK: Data helpers
+
+    private func durationSuffix(_ workout: Workout) -> String {
+        guard let duration = workout.duration, let text = Workout.durationFormatter.string(from: duration) else { return "" }
+        return " · \(text)"
+    }
 
     private func stats(_ workout: Workout) -> (exercises: Int, sets: Int, volume: Double) {
         let exercises = (workout.workoutExercises?.array as? [WorkoutExercise]) ?? []

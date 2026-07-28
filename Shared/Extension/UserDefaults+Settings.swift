@@ -21,6 +21,13 @@ extension UserDefaults {
         case accentIdentifier
         case unfinishedWorkoutReminderEnabled
         case unfinishedWorkoutReminderDelay
+        case showPersonalRecords
+    }
+
+    /// Whether to show the personal-record (estimated 1RM) trophy on qualifying sets.
+    var showPersonalRecords: Bool {
+        set { self.set(newValue, forKey: SettingsKeys.showPersonalRecords.rawValue) }
+        get { self.value(forKey: SettingsKeys.showPersonalRecords.rawValue) as? Bool ?? false }
     }
 
     /// Identifier of the selected accent theme (see ForgeAccent). Empty string means the default.

@@ -103,6 +103,12 @@ struct GeneralSettingsView: View {
         }
     }
 
+    private var recordsSection: some View {
+        Section(footer: Text("Show a trophy on a set when it is your best estimated one-rep max for that exercise.")) {
+            Toggle("Personal record trophies", isOn: $settingsStore.showPersonalRecords)
+        }
+    }
+
     var body: some View {
         Form {
             appearanceSection
@@ -111,6 +117,7 @@ struct GeneralSettingsView: View {
             restTimerTimesSection
             restTimerSection
             reminderSection
+            recordsSection
         }
         .navigationBarTitle("General", displayMode: .inline)
     }
