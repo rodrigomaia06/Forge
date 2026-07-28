@@ -184,7 +184,7 @@ struct WorkoutSetEditor : View {
     
     private var moreSheet: some View {
         NavigationStack {
-            MoreView(workoutSet: workoutSet)
+            MoreView(workoutSet: workoutSet, weightUnit: settingsStore.weightUnit)
                 .navigationBarTitle(Text(workoutSet.displayTitle(weightUnit: settingsStore.weightUnit)), displayMode: .inline)
                 .navigationBarItems(leading:
                     Button("Close") {
@@ -308,8 +308,30 @@ struct WorkoutSetEditor : View {
 
 private struct MoreView: View {
     @ObservedObject var workoutSet: WorkoutSet
-    
+    var weightUnit: WeightUnit = .metric
+
     @State private var activeAlert: AlertType?
+
+    // Target weight in the user's unit; 0 clears the target. Stored as kilograms.
+    private var targetWeightField: Binding<Double> {
+        Binding(
+            get: { workoutSet.targetWeightValue.map { WeightUnit.convert(weight: $0, from: .metric, to: weightUnit) } ?? 0 },
+            set: {
+                workoutSet.targetWeightValue = $0 > 0 ? WeightUnit.convert(weight: $0, from: weightUnit, to: .metric) : nil
+                workoutSet.managedObjectContext?.saveOrCrash()
+            }
+        )
+    }
+
+    private var targetRpeField: Binding<Double?> {
+        Binding(
+            get: { workoutSet.targetRpeValue },
+            set: {
+                workoutSet.targetRpeValue = $0
+                workoutSet.managedObjectContext?.saveOrCrash()
+            }
+        )
+    }
     
     private enum AlertType: Identifiable {
         case tagInfo
@@ -416,6 +438,24 @@ private struct MoreView: View {
                     }
                 })
             }
+
+            Section(header: Text("Target".uppercased()), footer: Text("Optional planned weight and effort for this set. Leave the weight at 0 for no target.")) {
+                HStack {
+                    Text("Weight")
+                    Spacer()
+                    TextField("0", value: targetWeightField, format: .number)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                    Text(weightUnit.unit.symbol)
+                        .foregroundColor(.secondary)
+                }
+                Picker("RPE", selection: targetRpeField) {
+                    Text("None").tag(Double?.none)
+                    ForEach(RPE.allowedValues.reversed(), id: \.self) { rpe in
+                        Text(String(format: "%.1f", rpe)).tag(Double?.some(rpe))
+                    }
+                }
+            }
             
             Section(header:
                 HStack {
@@ -452,7 +492,7 @@ struct WorkoutSetEditor_Previews : PreviewProvider {
                 .previewDisplayName("Imperial")
                 .previewLayout(.sizeThatFits)
             
-            MoreView(workoutSet: MockWorkoutData.metricRandom.workoutSet)
+            MoreView(workoutSet: MockWorkoutData.metricRandom.workoutSet, weightUnit: .metric)
                 .mockEnvironment(weightUnit: .metric)
                 .previewLayout(.sizeThatFits)
                 .listStyle(GroupedListStyle())

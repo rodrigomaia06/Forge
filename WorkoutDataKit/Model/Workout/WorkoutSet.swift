@@ -79,7 +79,32 @@ public class WorkoutSet: NSManagedObject, Codable {
             rpe = RPE.allowedValues.contains(newValue) ? newValue : 0
         }
     }
-    
+
+    /// Planned target weight for this set (nil = no target). In kilograms, like `weight`.
+    public var targetWeightValue: Double? {
+        get {
+            targetWeight?.doubleValue
+        }
+        set {
+            targetWeight = newValue as NSNumber?
+        }
+    }
+
+    /// Planned target RPE for this set (nil = no target).
+    public var targetRpeValue: Double? {
+        get {
+            guard let value = targetRpe?.doubleValue, RPE.allowedValues.contains(value) else { return nil }
+            return value
+        }
+        set {
+            if let newValue = newValue, RPE.allowedValues.contains(newValue) {
+                targetRpe = newValue as NSNumber
+            } else {
+                targetRpe = nil
+            }
+        }
+    }
+
     // MARK: Derived properties
     
     public func estimatedOneRepMax(maxReps: Int) -> Double? {
@@ -131,7 +156,9 @@ public class WorkoutSet: NSManagedObject, Codable {
         case minTargetRepetitions
         case maxTargetRepetitions
         case weight
+        case targetWeight
         case rpe
+        case targetRpe
         case tag
         case comment
     }
@@ -154,6 +181,8 @@ public class WorkoutSet: NSManagedObject, Codable {
         comment = try container.decodeIfPresent(String.self, forKey: .comment)
         minTargetRepetitionsValue = try container.decodeIfPresent(Int16.self, forKey: .minTargetRepetitions)
         maxTargetRepetitionsValue = try container.decodeIfPresent(Int16.self, forKey: .maxTargetRepetitions)
+        targetWeightValue = try container.decodeIfPresent(Double.self, forKey: .targetWeight)
+        targetRpeValue = try container.decodeIfPresent(Double.self, forKey: .targetRpe)
         isCompleted = true
     }
     
@@ -167,6 +196,8 @@ public class WorkoutSet: NSManagedObject, Codable {
         try container.encodeIfPresent(comment, forKey: .comment)
         try container.encodeIfPresent(minTargetRepetitionsValue, forKey: .minTargetRepetitions)
         try container.encodeIfPresent(maxTargetRepetitionsValue, forKey: .maxTargetRepetitions)
+        try container.encodeIfPresent(targetWeightValue, forKey: .targetWeight)
+        try container.encodeIfPresent(targetRpeValue, forKey: .targetRpe)
     }
 }
 

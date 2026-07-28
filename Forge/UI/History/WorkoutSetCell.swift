@@ -35,6 +35,18 @@ struct WorkoutSetCell: View {
         return formatter
     }()
 
+    /// The planned target weight in the user's unit (nil if no target), e.g. "100 kg".
+    private var targetWeightString: String? {
+        guard let target = workoutSet.targetWeightValue, target > 0 else { return nil }
+        let unit = settingsStore.weightUnit
+        let value = WeightUnit.convert(weight: target, from: .metric, to: unit)
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = unit.maximumFractionDigits
+        let number = formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
+        return "\(number) \(unit.unit.symbol)"
+    }
+
     private var isMuted: Bool { colorMode == .disabled }
 
     var body: some View {
@@ -47,6 +59,12 @@ struct WorkoutSetCell: View {
 
                     if let interval = WorkoutRoutineSetCell.repetitionIntervalString(minRepetitions: workoutSet.minTargetRepetitions?.intValue, maxRepetitions: workoutSet.maxTargetRepetitions?.intValue) {
                         Text(interval)
+                            .font(.forgeCaption)
+                            .foregroundColor(.forgeSecondaryLabel)
+                    }
+
+                    if let target = targetWeightString {
+                        Text("target \(target)")
                             .font(.forgeCaption)
                             .foregroundColor(.forgeSecondaryLabel)
                     }
