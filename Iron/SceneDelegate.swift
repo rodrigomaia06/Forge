@@ -48,9 +48,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                 do {
                     switch result {
                     case .success():
-                        guard let backupData = try Self.urlData(url: urlContext.url, openInPlace: urlContext.options.openInPlace) else { return }
+                        guard let localURL = try Self.copyToTemp(url: urlContext.url, openInPlace: urlContext.options.openInPlace) else { return }
                         DispatchQueue.main.async {
-                            NotificationCenter.default.post(name: .RestoreFromBackup, object: self, userInfo: [restoreFromBackupDataUserInfoKey : backupData])
+                            NotificationCenter.default.post(name: .RestoreFromBackup, object: self, userInfo: [restoreFromBackupDataUserInfoKey : localURL])
                         }
                     case .failure(let error):
                         throw error
@@ -68,11 +68,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                         let workout = Workout.create(context: context)
                         do {
                             os_log("Starting workout from deep link URL", log: .workoutData)
-                            try workout.start(startWatchCompanionErrorHandler: { error in
-                                // the Apple Watch wasn't started, most probably because the app is in the background
-                                os_log("Sending user notification to open the app because the watch app wasn't started. Probably because the app is in the background", log: .watch)
-                                NotificationManager.shared.requestStartedWorkoutFromBackgroundNotification()
-                            })
+                            try workout.start()
                         } catch {
                             os_log("Could not start workout: %@", log: .workoutData, type: .error, NSManagedObjectContext.descriptionWithDetailedErrors(error: error as NSError))
                             context.delete(workout)
@@ -86,7 +82,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
     }
     
-    private static func urlData(url: URL, openInPlace: Bool) throws -> Data? {
+    private static func copyToTemp(url: URL, openInPlace: Bool) throws -> URL? {
         if openInPlace {
             guard url.startAccessingSecurityScopedResource() else {
                 print("openInPlace but startAccessingSecurityScopedResource() -> false")
@@ -98,7 +94,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                 url.stopAccessingSecurityScopedResource()
             }
         }
-        return try Data(contentsOf: url)
+        let destination = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension(SQLiteBackup.fileExtension)
+        try? FileManager.default.removeItem(at: destination)
+        try FileManager.default.copyItem(at: url, to: destination)
+        return destination
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {
@@ -129,21 +130,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Called as the scene transitions from the background to the foreground.
         // Use this method to undo the changes made on entering the background.
         
-        // prepareAndStartWatchWorkout() only works when the app is active (not in background), therefore it could be that we have to call it now
-        if SettingsStore.shared.watchCompanion && WatchConnectionManager.shared.currentWatchWorkoutUuid == nil {
-            // if the watch companion is enabled and we haven't (successfully) started a watch workout yet
-            do {
-                // check if we have a workout running
-                os_log("Watch companion is enabled and no watch workout was started, checking if we have a current workout", log: .watch)
-                if let currentWorkout = try WorkoutDataStorage.shared.persistentContainer.viewContext.fetch(Workout.currentWorkoutFetchRequest).first {
-                    os_log("Current workout exists, but no watch workout was started. Trying to start it now.", log: .watch)
-                    WatchConnectionManager.shared.prepareAndStartWatchWorkout(workout: currentWorkout)
-                }
-            } catch {
-                os_log("Could not fetch current workout: %@", log: .workoutData, type: .error, NSManagedObjectContext.descriptionWithDetailedErrors(error: error as NSError))
-            }
-        }
-
         NotificationManager.shared.notificationCenter.removeAllDeliveredNotifications()
         NotificationManager.shared.removePendingNotificationRequests(withIdentifiers: [.unfinishedWorkout])
         

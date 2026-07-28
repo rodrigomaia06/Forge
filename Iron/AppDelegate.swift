@@ -10,7 +10,6 @@ import UIKit
 import CoreData
 import Combine
 import WorkoutDataKit
-import Intents
 import os.log
 
 @UIApplicationMain
@@ -22,9 +21,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         SettingsStore.migrateToAppGroupIfNecessary()
         ExerciseStore.migrateHiddenExercisesToAppGroupIfNecessary()
         
-        WatchConnectionManager.shared.activateSession()
-        Shortcuts.setShortcutSuggestions()
-//        Shortcuts.setRelevantShortcuts() // This doesn't work, the watch shows the suggestion but gets an error when executed (tested with iOS 13.4)
         if #available(iOS 14.0, *) {
             WidgetKind.lastWorkout.reloadTimelines()
         }
@@ -40,104 +36,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return true
     }
     
-    func applicationWillTerminate(_ application: UIApplication) {
-        if SettingsStore.shared.autoBackup {
-            let dispatchGroup = DispatchGroup()
-            dispatchGroup.enter()
-            
-            os_log("Auto backup is enabled, creating backup", log: .backup, type: .default)
-            BackupFileStore.create(data: { () -> Data in
-                return try WorkoutDataStorage.shared.persistentContainer.viewContext.performAndWait { context in
-                    try IronBackup.createBackupData(managedObjectContext: context, exerciseStore: ExerciseStore.shared)
-                }
-            }) { result in
-                if case let .failure(error) = result {
-                    os_log("Auto backup failed: %@", log: .backup, type: .error, error.localizedDescription)
-                }
-                dispatchGroup.leave()
-            }
-            
-            // the app terminates after this function returns and the backup is written on another queue, therefore we have to wait() here
-            dispatchGroup.wait()
-        }
-    }
-    
-    // MARK: Intents
-    
-    func application(_ application: UIApplication, handle intent: INIntent, completionHandler: @escaping (INIntentResponse) -> Void) {
-        os_log("Handling intent=%@", log: .intents, type: .info, intent)
-        
-        if let intent = intent as? INStartWorkoutIntent {
-            completionHandler(handle(intent, sceneDelegate: application.connectedScenes.compactMap({ $0 as? UIWindowScene }).first?.delegate as? SceneDelegate))
-        } else if let intent = intent as? INCancelWorkoutIntent {
-            completionHandler(handle(intent))
-        } else if let intent = intent as? INEndWorkoutIntent {
-            completionHandler(handle(intent))
-        } else {
-            preconditionFailure("Unhandled intent type: \(intent)")
-        }
-    }
-    
-    private func handle(_ startWorkoutIntent: INStartWorkoutIntent, sceneDelegate: SceneDelegate?) -> INStartWorkoutIntentResponse {
-        let context = WorkoutDataStorage.shared.persistentContainer.viewContext
-        do {
-            let count = try context.count(for: Workout.currentWorkoutFetchRequest)
-            if count == 0 {
-                let workout = Workout.create(context: context)
-                do {
-                    os_log("Starting workout from intent", log: .workoutData)
-                    try workout.start(startWatchCompanionErrorHandler: { error in
-                        // the Apple Watch wasn't started, most probably because the app is in the background
-                        os_log("Sending user notification to open the app because the watch app wasn't started. Probably because the app is in the background", log: .watch)
-                        NotificationManager.shared.requestStartedWorkoutFromBackgroundNotification()
-                    })
-                    
-                    sceneDelegate?.sceneState.selectedTab = .workout
-                    
-                    return .init(code: .success, userActivity: nil)
-                } catch {
-                    os_log("Could not start workout: %@", log: .workoutData, type: .error, NSManagedObjectContext.descriptionWithDetailedErrors(error: error as NSError))
-                    context.delete(workout)
-                    return .init(code: .failure, userActivity: nil)
-                }
-            } else {
-                return .init(code: .failureOngoingWorkout, userActivity: nil)
-            }
-        } catch {
-            return .init(code: .failure, userActivity: nil)
-        }
-    }
-    
-    private func handle(_ cancelWorkoutIntent: INCancelWorkoutIntent) -> INCancelWorkoutIntentResponse {
-        let context = WorkoutDataStorage.shared.persistentContainer.viewContext
-        do {
-            guard let workout = try context.fetch(Workout.currentWorkoutFetchRequest).first else {
-                return .init(code: .failureNoMatchingWorkout, userActivity: nil)
-            }
-            os_log("Cancelling workout from intent", log: .workoutData)
-            try workout.cancel()
-            return .init(code: .success, userActivity: nil)
-        } catch {
-            os_log("Could not cancel workout: %@", log: .workoutData, type: .error, error.localizedDescription)
-            return .init(code: .failure, userActivity: nil)
-        }
-    }
-    
-    private func handle(_ endWorkoutIntent: INEndWorkoutIntent) -> INEndWorkoutIntentResponse {
-        let context = WorkoutDataStorage.shared.persistentContainer.viewContext
-        do {
-            guard let workout = try context.fetch(Workout.currentWorkoutFetchRequest).first else {
-                return .init(code: .failureNoMatchingWorkout, userActivity: nil)
-            }
-            os_log("Finishing workout from intent", log: .workoutData)
-            try workout.finish()
-            return .init(code: .success, userActivity: nil)
-        } catch {
-            os_log("Could not finish workout: %@", log: .workoutData, type: .error, error.localizedDescription)
-            return .init(code: .failure, userActivity: nil)
-        }
-    }
-
     // MARK: UISceneSession Lifecycle
     
     func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {

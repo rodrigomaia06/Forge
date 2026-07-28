@@ -17,19 +17,7 @@ struct SettingsView : View {
             NavigationLink(destination: GeneralSettingsView(), isActive: $generalSelected) {
                 Text("General")
             }
-            
-            if HealthSettingsView.isSupported {
-                NavigationLink(destination: HealthSettingsView()) {
-                    Text("Apple Health")
-                }
-            }
-            
-            if WatchSettingsView.isSupported {
-                NavigationLink(destination: WatchSettingsView()) {
-                    Text("Apple Watch")
-                }
-            }
-            
+
             NavigationLink(destination: BackupAndExportView()) {
                 Text("Backup & Export")
             }

@@ -13,29 +13,43 @@ let NAVIGATION_BAR_SPACING: CGFloat = 16
 
 struct ContentView : View {
     @EnvironmentObject private var sceneState: SceneState
-    
-    @State private var restoreResult: IdentifiableHolder<Result<Void, Error>>?
-    @State private var restoreBackupData: IdentifiableHolder<Data>?
-    
+
+    @State private var pendingImportURL: IdentifiableHolder<URL>?
+    @State private var importResult: ImportResult?
+
+    private struct ImportResult: Identifiable {
+        let id = UUID()
+        let title: String
+        let message: String
+    }
+
     var body: some View {
         tabView
             .edgesIgnoringSafeArea([.top, .bottom])
             .onReceive(NotificationCenter.default.publisher(for: Notification.Name.RestoreFromBackup)) { output in
-                guard let backupData = output.userInfo?[restoreFromBackupDataUserInfoKey] as? Data else { return }
-                self.restoreBackupData = IdentifiableHolder(value: backupData)
+                guard let url = output.userInfo?[restoreFromBackupDataUserInfoKey] as? URL else { return }
+                self.pendingImportURL = IdentifiableHolder(value: url)
             }
-            .overlay(
-                Color.clear.frame(width: 0, height: 0)
-                    // This is a hack, we need to have this in an overlay and in Color.clear so it also works on iPad, tested on iOS 13.4
-                    .actionSheet(item: $restoreBackupData) { restoreBackupDataHolder in
-                        RestoreActionSheet.create(context: WorkoutDataStorage.shared.persistentContainer.viewContext, exerciseStore: ExerciseStore.shared, data: { restoreBackupDataHolder.value }) { result in
-                            self.restoreResult = IdentifiableHolder(value: result)
-                        }
-                    }
-            )
-            .alert(item: $restoreResult) { restoreResultHolder in
-                RestoreActionSheet.restoreResultAlert(restoreResult: restoreResultHolder.value)
+            .alert(item: $pendingImportURL) { holder in
+                Alert(
+                    title: Text("Import Database?"),
+                    message: Text("This replaces all workouts and exercises with the contents of this file. A safety copy of your current data is kept first. Reopen Forge afterwards to load the imported data."),
+                    primaryButton: .destructive(Text("Import")) { self.importDatabase(from: holder.value) },
+                    secondaryButton: .cancel()
+                )
             }
+            .alert(item: $importResult) { result in
+                Alert(title: Text(result.title), message: Text(result.message))
+            }
+    }
+
+    private func importDatabase(from url: URL) {
+        do {
+            try SQLiteBackup.import(from: url)
+            importResult = ImportResult(title: "Import Complete", message: "Please reopen Forge to load the imported data.")
+        } catch {
+            importResult = ImportResult(title: "Import Failed", message: error.localizedDescription)
+        }
     }
     
     @ViewBuilder

@@ -1,6 +1,6 @@
 //
 //  BackupAndExportView.swift
-//  Iron
+//  Forge
 //
 //  Created by Karim Abou Zeid on 17.09.19.
 //  Copyright © 2019 Karim Abou Zeid Software. All rights reserved.
@@ -9,107 +9,71 @@
 import SwiftUI
 import CoreData
 import WorkoutDataKit
+import UniformTypeIdentifiers
 import os.log
 
 struct BackupAndExportView: View {
     @Environment(\.managedObjectContext) var managedObjectContext
     @EnvironmentObject var settingsStore: SettingsStore
     @EnvironmentObject var exerciseStore: ExerciseStore
-    
-    @ObservedObject var backupStore = BackupFileStore.shared
-    
+
     @State private var showExportWorkoutDataSheet = false
-    
-    @State private var backupError: BackupError?
-    private struct BackupError: Identifiable {
-         let id = UUID()
-         let error: Error?
-    }
-    
+    @State private var showImporter = false
     @State private var activityItems: [Any]?
-     
-    private func alert(backupError: BackupError) -> Alert {
-        let errorMessage = backupError.error?.localizedDescription
-        let text = errorMessage.map { Text($0) }
-        return Alert(title: Text("Could Not Create Backup"), message: text)
+    @State private var message: Message?
+
+    private struct Message: Identifiable {
+        let id = UUID()
+        let title: String
+        let text: String
     }
-    
-    private var cloudBackupFooter: some View {
-        var strings = [String]()
-        if settingsStore.autoBackup {
-            strings.append("A backup is created automatically everytime you quit the app.")
-        }
-        strings.append("The backups are stored in your private iCloud Drive. Only the last backup of each day is kept. You can also access the backup files via the built in Files app.")
-        if let creationDate = backupStore.lastBackup?.creationDate {
-            strings.append("Last backup: " + BackupFileStore.BackupFile.dateFormatter.string(from: creationDate))
-        }
-        
-        return Text(strings.joined(separator: "\n"))
+
+    private static var databaseTypes: [UTType] {
+        [UTType(filenameExtension: "sqlite"), UTType("public.database"), .data].compactMap { $0 }
     }
-    
+
     var body: some View {
         Form {
-            Section(header: Text("Export".uppercased())) {
-                Button("Workout Data") {
-                    self.showExportWorkoutDataSheet = true
-                }
-                Button("Backup") {
-                    do {
-                        os_log("Creating backup data", log: .backup, type: .default)
-                        let data = try IronBackup.createBackupData(managedObjectContext: self.managedObjectContext, exerciseStore: self.exerciseStore)
-                        
-                        let formatter = DateFormatter()
-                        formatter.dateFormat = "yyyy-MM-dd"
-                        let url = try self.tempFile(data: data, name: "\(formatter.string(from: Date())).ironbackup")
-                        
-                        self.shareFile(url: url)
-                    } catch {
-                        os_log("Could not create backup: %@", log: .backup, type: .default, error.localizedDescription)
-                        self.backupError = BackupError(error: error)
-                    }
-                }
+            Section(
+                header: Text("Database".uppercased()),
+                footer: Text("The database is a standard SQLite file you can open and edit in any SQLite tool. Importing replaces all current data — a safety copy is kept first, and you'll need to reopen Forge afterwards.")
+            ) {
+                Button("Export Database") { exportDatabase() }
+                Button("Import Database") { showImporter = true }
             }
-            
-            Section(header: Text("iCloud Backup".uppercased()), footer: cloudBackupFooter) {
-                NavigationLink(destination: RestoreBackupView(backupStore: backupStore)) {
-                    Text("Restore")
-                }
-                Toggle("Auto Backup", isOn: $settingsStore.autoBackup)
-                Button("Back Up Now") {
-                    self.backupStore.create(data: {
-                        return try self.managedObjectContext.performAndWait { context in
-                            os_log("Creating backup data", log: .backup, type: .default)
-                            return try IronBackup.createBackupData(managedObjectContext: context, exerciseStore: self.exerciseStore)
-                        }
-                    }, onError: { error in
-                        self.backupError = BackupError(error: error)
-                    })
-                }
+
+            Section(header: Text("Export".uppercased())) {
+                Button("Workout Data") { showExportWorkoutDataSheet = true }
             }
         }
-        .onAppear(perform: backupStore.fetchBackups)
         .navigationBarTitle("Backup & Export", displayMode: .inline)
+        .fileImporter(isPresented: $showImporter, allowedContentTypes: Self.databaseTypes) { result in
+            switch result {
+            case .success(let url): importDatabase(from: url)
+            case .failure(let error): message = Message(title: "Import Failed", text: error.localizedDescription)
+            }
+        }
         .actionSheet(isPresented: $showExportWorkoutDataSheet) {
             ActionSheet(title: Text("Workout Data"), buttons: [
                 .default(Text("JSON"), action: {
                     guard let workouts = self.fetchWorkouts() else { return }
-                    
+
                     let encoder = JSONEncoder()
                     encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
                     encoder.dateEncodingStrategy = .iso8601
                     if let exercisesKey = CodingUserInfoKey.exercisesKey {
                         encoder.userInfo[exercisesKey] = ExerciseStore.shared.exercises
                     }
-                    
+
                     guard let data = try? encoder.encode(workouts) else { return }
                     guard let url = try? self.tempFile(data: data, name: "workout_data.json") else { return }
                     self.shareFile(url: url)
                 }),
                 .default(Text("TXT"), action: {
                     guard let workouts = self.fetchWorkouts() else { return }
-                    
+
                     let text = workouts.compactMap { $0.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit) }.joined(separator: "\n\n\n\n\n")
-                    
+
                     guard let data = text.data(using: .utf8) else { return }
                     guard let url = try? self.tempFile(data: data, name: "workout_data.txt") else { return }
                     self.shareFile(url: url)
@@ -117,26 +81,57 @@ struct BackupAndExportView: View {
                 .cancel()
             ])
         }
-        .alert(item: $backupError) { backupError in
-            self.alert(backupError: backupError)
+        .alert(item: $message) { message in
+            Alert(title: Text(message.title), message: Text(message.text))
         }
         .overlay(ActivitySheet(activityItems: $activityItems))
     }
-    
+
+    private func exportDatabase() {
+        do {
+            os_log("Exporting database", log: .backup, type: .default)
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent(SQLiteBackup.suggestedExportName())
+            try SQLiteBackup.export(to: url)
+            shareFile(url: url)
+        } catch {
+            os_log("Could not export database: %@", log: .backup, type: .error, error.localizedDescription)
+            message = Message(title: "Could Not Export", text: error.localizedDescription)
+        }
+    }
+
+    private func importDatabase(from url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        do {
+            // Copy to a location we own before replacing the store.
+            let local = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString)
+                .appendingPathExtension(SQLiteBackup.fileExtension)
+            try? FileManager.default.removeItem(at: local)
+            try FileManager.default.copyItem(at: url, to: local)
+
+            try SQLiteBackup.import(from: local)
+            message = Message(title: "Import Complete", text: "Please reopen Forge to load the imported data.")
+        } catch {
+            os_log("Could not import database: %@", log: .backup, type: .error, error.localizedDescription)
+            message = Message(title: "Import Failed", text: error.localizedDescription)
+        }
+    }
+
     private func fetchWorkouts() -> [Workout]? {
         let request: NSFetchRequest<Workout> = Workout.fetchRequest()
         request.predicate = NSPredicate(format: "\(#keyPath(Workout.isCurrentWorkout)) != %@", NSNumber(booleanLiteral: true))
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Workout.start, ascending: false)]
         return (try? self.managedObjectContext.fetch(request))
     }
-    
+
     private func tempFile(data: Data, name: String) throws -> URL {
         let path = FileManager.default.temporaryDirectory
         let url = path.appendingPathComponent(name)
         try data.write(to: url, options: .atomic)
         return url
     }
-    
+
     private func shareFile(url: URL) {
         self.activityItems = [url]
     }

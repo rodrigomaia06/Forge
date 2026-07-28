@@ -45,7 +45,6 @@ final class RestTimerStore: ObservableObject {
             self.objectWillChange.send()
             userDefaults.restTimerStart = newValue
             updateNotification()
-            updateWatch()
         }
     }
     
@@ -57,7 +56,6 @@ final class RestTimerStore: ObservableObject {
             self.objectWillChange.send()
             userDefaults.restTimerDuration = newValue
             updateNotification()
-            updateWatch()
         }
     }
     
@@ -73,17 +71,10 @@ final class RestTimerStore: ObservableObject {
     
     func notifyKeepRestTimerRunningChanged() { // TODO in future somehow subscribe to SettingsStore.shared.keepRestTimerRunning changes
         self.objectWillChange.send()
-        updateWatch()
     }
-    
+
     private func updateNotification() {
         NotificationManager.shared.updateRestTimerUpNotificationRequest(remainingTime: self.restTimerRemainingTime, totalTime: self.restTimerDuration)
-    }
-    
-    private func updateWatch() {
-        if let uuid = WatchConnectionManager.shared.currentWatchWorkoutUuid {
-            WatchConnectionManager.shared.updateWatchWorkoutRestTimer(end: restTimerEnd, keepRunning: SettingsStore.shared.keepRestTimerRunning, uuid: uuid)
-        }
     }
 }
 

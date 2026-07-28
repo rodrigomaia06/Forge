@@ -61,3 +61,5 @@ fastlane/metadata
 ### XcodeGen ###
 # The Xcode project is generated from project.yml (via `xcodegen generate`) and is not committed.
 /Iron.xcodeproj/
+
+testing-results/

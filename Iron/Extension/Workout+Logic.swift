@@ -13,7 +13,7 @@ import os.log
 extension Workout {
     // TODO: would be better when SettingsStore, WatchConnectionManager, RestTimerStore etc are injected
     
-    func start(startWatchCompanionErrorHandler: WatchConnectionManager.StartWatchCompanionErrorHandler? = nil) throws {
+    func start() throws {
         guard let context = managedObjectContext else {
             os_log("Attempt to start workout without context", log: .workoutData, type: .error)
             assertionFailure("Attempt to start workout without context")
@@ -23,19 +23,9 @@ extension Workout {
         start = Date()
         isCurrentWorkout = true
         try context.save() // this also checks that there is only one currentWorkout
-        
-        if SettingsStore.shared.watchCompanion {
-            WatchConnectionManager.shared.prepareAndStartWatchWorkout(workout: self, startWatchCompanionErrorHandler: startWatchCompanionErrorHandler)
-        }
-        
+
         // TODO: move this to the current workout view controller, or maybe even when a notification is scheduled?
         NotificationManager.shared.requestAuthorization()
-        
-        if (workoutExercises?.count ?? 0) == 0 && workoutRoutine == nil {
-            // only donate when we start an empty workout
-            // we don't have apropriate intent parameters for other workouts yet
-            Shortcuts.donateStartWorkoutInteraction(for: self)
-        }
     }
     
     func cancel() throws {
@@ -46,18 +36,11 @@ extension Workout {
         }
         
         RestTimerStore.shared.cancel()
-        
-        if WatchConnectionManager.shared.currentWatchWorkoutUuid != nil, let uuid = uuid {
-            WatchConnectionManager.shared.discardWatchWorkout(uuid: uuid)
-        }
-        
-        // the user did not go through with the workout, we should remove our previous donation
-        Shortcuts.deleteStartWorkoutInteractionDonation(for: self)
-        
+
         context.delete(self)
         try context.save()
     }
-    
+
     func finish() throws {
         guard let context = managedObjectContext else {
             os_log("Attempt to finish workout without context", log: .workoutData, type: .error)
@@ -75,19 +58,6 @@ extension Workout {
         end = safeEnd
         isCurrentWorkout = false
         try context.save()
-        
-        // save workout in Health or tell Apple Watch to finish the workout
-        if let watchWorkoutUuid = WatchConnectionManager.shared.currentWatchWorkoutUuid {
-            if watchWorkoutUuid != uuid {
-                os_log("currentWatchWorkoutUuid=%@ but workout uuid=%@, saving HealthKit workout on phone too to be safe", log: .watch, type: .error, watchWorkoutUuid.uuidString, uuid?.uuidString ?? "nil")
-                HealthManager.shared.saveWorkout(workout: self, exerciseStore: ExerciseStore.shared)
-            }
-            if let start = start, let end = end, let uuid = uuid {
-                WatchConnectionManager.shared.finishWatchWorkout(start: start, end: end, title: optionalDisplayTitle(in: ExerciseStore.shared.exercises), uuid: uuid)
-            }
-        } else {
-            HealthManager.shared.saveWorkout(workout: self, exerciseStore: ExerciseStore.shared)
-        }
     }
     
     func delete() throws {
@@ -97,14 +67,10 @@ extension Workout {
             return
         }
         
-        HealthManager.shared.deleteWorkout(workout: self)
-        
-        Shortcuts.deleteStartWorkoutInteractionDonation(for: self)
-        
         context.delete(self)
         try context.save()
     }
-    
+
     func copyForRepeat(blank: Bool) -> Workout? {
         guard let context = managedObjectContext else {
             os_log("Attempt to copy workout without context", log: .workoutData, type: .error)
@@ -145,10 +111,10 @@ extension Workout {
 
 import CoreData
 extension Workout {
-    func startOrCrash(startWatchCompanionErrorHandler: WatchConnectionManager.StartWatchCompanionErrorHandler? = nil) {
+    func startOrCrash() {
         do {
             os_log("Starting workout", log: .workoutData)
-            try start(startWatchCompanionErrorHandler: startWatchCompanionErrorHandler)
+            try start()
         } catch {
             let errorDescription = NSManagedObjectContext.descriptionWithDetailedErrors(error: error as NSError)
             os_log("Could not start workout: %@", log: .workoutData, type: .error, errorDescription)

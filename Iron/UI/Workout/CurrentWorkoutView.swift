@@ -9,7 +9,6 @@
 import SwiftUI
 import StoreKit
 import AVKit
-import HealthKit
 import WorkoutDataKit
 import os.log
 
