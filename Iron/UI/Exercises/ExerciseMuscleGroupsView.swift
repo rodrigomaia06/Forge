@@ -38,8 +38,7 @@ struct ExerciseMuscleGroupsView : View {
     }
     
     var body: some View {
-        NavigationView {
-            List {
+        List {
                 Section {
                     NavigationLink(destination: AllExercisesView(exerciseGroups: exerciseGroups), isActive: $allExercisesSelected) {
                         HStack {
@@ -85,10 +84,8 @@ struct ExerciseMuscleGroupsView : View {
                     }
                 }
             }
-            .listStyleCompat_InsetGroupedListStyle()
-            .navigationBarTitle("Exercises")
-        }
-        .padding(.leading, UIDevice.current.userInterfaceIdiom == .pad ? 1 : 0) // hack that makes the master view show on iPad on portrait mode
+        .listStyleCompat_InsetGroupedListStyle()
+        .navigationBarTitle("Exercises")
     }
 }
 

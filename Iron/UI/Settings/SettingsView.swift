@@ -14,6 +14,10 @@ struct SettingsView : View {
     
     private var mainSection: some View {
         Section {
+            NavigationLink(destination: ExerciseMuscleGroupsView()) {
+                Text("Exercises")
+            }
+
             NavigationLink(destination: GeneralSettingsView(), isActive: $generalSelected) {
                 Text("General")
             }

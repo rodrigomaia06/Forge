@@ -20,11 +20,10 @@ struct ForgeTabBar: View {
     }
 
     private let items: [Item] = [
-        Item(tab: .feed,      title: "Home",      icon: "house.fill"),
-        Item(tab: .history,   title: "History",   icon: "clock.fill"),
-        Item(tab: .workout,   title: "Workout",   icon: "dumbbell.fill"),
-        Item(tab: .exercises, title: "Exercises", icon: "square.stack.fill"),
-        Item(tab: .settings,  title: "Settings",  icon: "gearshape.fill"),
+        Item(tab: .feed,     title: "Home",     icon: "house.fill"),
+        Item(tab: .history,  title: "History",  icon: "clock.fill"),
+        Item(tab: .workout,  title: "Workout",  icon: "dumbbell.fill"),
+        Item(tab: .settings, title: "Settings", icon: "gearshape.fill"),
     ]
 
     var body: some View {
