@@ -41,6 +41,7 @@ struct ContentView : View {
             .alert(item: $importResult) { result in
                 Alert(title: Text(result.title), message: Text(result.message))
             }
+            .preferredColorScheme(.dark) // Forge is dark-first (matches the design direction)
     }
 
     private func importDatabase(from url: URL) {

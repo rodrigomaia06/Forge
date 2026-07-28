@@ -40,21 +40,31 @@ enum Theme {
 
 // MARK: - Semantic colours
 
-extension Color {
-    /// Screen background (grouped).
-    static let forgeBackground = Color(.systemGroupedBackground)
-    /// Raised surfaces: cards, rows, sheets.
-    static let forgeSurface = Color(.secondarySystemGroupedBackground)
-    /// Primary text and numbers.
-    static let forgeLabel = Color(.label)
-    /// Secondary / supporting text.
-    static let forgeSecondaryLabel = Color(.secondaryLabel)
-    /// Hairlines and dividers.
-    static let forgeSeparator = Color(.separator)
+/// Dynamic grey defined by (white, alpha) in light and dark. Dark-first: the dark values
+/// give Forge its near-black, high-contrast, monochrome-premium canvas; light stays usable.
+private func forgeGrey(light: (CGFloat, CGFloat), dark: (CGFloat, CGFloat)) -> Color {
+    Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(white: dark.0, alpha: dark.1)
+            : UIColor(white: light.0, alpha: light.1)
+    })
+}
 
-    /// The one accent colour that signals interactivity and the current action.
-    /// Backed by the asset accent for now; becomes user-selectable with custom themes later.
-    static let forgeAccent = Color.accentColor
+extension Color {
+    /// Screen canvas — near-black in dark, soft grey in light.
+    static let forgeBackground = forgeGrey(light: (0.95, 1), dark: (0.045, 1))
+    /// Raised surfaces: cards, rows, the tab bar.
+    static let forgeSurface = forgeGrey(light: (1.0, 1), dark: (0.11, 1))
+    /// Primary text and numbers.
+    static let forgeLabel = forgeGrey(light: (0.11, 1), dark: (0.97, 1))
+    /// Secondary / supporting text.
+    static let forgeSecondaryLabel = forgeGrey(light: (0.11, 0.55), dark: (0.97, 0.55))
+    /// Hairlines and dividers.
+    static let forgeSeparator = forgeGrey(light: (0.0, 0.10), dark: (1.0, 0.12))
+
+    /// High-contrast monochrome accent — bright on dark, near-black on light. Signals
+    /// interactivity and the current action; becomes user-selectable with custom themes later.
+    static let forgeAccent = forgeGrey(light: (0.11, 1), dark: (0.98, 1))
 
     // Meaning, not decoration — pair with a label/icon, never colour alone.
     static let forgeSuccess = Color(.systemGreen)
@@ -77,4 +87,10 @@ extension Font {
 
     /// Supporting captions and secondary metadata.
     static var forgeCaption: Font { .subheadline }
+
+    /// Large, calm greeting / screen title (e.g. "Good afternoon").
+    static var forgeGreeting: Font { .system(size: 30, weight: .semibold) }
+
+    /// Small uppercase section label (e.g. "MARCH 2026", tracked wider by the caller).
+    static var forgeSectionLabel: Font { .system(.caption, design: .default).weight(.semibold) }
 }

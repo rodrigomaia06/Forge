@@ -33,11 +33,16 @@ final class ScreenshotTests: XCTestCase {
         try capture(ForgeExerciseView(), named: "exercise-view")
     }
 
+    func testCaptureHome() throws {
+        try capture(ForgeHomeView(), named: "home")
+    }
+
     // MARK: - Helpers
 
     private func capture<V: View>(_ view: V, named name: String) throws {
         let renderer = ImageRenderer(content:
             view.frame(width: phoneWidth)
+                .environment(\.colorScheme, .dark) // Forge is dark-first
         )
         renderer.scale = 3
 
