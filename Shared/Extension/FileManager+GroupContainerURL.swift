@@ -29,13 +29,11 @@ extension FileManager {
         let directory = appGroupContainerURL
             .appendingPathComponent("Library")
             .appendingPathComponent("Application Support")
-        
-        do {
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        } catch {
-            fatalError("could not create \(directory)")
-        }
-        
+
+        // The directory normally already exists. If it can't be created we still return the
+        // path so Core Data surfaces a recoverable error rather than crashing here.
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
         return directory
     }
 }

@@ -15,12 +15,6 @@ import os.log
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // TODO: remove in future when every user should've been migrated
-        ExerciseStore.migrateCustomExercisesToAppGroupIfNecessary()
-        WorkoutDataStorage.migrateToAppGroupIfNecessary()
-        SettingsStore.migrateToAppGroupIfNecessary()
-        ExerciseStore.migrateHiddenExercisesToAppGroupIfNecessary()
-
         // disable the transparent tab bar in iOS 15, there is a bug and it doesn't work correctly with the TimerBannerView for now
         if #available(iOS 15.0, *) {
             if #unavailable(iOS 16.0) { // fixed in iOS 16
