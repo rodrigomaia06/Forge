@@ -25,6 +25,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // If using a storyboard, the `window` property will automatically be initialized and attached to the scene.
         // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
 
+        // Match the grouped-list background to the dashboard canvas (Color.forgeBackground) so every
+        // screen shares the same near-black, instead of the system's pure-black grouped background.
+        UICollectionView.appearance().backgroundColor = UIColor { traits in
+            traits.userInterfaceStyle == .dark ? UIColor(white: 0.045, alpha: 1) : UIColor(white: 0.95, alpha: 1)
+        }
+
         // Use a UIHostingController as window root view controller
         if let windowScene = scene as? UIWindowScene {
             let window = UIWindow(windowScene: windowScene)

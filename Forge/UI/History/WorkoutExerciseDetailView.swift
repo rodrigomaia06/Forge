@@ -25,6 +25,13 @@ struct WorkoutExerciseDetailView : View {
     @State private var moreSheetSet: WorkoutSet? = nil
     @State private var noteSheetSet: WorkoutSet? = nil
     @State private var showExerciseNote = false
+    @State private var showAllHistory = false
+
+    /// Past sessions to show. Capped at the most recent few until the user asks for more.
+    private var displayedHistory: [WorkoutExercise] {
+        let all = Array(workoutExerciseHistory)
+        return showAllHistory ? all : Array(all.prefix(3))
+    }
     
     @State private var showExerciseInfo = false
     
@@ -261,18 +268,20 @@ struct WorkoutExerciseDetailView : View {
     @ViewBuilder private var historyWorkoutSets: some View {
         // Each past session is its own card so different days read as clearly separate, not one merged
         // list. The date header opens that whole workout in the History tab.
-        ForEach(Array(workoutExerciseHistory.enumerated()), id: \.element.objectID) { offset, pastWorkoutExercise in
+        ForEach(Array(displayedHistory.enumerated()), id: \.element.objectID) { offset, pastWorkoutExercise in
+            let name = sessionTitle(for: pastWorkoutExercise.workout)
+            let dateText = Workout.dateFormatter.string(from: pastWorkoutExercise.workout?.start, fallback: "Unknown date")
             Section {
                 Button {
                     guard let workout = pastWorkoutExercise.workout else { return }
                     sceneState.historyWorkoutToOpen = workout
                     sceneState.selectedTab = .history
                 } label: {
-                    // Date and chevron share the top row so the chevron always lines up with the date,
-                    // whether or not a routine name is shown below. Keeps headers aligned across cards.
+                    // When the workout has a name (routine/plan), it leads and the date sits below it;
+                    // otherwise the date leads. The chevron stays on the top line either way.
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: Theme.Spacing.xs) {
-                            Text(Workout.dateFormatter.string(from: pastWorkoutExercise.workout?.start, fallback: "Unknown date"))
+                            Text(name ?? dateText)
                                 .font(.forgeCaption.weight(.semibold))
                                 .foregroundColor(.forgeSecondaryLabel)
                             Spacer()
@@ -280,10 +289,8 @@ struct WorkoutExerciseDetailView : View {
                                 .font(.caption2.weight(.semibold))
                                 .foregroundColor(.forgeSeparator)
                         }
-                        // Show the routine or plan name (and its day) when the workout came from one,
-                        // so same-day sessions are told apart by what they were.
-                        if let planTitle = sessionTitle(for: pastWorkoutExercise.workout) {
-                            Text(planTitle)
+                        if name != nil {
+                            Text(dateText)
                                 .font(.caption2)
                                 .foregroundColor(.forgeSecondaryLabel)
                                 .lineLimit(1)
@@ -302,6 +309,18 @@ struct WorkoutExerciseDetailView : View {
             } header: {
                 // A single umbrella label above the first card keeps the "these are past" context.
                 if offset == 0 { Text("Previous sessions") }
+            }
+        }
+
+        // Keep the list short by default; reveal the rest on demand.
+        if !showAllHistory, workoutExerciseHistory.count > 3 {
+            Section {
+                Button {
+                    withAnimation { showAllHistory = true }
+                } label: {
+                    Text("Show \(workoutExerciseHistory.count - 3) more")
+                        .font(.forgeCaption.weight(.semibold))
+                }
             }
         }
     }
@@ -339,6 +358,8 @@ struct WorkoutExerciseDetailView : View {
                     .navigationBarTitle(Text(set.displayTitle(weightUnit: settingsStore.weightUnit)), displayMode: .inline)
                     .navigationBarItems(trailing: Button("Done") { moreSheetSet = nil })
             }
+            // A compact sheet, not a full screen; expandable for the longer options.
+            .presentationDetents([.medium, .large])
         }
         .sheet(item: $noteSheetSet) { set in
             NavigationStack {
@@ -346,9 +367,8 @@ struct WorkoutExerciseDetailView : View {
                     .navigationBarTitle(Text("Note"), displayMode: .inline)
                     .navigationBarItems(trailing: Button("Done") { noteSheetSet = nil })
             }
-            // A compact sheet so the note editor does not take the whole screen.
+            // Compact, and no drag indicator: the nav bar Done reads as the native way to dismiss.
             .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showExerciseNote) {
             NavigationStack {
@@ -357,7 +377,6 @@ struct WorkoutExerciseDetailView : View {
                     .navigationBarItems(trailing: Button("Done") { showExerciseNote = false })
             }
             .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
         }
         .navigationBarTitle(Text(workoutExercise.exercise(in: exerciseStore.exercises)?.title ?? ""), displayMode: .inline)
         .navigationBarItems(trailing:

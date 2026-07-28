@@ -42,17 +42,20 @@ struct TimerBannerView: View {
     private var editTimeSheet: some View {
         NavigationStack {
             EditCurrentWorkoutTimeView(workout: workout)
-                .navigationBarTitle("Workout Duration", displayMode: .inline)
+                .navigationBarTitle("Workout duration", displayMode: .inline)
                 .navigationBarItems(leading: closeSheetButton)
         }
+        .presentationDetents([.medium])
     }
-    
+
     private var restTimerSheet: some View {
         NavigationStack {
             RestTimerView().environmentObject(self.restTimerStore)
-                .navigationBarTitle("Rest Timer", displayMode: .inline)
+                .navigationBarTitle("Rest timer", displayMode: .inline)
                 .navigationBarItems(leading: closeSheetButton)
         }
+        // A compact sheet, not a full screen. Allow expanding for the running-timer view.
+        .presentationDetents([.medium, .large])
     }
     
     var body: some View {
