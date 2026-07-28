@@ -2,14 +2,20 @@
 //  FeedView.swift
 //  Forge
 //
-//  The Home dashboard: greeting, quick stats, an activity calendar (a proper month grid you
-//  can tap to filter workouts by day, expandable to a year of separated month grids), and
-//  recent-workout cards — all from real data, on Forge's dark canvas.
+//  The Home dashboard: greeting, quick stats, an activity calendar (a month grid whose days
+//  filter the workout list, expandable to a year of month grids whose months also filter),
+//  and recent-workout cards. The chosen day/month filter persists while the app is open
+//  (the page stays alive) and clears only via the clear button or relaunch.
 //
 
 import SwiftUI
 import CoreData
 import WorkoutDataKit
+
+private enum ActivityFilter: Equatable {
+    case day(Date)
+    case month(year: Int, month: Int)
+}
 
 struct FeedView: View {
     @Environment(\.managedObjectContext) private var context
@@ -18,7 +24,7 @@ struct FeedView: View {
 
     @FetchRequest private var workouts: FetchedResults<Workout>
     @State private var calendarExpanded = false
-    @State private var selectedDate: Date?
+    @State private var filter: ActivityFilter?
 
     private var cal: Calendar {
         var c = Calendar.current
@@ -51,11 +57,8 @@ struct FeedView: View {
     // MARK: Header
 
     private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                Text(greeting).font(.forgeGreeting).foregroundColor(.forgeLabel)
-                Text("Ready to train?").font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)
-            }
+        HStack(alignment: .center) {
+            Text(greeting).font(.forgeGreeting).foregroundColor(.forgeLabel)
             Spacer()
             Button {
                 Haptics.impact()
@@ -116,13 +119,17 @@ struct FeedView: View {
 
     // MARK: Activity calendar (month <-> year)
 
+    private func toggle(_ f: ActivityFilter) {
+        Haptics.selection()
+        withAnimation(.snappy(duration: 0.2)) {
+            filter = (filter == f) ? nil : f
+        }
+    }
+
     private var activitySection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             Button {
-                withAnimation(.snappy(duration: 0.28)) {
-                    calendarExpanded.toggle()
-                    if calendarExpanded { selectedDate = nil }
-                }
+                withAnimation(.snappy(duration: 0.28)) { calendarExpanded.toggle() }
             } label: {
                 HStack {
                     Text(calendarExpanded ? "ACTIVITY \(yearString)" : monthString)
@@ -158,7 +165,6 @@ struct FeedView: View {
         return Array(syms[start...] + syms[..<start])
     }
 
-    // A tappable month grid; tapping a day filters the recent list.
     private var monthCalendar: some View {
         let firstOfMonth = cal.date(from: cal.dateComponents([.year, .month], from: Date())) ?? Date()
         let firstWeekday = (cal.component(.weekday, from: firstOfMonth) - cal.firstWeekday + 7) % 7
@@ -186,12 +192,9 @@ struct FeedView: View {
     @ViewBuilder
     private func dayCell(day: Int, valid: Bool, active: Bool, firstOfMonth: Date) -> some View {
         if valid, let date = cal.date(byAdding: .day, value: day - 1, to: firstOfMonth) {
-            let isSelected = selectedDate.map { cal.isDate($0, inSameDayAs: date) } ?? false
+            let isSelected = filter == .day(date)
             Button {
-                Haptics.selection()
-                withAnimation(.snappy(duration: 0.2)) {
-                    selectedDate = isSelected ? nil : date
-                }
+                toggle(.day(date))
             } label: {
                 Text("\(day)")
                     .font(.system(size: 13, weight: active || isSelected ? .semibold : .regular))
@@ -206,18 +209,23 @@ struct FeedView: View {
         }
     }
 
-    // The full year as 12 separated month grids.
+    // The full year as smaller, tappable month grids (4 per row).
     private var yearCalendar: some View {
         let year = cal.component(.year, from: Date())
-        let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
+        let columns = Array(repeating: GridItem(.flexible(), spacing: Theme.Spacing.m), count: 4)
         return LazyVGrid(columns: columns, alignment: .leading, spacing: Theme.Spacing.l) {
             ForEach(1...12, id: \.self) { month in
-                miniMonth(year: year, month: month)
+                Button {
+                    toggle(.month(year: year, month: month))
+                } label: {
+                    miniMonth(year: year, month: month, selected: filter == .month(year: year, month: month))
+                }
+                .buttonStyle(.plain)
             }
         }
     }
 
-    private func miniMonth(year: Int, month: Int) -> some View {
+    private func miniMonth(year: Int, month: Int, selected: Bool) -> some View {
         let firstOfMonth = cal.date(from: DateComponents(year: year, month: month, day: 1)) ?? Date()
         let firstWeekday = (cal.component(.weekday, from: firstOfMonth) - cal.firstWeekday + 7) % 7
         let daysInMonth = cal.range(of: .day, in: .month, for: firstOfMonth)?.count ?? 30
@@ -228,14 +236,15 @@ struct FeedView: View {
         let rows = Int(ceil(Double(firstWeekday + daysInMonth) / 7.0))
         return VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             Text(cal.shortStandaloneMonthSymbols[month - 1].uppercased())
-                .font(.system(size: 11, weight: .semibold)).foregroundColor(.forgeSecondaryLabel)
-            VStack(spacing: 2) {
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(selected ? .forgeLabel : .forgeSecondaryLabel)
+            VStack(spacing: 1.5) {
                 ForEach(0..<rows, id: \.self) { row in
-                    HStack(spacing: 2) {
+                    HStack(spacing: 1.5) {
                         ForEach(0..<7, id: \.self) { col in
                             let day = row * 7 + col - firstWeekday + 1
                             let valid = day >= 1 && day <= daysInMonth
-                            Circle()
+                            RoundedRectangle(cornerRadius: 1, style: .continuous)
                                 .fill(valid ? (active.contains(day) ? Color.forgeAccent : Color.forgeSurface) : Color.clear)
                                 .aspectRatio(1, contentMode: .fit)
                                 .frame(maxWidth: .infinity)
@@ -244,6 +253,9 @@ struct FeedView: View {
                 }
             }
         }
+        .padding(Theme.Spacing.xs)
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous)
+            .strokeBorder(selected ? Color.forgeAccent : Color.clear, lineWidth: 1))
     }
 
     private func activeDays(inSameMonthAs date: Date) -> Set<Int> {
@@ -253,16 +265,23 @@ struct FeedView: View {
         })
     }
 
-    // MARK: Recent workouts (filtered by the selected day)
+    // MARK: Recent workouts (filtered by the selected day / month)
 
-    private var recentWorkouts: [Workout] {
-        if let d = selectedDate {
+    private var filteredWorkouts: [Workout] {
+        switch filter {
+        case .day(let d):
             return workouts.filter { w in
                 guard let s = w.start else { return false }
                 return cal.isDate(s, inSameDayAs: d)
             }
+        case .month(let year, let month):
+            return workouts.filter { w in
+                guard let s = w.start else { return false }
+                return cal.component(.year, from: s) == year && cal.component(.month, from: s) == month
+            }
+        case nil:
+            return Array(workouts.prefix(6))
         }
-        return Array(workouts.prefix(6))
     }
 
     private var recent: some View {
@@ -270,19 +289,19 @@ struct FeedView: View {
             HStack {
                 Text(recentTitle).font(.forgeSectionLabel).tracking(2).foregroundColor(.forgeSecondaryLabel)
                 Spacer()
-                if selectedDate != nil {
+                if filter != nil {
                     Button {
-                        withAnimation(.snappy(duration: 0.2)) { selectedDate = nil }
+                        withAnimation(.snappy(duration: 0.2)) { filter = nil }
                     } label: {
                         Image(systemName: "xmark.circle.fill").font(.callout).foregroundColor(.forgeSecondaryLabel)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Clear day filter")
+                    .accessibilityLabel("Clear filter")
                 }
             }
-            let list = recentWorkouts
+            let list = filteredWorkouts
             if list.isEmpty {
-                Text(selectedDate == nil ? "No workouts yet." : "No workouts that day.")
+                Text(filter == nil ? "No workouts yet." : "No workouts in this period.")
                     .font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)
                     .padding(.vertical, Theme.Spacing.m)
             } else {
@@ -294,9 +313,17 @@ struct FeedView: View {
     }
 
     private var recentTitle: String {
-        guard let d = selectedDate else { return "RECENT" }
-        let f = DateFormatter(); f.dateFormat = "MMMM d"
-        return f.string(from: d).uppercased()
+        switch filter {
+        case .day(let d):
+            let f = DateFormatter(); f.dateFormat = "MMMM d"
+            return f.string(from: d).uppercased()
+        case .month(let year, let month):
+            let f = DateFormatter(); f.dateFormat = "MMMM yyyy"
+            let comps = DateComponents(year: year, month: month, day: 1)
+            return (cal.date(from: comps).map { f.string(from: $0) } ?? "").uppercased()
+        case nil:
+            return "RECENT"
+        }
     }
 
     private func workoutCard(_ workout: Workout) -> some View {
