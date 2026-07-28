@@ -17,6 +17,7 @@ struct CurrentWorkoutView: View {
     @EnvironmentObject var restTimerStore: RestTimerStore
     @EnvironmentObject var exerciseStore: ExerciseStore
     @EnvironmentObject var settingsStore: SettingsStore
+    @EnvironmentObject var sceneState: SceneState
     
     @ObservedObject var workout: Workout
     
@@ -185,6 +186,11 @@ struct CurrentWorkoutView: View {
             // ask for review after the user finishes his third workout
             SKStoreReviewController.requestReview()
         }
+
+        // Switch to the dashboard first, then dismiss the summary. The sheet slides down and reveals
+        // the dashboard already in place, so finishing lands the user back home.
+        withAnimation { sceneState.selectedTab = .feed }
+        activeSheet = nil
     }
     
     @State private var finishWorkoutSheetActivityItems: [Any]?

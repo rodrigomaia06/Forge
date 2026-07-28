@@ -17,7 +17,7 @@ struct WorkoutDetailView : View {
     @EnvironmentObject var sceneState: SceneState
     @ObservedObject var workout: Workout
 
-//    @Environment(\.editMode) var editMode
+    @Environment(\.editMode) var editMode
     @State private var showingExerciseSelectorSheet = false
     @State private var showingOptionsMenu = false
     
@@ -111,15 +111,21 @@ struct WorkoutDetailView : View {
                 }
                 
                 Section {
-                    DatePicker(selection: $workout.safeStart, in: ...min(workout.safeEnd, Date())) {
-                        Text("Start")
-                    }
-                    
-                    DatePicker(selection: $workout.safeEnd, in: workout.safeStart...Date()) {
-                        Text("End")
+                    // The start and end are editable only in edit mode, so a stray tap while browsing
+                    // a finished workout cannot change its recorded times.
+                    if editMode?.wrappedValue.isEditing == true {
+                        DatePicker(selection: $workout.safeStart, in: ...min(workout.safeEnd, Date())) {
+                            Text("Start")
+                        }
+
+                        DatePicker(selection: $workout.safeEnd, in: workout.safeStart...Date()) {
+                            Text("End")
+                        }
+                    } else {
+                        LabeledContent("Start") { Text(workout.safeStart.formatted(date: .abbreviated, time: .shortened)) }
+                        LabeledContent("End") { Text(workout.safeEnd.formatted(date: .abbreviated, time: .shortened)) }
                     }
                 }
-//            }
 
             Section {
                 ForEach(workoutExercises) { workoutExercise in

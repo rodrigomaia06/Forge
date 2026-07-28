@@ -398,8 +398,11 @@ struct FeedView: View {
 
     private func workoutCard(_ workout: Workout) -> some View {
         let s = stats(workout)
-        return NavigationLink {
-            WorkoutDetailView(workout: workout)
+        // Open the workout in the History tab rather than pushing it inside the dashboard, so a
+        // finished workout always lives in one place.
+        return Button {
+            sceneState.historyWorkoutToOpen = workout
+            sceneState.selectedTab = .history
         } label: {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text(dateLabel(workout.start)).font(.forgeSectionLabel).tracking(1).foregroundColor(.forgeSecondaryLabel)
