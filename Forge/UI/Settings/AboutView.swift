@@ -36,6 +36,12 @@ struct AboutView: View {
                 } label: {
                     Label("Source code", image: "github.fill")
                 }
+
+                Button {
+                    UIApplication.shared.open(URL(string: "https://github.com/rodrigomaia06/Forge/blob/main/LICENSE")!)
+                } label: {
+                    Label("License: GPL v3.0", systemImage: "doc.text")
+                }
             }
 
             Section(header: Text("Privacy")) {
