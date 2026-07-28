@@ -10,7 +10,10 @@ import Foundation
 import WorkoutDataKit
 
 extension ExerciseStore {
-    static let shared = ExerciseStore(customExercisesURL: customExercisesURL, userDefaults: UserDefaults.appGroup)
-    
-    static let customExercisesURL = FileManager.default.appGroupContainerApplicationSupportURL.appendingPathComponent("custom_exercises").appendingPathExtension("json")
+    // Custom exercises live in the workout database (CustomExercise entity), so the store reads
+    // and writes them through the shared Core Data context.
+    static let shared = ExerciseStore(
+        context: WorkoutDataStorage.shared.persistentContainer.viewContext,
+        userDefaults: UserDefaults.appGroup
+    )
 }

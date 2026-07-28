@@ -14,7 +14,7 @@ class WorkoutDataMigrationTests: XCTestCase {
     var testFolder: URL!
     var storeURL: URL!
     var persistentContainer: NSPersistentContainer!
-    let exerciseStore = ExerciseStore(customExercisesURL: nil)
+    let exerciseStore = ExerciseStore()
     
     override func setUpWithError() throws {
         testFolder = FileManager.default.temporaryDirectory.appendingPathComponent("test", isDirectory: true)

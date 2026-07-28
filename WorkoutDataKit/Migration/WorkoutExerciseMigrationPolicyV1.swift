@@ -10,14 +10,9 @@ import CoreData
 import os.log
 
 class WorkoutExerciseMigrationPolicyV1: UuidMigrationPolicy {
-    private static let exerciseStore = ExerciseStore(
-        // not completely clean to hardcode the custom exercises path here
-        customExercisesURL: FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: "group.com.kabouzeid.Iron")?
-            .appendingPathComponent("Library")
-            .appendingPathComponent("Application Support")
-            .appendingPathComponent("custom_exercises").appendingPathExtension("json")
-    )
+    // This maps old integer ids to UUIDs during the ancient v1 -> v2 migration; only built-in
+    // exercises are needed here, so no Core Data context (custom exercises) is required.
+    private static let exerciseStore = ExerciseStore()
     
     @objc
     func uuidForId(id: NSNumber) -> NSUUID { // don't change the func name, it is referenced from the mapping model
