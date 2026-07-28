@@ -110,6 +110,17 @@ final class SettingsStore: ObservableObject {
         }
     }
 
+    /// Selected accent theme. Stored by identifier; defaults to graphite (the monochrome look).
+    var accentIdentifier: String {
+        get {
+            userDefaults.accentIdentifier
+        }
+        set {
+            self.objectWillChange.send()
+            userDefaults.accentIdentifier = newValue
+        }
+    }
+
     /// Per-exercise rest time override (nil = use the default rest time).
     func restTime(forExercise uuid: UUID) -> TimeInterval? {
         userDefaults.exerciseRestTimes[uuid.uuidString]

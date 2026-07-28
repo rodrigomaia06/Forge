@@ -20,6 +20,13 @@ extension UserDefaults {
         case watchCompanion
         case firstWeekday
         case exerciseRestTimes
+        case accentIdentifier
+    }
+
+    /// Identifier of the selected accent theme (see ForgeAccent). Empty string means the default.
+    var accentIdentifier: String {
+        set { self.set(newValue, forKey: SettingsKeys.accentIdentifier.rawValue) }
+        get { self.string(forKey: SettingsKeys.accentIdentifier.rawValue) ?? "" }
     }
 
     var weightUnit: WeightUnit {

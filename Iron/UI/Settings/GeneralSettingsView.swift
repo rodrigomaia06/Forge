@@ -20,6 +20,42 @@ struct GeneralSettingsView: View {
             }
         }
     }
+
+    private var selectedAccent: ForgeAccent {
+        ForgeAccent(rawValue: settingsStore.accentIdentifier) ?? .graphite
+    }
+
+    private var appearanceSection: some View {
+        Section(
+            header: Text("Accent color"),
+            footer: Text("Tints buttons, links, and the selected tab. Graphite is the default monochrome look.")
+        ) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: Theme.Spacing.s)], spacing: Theme.Spacing.s) {
+                ForEach(ForgeAccent.allCases) { accent in
+                    let isSelected = accent == selectedAccent
+                    Button {
+                        Haptics.selection()
+                        settingsStore.accentIdentifier = accent.rawValue
+                    } label: {
+                        Circle()
+                            .fill(accent.color)
+                            .frame(width: 30, height: 30)
+                            // Hairline so the monochrome graphite swatch stays visible on any surface.
+                            .overlay(Circle().strokeBorder(Color.forgeSeparator, lineWidth: accent == .graphite ? 1 : 0))
+                            .padding(5)
+                            .overlay(Circle().strokeBorder(isSelected ? Color.forgeLabel : .clear, lineWidth: 2))
+                            .frame(minHeight: Theme.Layout.minTapTarget)
+                            .frame(maxWidth: .infinity)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(accent.title)
+                    .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+                }
+            }
+            .padding(.vertical, Theme.Spacing.xs)
+        }
+    }
     
     private var restTimerTimesSection: some View {
         Section(footer: Text("Used for exercises without their own rest time. Set a rest time per exercise on the exercise's page.")) {
@@ -55,6 +91,7 @@ struct GeneralSettingsView: View {
     
     var body: some View {
         Form {
+            appearanceSection
             weightPickerSection
             calendarSection
             restTimerTimesSection

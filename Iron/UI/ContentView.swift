@@ -14,6 +14,8 @@ let NAVIGATION_BAR_SPACING: CGFloat = 16
 
 struct ContentView : View {
     @EnvironmentObject private var sceneState: SceneState
+    // Observed so changing the accent in Settings re-renders and re-tints the whole app.
+    @ObservedObject private var settings = SettingsStore.shared
 
     @State private var pendingImportURL: IdentifiableHolder<URL>?
     @State private var importResult: ImportResult?
@@ -47,7 +49,7 @@ struct ContentView : View {
         .environmentObject(RestTimerStore.shared)
         .environmentObject(ExerciseStore.shared)
         .environment(\.managedObjectContext, WorkoutDataStorage.shared.persistentContainer.viewContext)
-        .tint(.forgeAccent) // selected-tab color
+        .tint((ForgeAccent(rawValue: settings.accentIdentifier) ?? .graphite).color) // accent-driven tint
         .preferredColorScheme(.dark) // Forge is dark-first (matches the design direction)
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name.RestoreFromBackup)) { output in
             guard let url = output.userInfo?[restoreFromBackupDataUserInfoKey] as? URL else { return }
