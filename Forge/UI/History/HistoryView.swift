@@ -33,6 +33,10 @@ struct HistoryView : View {
     @State private var fromDate = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
     @State private var toDate = Date()
 
+    /// Drives navigation into a workout. A typed path lets both a row tap and a deep-link from another
+    /// tab push the same destination.
+    @State private var path: [Workout] = []
+
     /// The workouts shown, filtered to the selected date range when the filter is on.
     private var displayedWorkouts: [Workout] {
         guard filterActive else { return Array(workouts) }
@@ -64,7 +68,7 @@ struct HistoryView : View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             List {
                 if filterActive {
                     Section(footer: Text("Showing workouts from the first to the second date.")) {
@@ -73,9 +77,7 @@ struct HistoryView : View {
                     }
                 }
                 ForEach(displayedWorkouts) { workout in
-                    NavigationLink(destination: WorkoutDetailView(workout: workout)
-                        .environmentObject(self.settingsStore)
-                    ) {
+                    NavigationLink(value: workout) {
                         WorkoutCell(workout: workout)
                             .contextMenu {
                                 // TODO add images when SwiftUI fixes the image size
@@ -104,6 +106,10 @@ struct HistoryView : View {
                 }
             }
             .listStyleCompat_InsetGroupedListStyle()
+            .navigationDestination(for: Workout.self) { workout in
+                WorkoutDetailView(workout: workout)
+                    .environmentObject(self.settingsStore)
+            }
             .navigationBarItems(trailing:
                 HStack(spacing: NAVIGATION_BAR_SPACING) {
                     Button {
@@ -134,6 +140,16 @@ struct HistoryView : View {
             .navigationBarTitle(Text("History"))
         }
         .overlay(ActivitySheet(activityItems: self.$activityItems))
+        // A deep-link from another tab (e.g. a past session tapped during a workout) lands here.
+        .onChange(of: sceneState.historyWorkoutToOpen) { _ in openPendingHistoryWorkout() }
+        .onAppear { openPendingHistoryWorkout() }
+    }
+
+    /// Re-roots the navigation stack at a workout requested from another tab, then clears the request.
+    private func openPendingHistoryWorkout() {
+        guard let workout = sceneState.historyWorkoutToOpen else { return }
+        path = [workout]
+        sceneState.historyWorkoutToOpen = nil
     }
 }
 

@@ -161,10 +161,10 @@ struct CurrentWorkoutView: View {
                         .foregroundColor(.forgeSuccess)
                 }
             }
-            .padding(.vertical, Theme.Spacing.s)
+            .padding(.vertical, Theme.Spacing.xxs)
         }
     }
-    
+
     private var closeSheetButton: some View {
         Button("Close") {
             self.activeSheet = nil

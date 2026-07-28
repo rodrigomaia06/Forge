@@ -155,7 +155,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
 class SceneState: ObservableObject {
     @Published var selectedTabNumber: Int = Tab.workout.rawValue
-    
+
+    /// A finished workout the History tab should open. Set this together with `selectedTab = .history`
+    /// to deep-link into a past workout from elsewhere (for example, tapping a past session while a
+    /// workout is in progress). HistoryView clears it once it has navigated.
+    @Published var historyWorkoutToOpen: Workout?
+
     var selectedTab: Tab {
         get {
             Tab(rawValue: selectedTabNumber) ?? Tab.feed

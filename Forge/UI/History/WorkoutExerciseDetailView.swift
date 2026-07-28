@@ -17,6 +17,7 @@ struct WorkoutExerciseDetailView : View {
     @EnvironmentObject var settingsStore: SettingsStore
     @EnvironmentObject var restTimerStore: RestTimerStore
     @EnvironmentObject var exerciseStore: ExerciseStore
+    @EnvironmentObject var sceneState: SceneState
     
     @FetchRequest(fetchRequest: WorkoutExercise.fetchRequest()) var workoutExerciseHistory // will be overwritten in init()
     @ObservedObject var workoutExercise: WorkoutExercise
@@ -239,13 +240,24 @@ struct WorkoutExerciseDetailView : View {
     private var historyWorkoutSets: some View {
         ForEach(workoutExerciseHistory) { pastWorkoutExercise in
             Section {
-                // Tap the date to open that session's version of this exercise (notes and sets),
-                // pushed within the current tab.
-                NavigationLink {
-                    WorkoutExerciseDetailView(workoutExercise: pastWorkoutExercise)
+                // Tap the date to open that session in the History tab. The whole workout opens there,
+                // so notes and every exercise from that day are visible in one place.
+                Button {
+                    guard let workout = pastWorkoutExercise.workout else { return }
+                    sceneState.historyWorkoutToOpen = workout
+                    sceneState.selectedTab = .history
                 } label: {
-                    WorkoutExerciseSectionHeader(workoutExercise: pastWorkoutExercise)
+                    HStack {
+                        WorkoutExerciseSectionHeader(workoutExercise: pastWorkoutExercise)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.forgeSecondaryLabel)
+                    }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens this workout in the History tab")
 
                 pastWorkoutExercise.comment.map {
                     Text($0.enquoted)
@@ -358,90 +370,116 @@ private struct ActiveSetRow: View {
         )
     }
 
-    var body: some View {
-        HStack(spacing: Theme.Spacing.s) {
-            Text("\(index)")
-                .font(.forgeCaption)
-                .foregroundColor(.forgeSecondaryLabel)
-                .frame(minWidth: 16, alignment: .leading)
+    private func setTag(_ tag: WorkoutSetTag?) {
+        workoutSet.tagValue = (workoutSet.tagValue == tag) ? nil : tag
+        workoutSet.managedObjectContext?.saveOrCrash()
+    }
 
-            TextField("0", value: weightField, format: .number)
-                .keyboardType(.decimalPad)
-                .focused($focus, equals: .weight)
-                .multilineTextAlignment(.trailing)
-                .frame(maxWidth: 76)
-                .font(.forgeValue)
-            Text(weightUnit.unit.symbol)
-                .font(.forgeCaption)
-                .foregroundColor(.forgeSecondaryLabel)
-
-            // Marks a value pre-filled from a target planned last session.
-            if !workoutSet.isCompleted, workoutSet.targetWeightValue != nil {
-                Image(systemName: "target")
-                    .font(.caption2)
-                    .foregroundColor(.forgeSecondaryLabel)
-                    .accessibilityLabel("Planned target")
+    // The set-type control sits right after the set number. The dot shows the current tag color;
+    // each menu option carries its own color so the meaning reads without the label.
+    private var tagMenu: some View {
+        Menu {
+            Button { setTag(nil) } label: {
+                Label("No type", systemImage: workoutSet.tagValue == nil ? "checkmark" : "circle")
             }
+            ForEach(WorkoutSetTag.allCases, id: \.self) { tag in
+                Button { setTag(tag) } label: {
+                    Label(tag.title.capitalized, systemImage: workoutSet.tagValue == tag ? "checkmark.circle.fill" : "circle.fill")
+                }
+                .tint(tag.color)
+            }
+        } label: {
+            Circle()
+                .fill(workoutSet.tagValue?.color ?? Color.clear)
+                .overlay(Circle().strokeBorder(Color.forgeSeparator, lineWidth: workoutSet.tagValue == nil ? 1.2 : 0))
+                .frame(width: 11, height: 11)
+                .frame(width: 26, height: 30)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel(workoutSet.tagValue.map { "Set type: \($0.title)" } ?? "Set type")
+    }
 
-            Text("×").foregroundColor(.forgeSecondaryLabel)
-
-            TextField("0", value: repsField, format: .number)
-                .keyboardType(.numberPad)
-                .focused($focus, equals: .reps)
-                .multilineTextAlignment(.trailing)
-                .frame(maxWidth: 44)
-                .font(.forgeValue)
-            Text("reps")
-                .font(.forgeCaption)
-                .foregroundColor(.forgeSecondaryLabel)
-
-            Spacer(minLength: Theme.Spacing.s)
-
-            if showRPE, let rpe = workoutSet.rpeValue {
-                Text(String(format: "%.1f", rpe))
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: Theme.Spacing.s) {
+                Text("\(index)")
                     .font(.forgeCaption)
                     .foregroundColor(.forgeSecondaryLabel)
-            }
+                    .frame(minWidth: 14, alignment: .leading)
 
-            Menu {
-                ForEach(WorkoutSetTag.allCases, id: \.self) { tag in
-                    Button {
-                        workoutSet.tagValue = (workoutSet.tagValue == tag) ? nil : tag
-                        workoutSet.managedObjectContext?.saveOrCrash()
-                    } label: {
-                        Label(tag.title.capitalized, systemImage: workoutSet.tagValue == tag ? "checkmark" : "circle")
-                    }
-                }
-            } label: {
-                Image(systemName: "tag")
-                    .foregroundColor(workoutSet.tagValue?.color ?? .forgeSecondaryLabel)
-                    .frame(width: 30, height: 40)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel("Set tag")
+                tagMenu
 
-            Button(action: onMore) {
-                Image(systemName: "ellipsis")
+                TextField("0", value: weightField, format: .number)
+                    .keyboardType(.decimalPad)
+                    .focused($focus, equals: .weight)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 70)
+                    .font(.forgeValue)
+                Text(weightUnit.unit.symbol)
+                    .font(.forgeCaption)
                     .foregroundColor(.forgeSecondaryLabel)
-                    .frame(width: 30, height: 40)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("More options")
 
-            if isCurrentWorkout {
-                Button(action: onToggleComplete) {
-                    Image(systemName: workoutSet.isCompleted ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 27))
-                        .foregroundColor(workoutSet.isCompleted ? .forgeSuccess : (isUpNext ? .forgeLabel : .forgeSecondaryLabel))
-                        .frame(width: 40, height: 40)
+                // Marks a value pre-filled from a target planned last session.
+                if !workoutSet.isCompleted, workoutSet.targetWeightValue != nil {
+                    Image(systemName: "target")
+                        .font(.caption2)
+                        .foregroundColor(.forgeSecondaryLabel)
+                        .accessibilityLabel("Planned target")
+                }
+
+                Text("×").foregroundColor(.forgeSecondaryLabel)
+
+                TextField("0", value: repsField, format: .number)
+                    .keyboardType(.numberPad)
+                    .focused($focus, equals: .reps)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 40)
+                    .font(.forgeValue)
+                Text("reps")
+                    .font(.forgeCaption)
+                    .foregroundColor(.forgeSecondaryLabel)
+
+                Spacer(minLength: Theme.Spacing.xs)
+
+                if showRPE, let rpe = workoutSet.rpeValue {
+                    Text(String(format: "%.1f", rpe))
+                        .font(.forgeCaption)
+                        .foregroundColor(.forgeSecondaryLabel)
+                }
+
+                Button(action: onMore) {
+                    Image(systemName: "ellipsis")
+                        .foregroundColor(.forgeSecondaryLabel)
+                        .frame(width: 28, height: 30)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(workoutSet.isCompleted ? "Set completed" : "Complete set")
+                .accessibilityLabel("More options")
+
+                if isCurrentWorkout {
+                    Button(action: onToggleComplete) {
+                        Image(systemName: workoutSet.isCompleted ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 23))
+                            .foregroundColor(workoutSet.isCompleted ? .forgeSuccess : (isUpNext ? .forgeLabel : .forgeSecondaryLabel))
+                            .frame(width: 34, height: 34)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(workoutSet.isCompleted ? "Set completed" : "Complete set")
+                }
+            }
+            .foregroundColor(workoutSet.isCompleted ? .forgeLabel : .forgeSecondaryLabel)
+
+            // A per-set note logged during the workout reads right under its numbers.
+            if let comment = workoutSet.comment, !comment.isEmpty {
+                Text(comment)
+                    .font(.forgeCaption)
+                    .italic()
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .lineLimit(2)
+                    .padding(.leading, 22)
             }
         }
-        .foregroundColor(workoutSet.isCompleted ? .forgeLabel : .forgeSecondaryLabel)
     }
 }
 
