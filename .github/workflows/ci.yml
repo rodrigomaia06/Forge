@@ -40,12 +40,7 @@ jobs:
         run: xcodegen generate
 
       - name: Build & test
-        env:
-          # simctl forwards SIMCTL_CHILD_* into the app running in the simulator,
-          # so the screenshot test sees FORGE_SCREENSHOT_DIR and writes PNGs there.
-          SIMCTL_CHILD_FORGE_SCREENSHOT_DIR: ${{ github.workspace }}/screenshots
         run: |
-          mkdir -p "${{ github.workspace }}/screenshots"
           xcodebuild test \
             -project Iron.xcodeproj \
             -scheme Iron \
@@ -53,6 +48,13 @@ jobs:
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
+
+      - name: Extract UI screenshots from result bundle
+        if: always()
+        run: |
+          command -v zstd >/dev/null || brew install zstd
+          ./scripts/extract-screenshots.sh TestResults.xcresult screenshots || true
+          ls -l screenshots/ || true
 
       - name: Upload UI screenshots
         if: always()
