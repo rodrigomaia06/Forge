@@ -143,15 +143,6 @@ struct ExerciseDetailView : View {
         }
     }
     
-    private var stepsSection: some View {
-        Section(header: Text("Steps".uppercased())) {
-            ForEach(self.exercise.steps, id: \.hashValue) { step in
-                Text(step as String)
-                    .lineLimit(nil)
-            }
-        }
-    }
-    
     private var tipsSection: some View {
         Section(header: Text("Tips".uppercased())) {
             ForEach(self.exercise.tips, id: \.hashValue) { tip in
@@ -232,10 +223,6 @@ struct ExerciseDetailView : View {
 
                 if !(self.exercise.primaryMuscleCommonName.isEmpty && self.exercise.secondaryMuscleCommonName.isEmpty) {
                     self.muscleSection
-                }
-
-                if !self.exercise.steps.isEmpty {
-                    self.stepsSection
                 }
 
                 if !self.exercise.tips.isEmpty {
