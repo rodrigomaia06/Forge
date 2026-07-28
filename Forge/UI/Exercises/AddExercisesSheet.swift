@@ -57,28 +57,23 @@ struct AddExercisesSheet: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: 0) {
-                SheetBar(title: "Add Exercises",
-                    leading:
-                    Button("Cancel") {
-                        self.resetAndDismiss()
-                    },
-                    trailing:
-                    Button("Add") {
-                        self.onAdd(self.exerciseSelectorSelection)
-                        self.resetAndDismiss()
-                    }
-                    .environment(\.isEnabled, !self.exerciseSelectorSelection.isEmpty)
-                )
-                TextField("Search", text: $filter.filter)
-                    .textFieldStyle(SearchTextFieldStyle(text: $filter.filter))
-                    .padding(.top)
-            }.padding()
-            
-            Divider()
-            
+        NavigationStack {
             ExerciseMultiSelectionView(exerciseGroups: filter.exerciseGroups, selection: self.$exerciseSelectorSelection)
+                .navigationTitle("Add exercises")
+                .navigationBarTitleDisplayMode(.inline)
+                .searchable(text: $filter.filter, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { self.resetAndDismiss() }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Add") {
+                            self.onAdd(self.exerciseSelectorSelection)
+                            self.resetAndDismiss()
+                        }
+                        .disabled(self.exerciseSelectorSelection.isEmpty)
+                    }
+                }
         }
     }
 }
