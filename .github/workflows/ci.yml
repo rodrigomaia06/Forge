@@ -49,21 +49,6 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
 
-      - name: Extract UI screenshots from result bundle
-        if: always()
-        run: |
-          command -v zstd >/dev/null || brew install zstd
-          ./scripts/extract-screenshots.sh TestResults.xcresult screenshots || true
-          ls -l screenshots/ || true
-
-      - name: Upload UI screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshots
-          path: screenshots/
-          if-no-files-found: warn
-
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
