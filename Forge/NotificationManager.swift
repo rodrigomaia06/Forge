@@ -7,6 +7,7 @@
 //
 
 import UserNotifications
+import AudioToolbox
 
 class NotificationManager: NSObject {
     static let shared = NotificationManager(notificationCenter: UNUserNotificationCenter.current())
@@ -129,12 +130,16 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
             completionHandler([])
             return
         }
-        // The rest timer ended while Forge is in the foreground: fire the configured haptic here
-        // (the notification itself carries the configured sound).
+        // The rest timer ended while Forge is in the foreground. Fire the configured haptic, and play
+        // the classic iPhone tri-tone alert in-app. The notification carries no sound here so it does
+        // not double up. (Background notifications can only use the system default; see the request.)
         if SettingsStore.shared.restTimerHaptic {
             DispatchQueue.main.async { Haptics.success() }
         }
-        completionHandler(SettingsStore.shared.restTimerSound ? [.alert, .sound] : [.alert])
+        if SettingsStore.shared.restTimerSound {
+            DispatchQueue.main.async { AudioServicesPlaySystemSound(1007) } // 1007 = classic tri-tone
+        }
+        completionHandler([.alert])
     }
     
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
