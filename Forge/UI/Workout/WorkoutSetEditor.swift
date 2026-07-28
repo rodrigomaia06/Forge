@@ -182,7 +182,7 @@ struct WorkoutSetEditor : View {
     
     private var moreSheet: some View {
         NavigationStack {
-            SetMoreView(workoutSet: workoutSet, weightUnit: settingsStore.weightUnit)
+            SetMoreView(workoutSet: workoutSet, weightUnit: settingsStore.weightUnit, showRPE: settingsStore.showRPE)
                 .navigationBarTitle(Text(workoutSet.displayTitle(weightUnit: settingsStore.weightUnit)), displayMode: .inline)
                 .navigationBarItems(leading:
                     Button("Close") {
@@ -302,6 +302,7 @@ struct WorkoutSetEditor : View {
 struct SetMoreView: View {
     @ObservedObject var workoutSet: WorkoutSet
     var weightUnit: WeightUnit = .metric
+    var showRPE: Bool = false
 
     @State private var activeAlert: AlertType?
 
@@ -442,27 +443,31 @@ struct SetMoreView: View {
                     Text(weightUnit.unit.symbol)
                         .foregroundColor(.secondary)
                 }
-                Picker("RPE", selection: targetRpeField) {
-                    Text("None").tag(Double?.none)
-                    ForEach(RPE.allowedValues.reversed(), id: \.self) { rpe in
-                        Text(String(format: "%.1f", rpe)).tag(Double?.some(rpe))
+                if showRPE {
+                    Picker("RPE", selection: targetRpeField) {
+                        Text("None").tag(Double?.none)
+                        ForEach(RPE.allowedValues.reversed(), id: \.self) { rpe in
+                            Text(String(format: "%.1f", rpe)).tag(Double?.some(rpe))
+                        }
                     }
                 }
             }
-            
-            Section(header:
-                HStack {
-                    Text("RPE (Rating of Perceived Exertion)")
-                    Spacer()
-                    Button(action: {
-                        self.activeAlert = .rpeInfo
+
+            if showRPE {
+                Section(header:
+                    HStack {
+                        Text("RPE (Rating of Perceived Exertion)")
+                        Spacer()
+                        Button(action: {
+                            self.activeAlert = .rpeInfo
+                        }) {
+                            Image(systemName: "questionmark.circle")
+                                .foregroundColor(.accentColor)
+                        }
                     }) {
-                        Image(systemName: "questionmark.circle")
-                            .foregroundColor(.accentColor)
+                    ForEach(RPE.allowedValues.reversed(), id: \.self) { rpe in
+                        self.rpeButton(rpe: rpe)
                     }
-                }) {
-                ForEach(RPE.allowedValues.reversed(), id: \.self) { rpe in
-                    self.rpeButton(rpe: rpe)
                 }
             }
         }

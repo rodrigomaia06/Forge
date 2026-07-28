@@ -140,6 +140,16 @@ final class SettingsStore: ObservableObject {
             userDefaults.showPersonalRecords = newValue
         }
     }
+
+    var showRPE: Bool {
+        get {
+            userDefaults.showRPE
+        }
+        set {
+            self.objectWillChange.send()
+            userDefaults.showRPE = newValue
+        }
+    }
 }
 
 #if DEBUG

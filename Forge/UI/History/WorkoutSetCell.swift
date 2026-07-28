@@ -80,7 +80,7 @@ struct WorkoutSetCell: View {
 
             Spacer(minLength: Theme.Spacing.s)
 
-            if let rpe = workoutSet.rpeValue {
+            if settingsStore.showRPE, let rpe = workoutSet.rpeValue {
                 rpePill(rpe)
             }
 

@@ -176,6 +176,7 @@ struct WorkoutExerciseDetailView : View {
                 weightUnit: settingsStore.weightUnit,
                 isCurrentWorkout: isCurrentWorkout,
                 isUpNext: firstUncompletedSet == workoutSet,
+                showRPE: settingsStore.showRPE,
                 onToggleComplete: { toggleComplete(workoutSet) },
                 onMore: { moreSheetSet = workoutSet }
             )
@@ -275,7 +276,7 @@ struct WorkoutExerciseDetailView : View {
         }
         .sheet(item: $moreSheetSet) { set in
             NavigationStack {
-                SetMoreView(workoutSet: set, weightUnit: settingsStore.weightUnit)
+                SetMoreView(workoutSet: set, weightUnit: settingsStore.weightUnit, showRPE: settingsStore.showRPE)
                     .navigationBarTitle(Text(set.displayTitle(weightUnit: settingsStore.weightUnit)), displayMode: .inline)
                     .navigationBarItems(trailing: Button("Done") { moreSheetSet = nil })
             }
@@ -321,6 +322,7 @@ private struct ActiveSetRow: View {
     let weightUnit: WeightUnit
     let isCurrentWorkout: Bool
     let isUpNext: Bool
+    let showRPE: Bool
     var onToggleComplete: () -> Void
     var onMore: () -> Void
 
@@ -372,7 +374,7 @@ private struct ActiveSetRow: View {
 
             Spacer(minLength: Theme.Spacing.s)
 
-            if let rpe = workoutSet.rpeValue {
+            if showRPE, let rpe = workoutSet.rpeValue {
                 Text(String(format: "%.1f", rpe))
                     .font(.forgeCaption)
                     .foregroundColor(.forgeSecondaryLabel)
@@ -381,7 +383,7 @@ private struct ActiveSetRow: View {
             Button(action: onMore) {
                 Image(systemName: "ellipsis")
                     .foregroundColor(.forgeSecondaryLabel)
-                    .frame(width: 30, height: 34)
+                    .frame(width: 30, height: 40)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -390,9 +392,9 @@ private struct ActiveSetRow: View {
             if isCurrentWorkout {
                 Button(action: onToggleComplete) {
                     Image(systemName: workoutSet.isCompleted ? "checkmark.circle.fill" : "circle")
-                        .font(.title3)
-                        .foregroundColor(workoutSet.isCompleted ? .forgeAccent : (isUpNext ? .forgeLabel : .forgeSecondaryLabel))
-                        .frame(width: 34, height: 34)
+                        .font(.system(size: 27))
+                        .foregroundColor(workoutSet.isCompleted ? .forgeSuccess : (isUpNext ? .forgeLabel : .forgeSecondaryLabel))
+                        .frame(width: 40, height: 40)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

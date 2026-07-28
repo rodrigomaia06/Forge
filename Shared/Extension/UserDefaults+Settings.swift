@@ -22,12 +22,19 @@ extension UserDefaults {
         case unfinishedWorkoutReminderEnabled
         case unfinishedWorkoutReminderDelay
         case showPersonalRecords
+        case showRPE
     }
 
     /// Whether to show the personal-record (estimated 1RM) trophy on qualifying sets.
     var showPersonalRecords: Bool {
         set { self.set(newValue, forKey: SettingsKeys.showPersonalRecords.rawValue) }
         get { self.value(forKey: SettingsKeys.showPersonalRecords.rawValue) as? Bool ?? false }
+    }
+
+    /// Whether RPE (rating of perceived exertion) inputs and labels are shown.
+    var showRPE: Bool {
+        set { self.set(newValue, forKey: SettingsKeys.showRPE.rawValue) }
+        get { self.value(forKey: SettingsKeys.showRPE.rawValue) as? Bool ?? false }
     }
 
     /// Identifier of the selected accent theme (see ForgeAccent). Empty string means the default.

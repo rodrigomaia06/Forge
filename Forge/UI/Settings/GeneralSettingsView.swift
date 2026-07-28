@@ -104,8 +104,9 @@ struct GeneralSettingsView: View {
     }
 
     private var recordsSection: some View {
-        Section(footer: Text("Show a trophy on a set when it is your best estimated one-rep max for that exercise.")) {
+        Section(footer: Text("Optional features. The trophy marks a set that is your best estimated one-rep max for that exercise. RPE is a rating of perceived exertion you can log per set.")) {
             Toggle("Personal record trophies", isOn: $settingsStore.showPersonalRecords)
+            Toggle("RPE (perceived exertion)", isOn: $settingsStore.showRPE)
         }
     }
 
