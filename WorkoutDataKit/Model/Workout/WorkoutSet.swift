@@ -9,7 +9,8 @@
 import CoreData
 import Combine
 
-extension WorkoutSet: Identifiable {
+extension WorkoutSet {
+    // WorkoutSet already conforms to Identifiable via Core Data's generated properties.
     public var id: NSManagedObjectID { self.objectID }
 }
 
