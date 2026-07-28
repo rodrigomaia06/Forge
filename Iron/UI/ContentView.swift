@@ -1,9 +1,10 @@
 //
-//  SessionContentView.swift
-//  SwiftUI Playground
+//  ContentView.swift
+//  Forge
 //
-//  Created by Karim Abou Zeid on 19.06.19.
-//  Copyright © 2019 Karim Abou Zeid. All rights reserved.
+//  Root screen: the selected tab's content with the custom floating dock (ForgeTabBar)
+//  pinned at the bottom, on Forge's dark canvas. Also hosts the import-database flow that
+//  fires when the user opens a .sqlite file.
 //
 
 import SwiftUI
@@ -24,8 +25,18 @@ struct ContentView : View {
     }
 
     var body: some View {
-        tabView
-            .edgesIgnoringSafeArea([.top, .bottom])
+        content
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.forgeBackground.ignoresSafeArea())
+            .safeAreaInset(edge: .bottom) {
+                ForgeTabBar(selection: Binding(
+                    get: { sceneState.selectedTab },
+                    set: { sceneState.selectedTab = $0 }
+                ))
+                .padding(.horizontal, Theme.Spacing.l)
+                .padding(.top, Theme.Spacing.xs)
+            }
+            .preferredColorScheme(.dark) // Forge is dark-first (matches the design direction)
             .onReceive(NotificationCenter.default.publisher(for: Notification.Name.RestoreFromBackup)) { output in
                 guard let url = output.userInfo?[restoreFromBackupDataUserInfoKey] as? URL else { return }
                 self.pendingImportURL = IdentifiableHolder(value: url)
@@ -41,7 +52,19 @@ struct ContentView : View {
             .alert(item: $importResult) { result in
                 Alert(title: Text(result.title), message: Text(result.message))
             }
-            .preferredColorScheme(.dark) // Forge is dark-first (matches the design direction)
+    }
+
+    @ViewBuilder private var content: some View {
+        Group {
+            switch sceneState.selectedTab {
+            case .feed: FeedView()
+            case .history: HistoryView()
+            case .workout: WorkoutTab()
+            case .exercises: ExerciseMuscleGroupsView()
+            case .settings: SettingsView()
+            }
+        }
+        .productionEnvironment()
     }
 
     private func importDatabase(from url: URL) {
@@ -50,75 +73,6 @@ struct ContentView : View {
             importResult = ImportResult(title: "Import Complete", message: "Please reopen Forge to load the imported data.")
         } catch {
             importResult = ImportResult(title: "Import Failed", message: error.localizedDescription)
-        }
-    }
-    
-    @ViewBuilder
-    private var tabView: some View {
-        if #available(iOS 14, *) {
-            TabView(selection: $sceneState.selectedTabNumber) {
-                FeedView()
-                    .tag(SceneState.Tab.feed.rawValue)
-                    .tabItem {
-                        Label("Feed", systemImage: "house")
-                    }
-
-                HistoryView()
-                    .tag(SceneState.Tab.history.rawValue)
-                    .tabItem {
-                        Label("History", systemImage: "clock")
-                    }
-
-                WorkoutTab()
-                    .tag(SceneState.Tab.workout.rawValue)
-                    .tabItem {
-                        Label("Workout", systemImage: "plus.diamond")
-                    }
-
-                ExerciseMuscleGroupsView()
-                    .tag(SceneState.Tab.exercises.rawValue)
-                    .tabItem {
-                        Label("Exercises", systemImage: "tray.full")
-                    }
-
-                SettingsView()
-                    .tag(SceneState.Tab.settings.rawValue)
-                    .tabItem {
-                        Label("Settings", systemImage: "gear")
-                    }
-            }
-            .productionEnvironment()
-        } else {
-            /**
-             *  We inject .productionEnvironment() for every tab, because when the "screen reading" accessibility setting is enabled,
-             *  some Tabs get created by the system in the background without its parents environment! This is probably a bug and it happens since iOS 13.4
-             */
-            UITabView(viewControllers: [
-                FeedView()
-                    .productionEnvironment()
-                    .hostingController()
-                    .tabItem(title: "Feed", image: UIImage(systemName: "house"), tag: 0),
-
-                HistoryView()
-                    .productionEnvironment()
-                    .hostingController()
-                    .tabItem(title: "History", image: UIImage(systemName: "clock"), tag: 1),
-
-                WorkoutTab()
-                    .productionEnvironment()
-                    .hostingController()
-                    .tabItem(title: "Workout", image: UIImage(systemName: "plus.square"), tag: 2),
-
-                ExerciseMuscleGroupsView()
-                    .productionEnvironment()
-                    .hostingController()
-                    .tabItem(title: "Exercises", image: UIImage(systemName: "tray.full"), tag: 3),
-
-                SettingsView()
-                    .productionEnvironment()
-                    .hostingController()
-                    .tabItem(title: "Settings", image: UIImage(systemName: "gear"), tag: 4),
-            ], selection: sceneState.selectedTabNumber)
         }
     }
 }
