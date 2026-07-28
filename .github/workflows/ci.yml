@@ -47,8 +47,8 @@ jobs:
           DEVICE="$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ {gsub(/^ +| +$/, "", $1); print $1; exit}')"
           echo "Testing on: $DEVICE"
           xcodebuild test \
-            -project Iron.xcodeproj \
-            -scheme Iron \
+            -project Forge.xcodeproj \
+            -scheme Forge \
             -destination "platform=iOS Simulator,name=$DEVICE,OS=latest" \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
@@ -87,8 +87,8 @@ jobs:
       - name: Build unsigned (Release, device)
         run: |
           xcodebuild build \
-            -project Iron.xcodeproj \
-            -scheme Iron \
+            -project Forge.xcodeproj \
+            -scheme Forge \
             -configuration Release \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
