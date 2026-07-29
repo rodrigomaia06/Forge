@@ -63,3 +63,7 @@ fastlane/metadata
 /Forge.xcodeproj/
 
 /local/
+
+# Original, uncropped screenshots kept locally as source for the README gallery
+assets/screenshots/IMG_*.PNG
+assets/screenshots/IMG_*.png

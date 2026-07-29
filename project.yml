@@ -62,10 +62,7 @@ targets:
       - path: Forge
         excludes:
           - quotes
-          - iron_backup_file_images
       - path: Forge/quotes
-        type: folder
-      - path: Forge/iron_backup_file_images
         type: folder
       - path: Shared
     dependencies:
