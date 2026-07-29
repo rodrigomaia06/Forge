@@ -378,6 +378,21 @@ struct WorkoutExerciseDetailView : View {
         return 0
     }
 
+    /// Reps the warm-up ramp is based on: the first working set's reps or target reps, else the most
+    /// recent session's first working set, else zero (a light default ramp is used).
+    private var warmupBaseReps: Int {
+        let working = workoutSets(for: workoutExercise).first(where: { $0.tagValue != .warmUp })
+        if let reps = working?.repetitionsValue, reps > 0 { return Int(reps) }
+        if let target = working?.maxTargetRepetitionsValue ?? working?.minTargetRepetitionsValue, target > 0 {
+            return Int(target)
+        }
+        if let history = workoutExerciseHistory.first?.workoutSets?.array as? [WorkoutSet],
+           let reps = history.first(where: { $0.repetitionsValue > 0 })?.repetitionsValue {
+            return Int(reps)
+        }
+        return 0
+    }
+
     /// Inserts the computed warm-up sets before the first working set, so the ramp leads into the
     /// working sets. Each is tagged as a warm-up and left uncompleted for the user to work through.
     private func insertWarmupSets(_ plan: [WarmupSetPlan]) {
@@ -432,7 +447,7 @@ struct WorkoutExerciseDetailView : View {
         }
         if isCurrentWorkout {
             Button { showWarmupCalculator = true } label: {
-                Label("Add warm-up sets", systemImage: "flame")
+                Label("Warm-up sets", systemImage: "flame")
             }
         }
         if workoutExercise.exercise(in: exerciseStore.exercises) != nil {
@@ -469,6 +484,7 @@ struct WorkoutExerciseDetailView : View {
                     WarmupCalculatorView(
                         weightUnit: settingsStore.weightUnit,
                         initialWorkingWeightKg: warmupBaseWeightKg,
+                        initialWorkingReps: warmupBaseReps,
                         onAdd: { insertWarmupSets($0) }
                     )
                 }

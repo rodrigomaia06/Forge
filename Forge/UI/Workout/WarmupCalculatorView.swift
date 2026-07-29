@@ -6,18 +6,21 @@
 import SwiftUI
 import WorkoutDataKit
 
-/// Enter a working weight and add a warm-up ramp of sets before the working sets. The ramp is computed
-/// by `WarmupCalculator`; the caller inserts the returned sets.
+/// Shows a warm-up ramp for a working weight and reps. You can just read it, or add the sets to the
+/// exercise. The ramp is computed by `WarmupCalculator`; the caller inserts the sets when Add is tapped.
 struct WarmupCalculatorView: View {
     @Environment(\.dismiss) private var dismiss
 
     let weightUnit: WeightUnit
     /// Working weight to base the ramp on, in kilograms. Zero shows an empty field to type into.
     let initialWorkingWeightKg: Double
+    /// Working reps to base the ramp on. Zero falls back to a light default rep ramp.
+    let initialWorkingReps: Int
     /// Called with the computed warm-up sets (lightest first) when Add is tapped.
     let onAdd: ([WarmupSetPlan]) -> Void
 
     @State private var workingWeightInput = ""
+    @State private var workingRepsInput = ""
 
     private var workingWeightKg: Double {
         let normalized = workingWeightInput.replacingOccurrences(of: ",", with: ".")
@@ -25,8 +28,10 @@ struct WarmupCalculatorView: View {
         return WeightUnit.convert(weight: display, from: weightUnit, to: .metric)
     }
 
+    private var workingReps: Int { Int(workingRepsInput) ?? 0 }
+
     private var plan: [WarmupSetPlan] {
-        WarmupCalculator.plan(workingWeightKg: workingWeightKg, unit: weightUnit)
+        WarmupCalculator.plan(workingWeightKg: workingWeightKg, workingReps: workingReps, unit: weightUnit)
     }
 
     private func weightText(_ kg: Double) -> String {
@@ -35,12 +40,24 @@ struct WarmupCalculatorView: View {
 
     var body: some View {
         Form {
-            Section(header: Text("Working weight")) {
+            Section(header: Text("Working set")) {
                 HStack {
+                    Text("Weight")
+                    Spacer()
                     TextField("0", text: $workingWeightInput)
                         .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 90)
                     Text(weightUnit.unit.symbol)
                         .foregroundColor(.forgeSecondaryLabel)
+                }
+                HStack {
+                    Text("Reps")
+                    Spacer()
+                    TextField("0", text: $workingRepsInput)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 90)
                 }
             }
 
@@ -67,18 +84,23 @@ struct WarmupCalculatorView: View {
             }
         }
         .keyboardDoneToolbar()
+        .presentationDetents([.medium, .large])
         .navigationBarTitle("Warm-up sets", displayMode: .inline)
         .navigationBarItems(
-            leading: Button("Cancel") { dismiss() },
-            trailing: Button("Add") {
+            leading: Button("Done") { dismiss() },
+            trailing: Button("Add sets") {
                 onAdd(plan)
                 dismiss()
             }
             .disabled(plan.isEmpty)
         )
         .onAppear {
-            guard workingWeightInput.isEmpty, initialWorkingWeightKg > 0 else { return }
-            workingWeightInput = weightText(initialWorkingWeightKg)
+            if workingWeightInput.isEmpty, initialWorkingWeightKg > 0 {
+                workingWeightInput = weightText(initialWorkingWeightKg)
+            }
+            if workingRepsInput.isEmpty, initialWorkingReps > 0 {
+                workingRepsInput = String(initialWorkingReps)
+            }
         }
     }
 }
