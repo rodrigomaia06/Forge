@@ -94,6 +94,11 @@ enum WorkoutDataExchange {
         var end: Date?
         var attributes: [String: String]?
         var exercises: [WorkoutExerciseDTO]
+        // Optional link to a routine (and its plan) imported in the same file. When set and no explicit
+        // title is given, the workout is named from the routine, so the "show plan in name" setting
+        // applies to it like any routine-started workout.
+        var plan: String?
+        var routine: String?
     }
 
     struct WorkoutExerciseDTO: Codable {
@@ -168,7 +173,9 @@ enum WorkoutDataExchange {
                         )
                     }
                 )
-            }
+            },
+            plan: workout.workoutRoutine?.workoutPlan?.title,
+            routine: workout.workoutRoutine?.title
         )
     }
 
@@ -199,18 +206,34 @@ enum WorkoutDataExchange {
         let workouts = includeWorkouts ? file.workouts : []
         guard !file.plans.isEmpty || !file.routines.isEmpty || !workouts.isEmpty else { throw ExchangeError.empty }
 
-        for planDTO in file.plans { insert(planDTO, into: context) }
-        for routineDTO in file.routines { makeRoutine(routineDTO, plan: nil, into: context) } // standalone
-        for workoutDTO in workouts { insert(workoutDTO, into: context) }
+        // Routines imported in this file, keyed by plan+routine title, so a workout can link to one.
+        var routinesByName: [String: WorkoutRoutine] = [:]
+        for planDTO in file.plans {
+            let plan = WorkoutPlan.create(context: context)
+            plan.title = planDTO.title
+            for routineDTO in planDTO.routines {
+                let routine = makeRoutine(routineDTO, plan: plan, into: context)
+                routinesByName[routineKey(plan: planDTO.title, routine: routineDTO.title)] = routine
+            }
+        }
+        for routineDTO in file.routines {
+            let routine = makeRoutine(routineDTO, plan: nil, into: context)
+            routinesByName[routineKey(plan: nil, routine: routineDTO.title)] = routine
+        }
+        for workoutDTO in workouts {
+            let workout = insert(workoutDTO, into: context)
+            if let routineTitle = workoutDTO.routine {
+                workout.workoutRoutine = routinesByName[routineKey(plan: workoutDTO.plan, routine: routineTitle)]
+                    ?? routinesByName[routineKey(plan: nil, routine: routineTitle)]
+            }
+        }
 
         try context.save()
         return ImportResult(plans: file.plans.count, routines: file.routines.count, workouts: workouts.count)
     }
 
-    private static func insert(_ dto: PlanDTO, into context: NSManagedObjectContext) {
-        let plan = WorkoutPlan.create(context: context)
-        plan.title = dto.title
-        for routineDTO in dto.routines { makeRoutine(routineDTO, plan: plan, into: context) }
+    private static func routineKey(plan: String?, routine: String?) -> String {
+        (plan ?? "") + "\u{1}" + (routine ?? "")
     }
 
     // Ordered relationships are built by setting the to-one inverse on each child (which appends it in
@@ -240,7 +263,8 @@ enum WorkoutDataExchange {
         return routine
     }
 
-    private static func insert(_ dto: WorkoutDTO, into context: NSManagedObjectContext) {
+    @discardableResult
+    private static func insert(_ dto: WorkoutDTO, into context: NSManagedObjectContext) -> Workout {
         let workout = Workout.create(context: context)
         workout.title = dto.title
         workout.comment = dto.comment
@@ -268,6 +292,7 @@ enum WorkoutDataExchange {
                 set.workoutExercise = exercise
             }
         }
+        return workout
     }
 
     // MARK: Ordered helpers
