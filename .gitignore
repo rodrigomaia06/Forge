@@ -62,4 +62,5 @@ fastlane/metadata
 # The Xcode project is generated from project.yml (via `xcodegen generate`) and is not committed.
 /Forge.xcodeproj/
 
-testing-results/
+testing-results/forge-migration.json
+*.db

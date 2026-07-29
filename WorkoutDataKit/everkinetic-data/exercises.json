@@ -5767,5 +5767,1068 @@
       "png/9002-relaxation.png",
       "png/9002-tension.png"
     ]
+  },
+  {
+    "uuid": "ABA5AD44-81A9-5816-9A50-D4383FDFC723",
+    "id": 6000,
+    "title": "Chest Dip",
+    "alias": [],
+    "primary": [
+      "pectoralis major"
+    ],
+    "secondary": [
+      "triceps brachii",
+      "deltoid"
+    ],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "850D8977-98B0-5C4D-8898-413377FD829B",
+    "id": 6001,
+    "title": "Chest Press: Machine",
+    "alias": [],
+    "primary": [
+      "pectoralis major"
+    ],
+    "secondary": [
+      "triceps brachii",
+      "deltoid"
+    ],
+    "equipment": [
+      "machine"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "D2345A42-C08B-59D6-B9E7-4271166C1524",
+    "id": 6002,
+    "title": "Chest Press: Machine (Incline)",
+    "alias": [],
+    "primary": [
+      "pectoralis major"
+    ],
+    "secondary": [
+      "triceps brachii",
+      "deltoid"
+    ],
+    "equipment": [
+      "machine"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "BCAF1E6B-5619-5A0E-9BCD-0690126FE633",
+    "id": 6003,
+    "title": "Cable Crossover",
+    "alias": [],
+    "primary": [
+      "pectoralis major"
+    ],
+    "secondary": [
+      "deltoid"
+    ],
+    "equipment": [
+      "cable"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "E7873829-35C2-5305-8280-EC50BF729044",
+    "id": 6004,
+    "title": "Pec Deck",
+    "alias": [],
+    "primary": [
+      "pectoralis major"
+    ],
+    "secondary": [
+      "deltoid"
+    ],
+    "equipment": [
+      "machine"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "8FE43FAF-C7CB-539E-992F-E5600060BB46",
+    "id": 6005,
+    "title": "Svend Press",
+    "alias": [],
+    "primary": [
+      "pectoralis major"
+    ],
+    "secondary": [],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "32D30AE5-552D-57E2-BB14-068443BB351A",
+    "id": 6006,
+    "title": "Pull Up (Weighted)",
+    "alias": [],
+    "primary": [
+      "latissimus dorsi"
+    ],
+    "secondary": [
+      "biceps brachii"
+    ],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "F26F249F-5BC8-59B4-9EEA-2A67E2F6F5DC",
+    "id": 6007,
+    "title": "Lat Pulldown",
+    "alias": [],
+    "primary": [
+      "latissimus dorsi"
+    ],
+    "secondary": [
+      "biceps brachii"
+    ],
+    "equipment": [
+      "cable"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "D6ED5F13-1D08-5504-B119-062D67C84C4D",
+    "id": 6008,
+    "title": "Lat Pulldown (Close Grip)",
+    "alias": [],
+    "primary": [
+      "latissimus dorsi"
+    ],
+    "secondary": [
+      "biceps brachii"
+    ],
+    "equipment": [
+      "cable"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "DDC41CFC-DB6B-5C21-B7A4-FF5F8017E0B7",
+    "id": 6009,
+    "title": "Row: Machine",
+    "alias": [],
+    "primary": [
+      "latissimus dorsi"
+    ],
+    "secondary": [
+      "biceps brachii",
+      "trapezius"
+    ],
+    "equipment": [
+      "machine"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "D1038F27-5BE6-51C8-8E2E-2E80A8BC2321",
+    "id": 6010,
+    "title": "Row: Dumbbell (Chest Supported)",
+    "alias": [],
+    "primary": [
+      "latissimus dorsi"
+    ],
+    "secondary": [
+      "biceps brachii",
+      "trapezius"
+    ],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "197E68DD-49E1-50A0-A516-EF58C7C10CB2",
+    "id": 6011,
+    "title": "Renegade Row: Dumbbell",
+    "alias": [],
+    "primary": [
+      "latissimus dorsi"
+    ],
+    "secondary": [
+      "biceps brachii",
+      "abdominals"
+    ],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "33EA2AE8-ED87-5FE3-870E-4327FAB12074",
+    "id": 6012,
+    "title": "Pendlay Row: Barbell",
+    "alias": [],
+    "primary": [
+      "latissimus dorsi"
+    ],
+    "secondary": [
+      "biceps brachii",
+      "trapezius"
+    ],
+    "equipment": [
+      "barbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "2EB4B804-B446-58F3-B623-12B55DD5AD3A",
+    "id": 6013,
+    "title": "Romanian Deadlift: Barbell",
+    "alias": [],
+    "primary": [
+      "ischiocrural muscles"
+    ],
+    "secondary": [
+      "glutaeus maximus",
+      "erector spinae"
+    ],
+    "equipment": [
+      "barbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "9C494677-80C0-549E-9172-0C62EBFDC291",
+    "id": 6014,
+    "title": "Romanian Deadlift: Dumbbell",
+    "alias": [],
+    "primary": [
+      "ischiocrural muscles"
+    ],
+    "secondary": [
+      "glutaeus maximus",
+      "erector spinae"
+    ],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "B47D13B6-F0A1-54CC-BE4A-FEF8A6FBEA3B",
+    "id": 6015,
+    "title": "Rack Pull: Barbell",
+    "alias": [],
+    "primary": [
+      "erector spinae"
+    ],
+    "secondary": [
+      "trapezius",
+      "glutaeus maximus"
+    ],
+    "equipment": [
+      "barbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "8C18D5C7-31D6-56AA-9F60-6A29B0784E0C",
+    "id": 6016,
+    "title": "Shrug: Barbell",
+    "alias": [],
+    "primary": [
+      "trapezius"
+    ],
+    "secondary": [],
+    "equipment": [
+      "barbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "174FD111-FA37-59AA-990D-3ED63ED018C5",
+    "id": 6017,
+    "title": "Shrug: Dumbbell",
+    "alias": [],
+    "primary": [
+      "trapezius"
+    ],
+    "secondary": [],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "9437BE8E-F1BC-576A-8FBA-E2BE9E60FB8B",
+    "id": 6018,
+    "title": "Lateral Raise: Cable",
+    "alias": [],
+    "primary": [
+      "deltoid"
+    ],
+    "secondary": [],
+    "equipment": [
+      "cable"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "D27E58A5-3444-5524-B6F3-86729BE8014F",
+    "id": 6019,
+    "title": "Lateral Raise: Machine",
+    "alias": [],
+    "primary": [
+      "deltoid"
+    ],
+    "secondary": [],
+    "equipment": [
+      "machine"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "05416F1E-BA31-5863-8487-5176DE1A0524",
+    "id": 6020,
+    "title": "Reverse Fly: Dumbbell (Incline)",
+    "alias": [],
+    "primary": [
+      "deltoid"
+    ],
+    "secondary": [
+      "trapezius"
+    ],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "4B0ACBBD-CBC5-5EC3-8DA2-830917D13D68",
+    "id": 6021,
+    "title": "Reverse Pec Deck",
+    "alias": [],
+    "primary": [
+      "deltoid"
+    ],
+    "secondary": [
+      "trapezius"
+    ],
+    "equipment": [
+      "machine"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "802ECEC2-C361-5321-858D-3545251D61DF",
+    "id": 6022,
+    "title": "Face Pull: Cable",
+    "alias": [],
+    "primary": [
+      "deltoid"
+    ],
+    "secondary": [
+      "trapezius"
+    ],
+    "equipment": [
+      "cable"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "C115E558-06B5-575D-A792-175A92C9B657",
+    "id": 6023,
+    "title": "Overhead Press: Dumbbell (Seated)",
+    "alias": [],
+    "primary": [
+      "deltoid"
+    ],
+    "secondary": [
+      "triceps brachii"
+    ],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "4F927F29-5D2A-5FEA-A1A4-BE999A9FAF15",
+    "id": 6024,
+    "title": "Front Raise: Cable",
+    "alias": [],
+    "primary": [
+      "deltoid"
+    ],
+    "secondary": [],
+    "equipment": [
+      "cable"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "9A93E466-D1CB-5A26-A462-ECCD626D42C3",
+    "id": 6025,
+    "title": "Upright Row: Cable",
+    "alias": [],
+    "primary": [
+      "deltoid"
+    ],
+    "secondary": [
+      "trapezius",
+      "biceps brachii"
+    ],
+    "equipment": [
+      "cable"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "F8B2F73A-65F7-5588-BD47-BB8C84CEB575",
+    "id": 6026,
+    "title": "Kettlebell Press",
+    "alias": [],
+    "primary": [
+      "deltoid"
+    ],
+    "secondary": [
+      "triceps brachii"
+    ],
+    "equipment": [
+      "kettlebell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "F6CE82F7-3F5A-5107-A9A6-4B8B8C104D9D",
+    "id": 6027,
+    "title": "Biceps Curl: Barbell",
+    "alias": [],
+    "primary": [
+      "biceps brachii"
+    ],
+    "secondary": [],
+    "equipment": [
+      "barbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "638C0D3A-4D99-569D-8885-6B834E8E6104",
+    "id": 6028,
+    "title": "Biceps Curl: EZ Curl Bar (Wide)",
+    "alias": [],
+    "primary": [
+      "biceps brachii"
+    ],
+    "secondary": [],
+    "equipment": [
+      "ez-curl-bar"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "9D95483F-10CC-577F-B53F-F2AA1C8DD363",
+    "id": 6029,
+    "title": "Bayesian Curl: Cable",
+    "alias": [],
+    "primary": [
+      "biceps brachii"
+    ],
+    "secondary": [],
+    "equipment": [
+      "cable"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "CDC48B5B-2D5D-5942-9D04-D91E7BAC842C",
+    "id": 6030,
+    "title": "Spider Curl: Dumbbell",
+    "alias": [],
+    "primary": [
+      "biceps brachii"
+    ],
+    "secondary": [],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "E56CB967-1FC1-5821-A566-BD1AE7DAEDB5",
+    "id": 6031,
+    "title": "Triceps Extension: Cable (Overhead)",
+    "alias": [],
+    "primary": [
+      "triceps brachii"
+    ],
+    "secondary": [],
+    "equipment": [
+      "cable"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "3CEC9CD6-6F83-5D5E-A20A-89F5236E6AD9",
+    "id": 6032,
+    "title": "Skullcrusher: EZ Curl Bar",
+    "alias": [],
+    "primary": [
+      "triceps brachii"
+    ],
+    "secondary": [],
+    "equipment": [
+      "ez-curl-bar"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "D909113D-8C02-53E6-9365-9ECBC79288C0",
+    "id": 6033,
+    "title": "Triceps Dip (Bench)",
+    "alias": [],
+    "primary": [
+      "triceps brachii"
+    ],
+    "secondary": [],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "1A12F0A7-AE90-5E85-8B5B-D5DD918328ED",
+    "id": 6034,
+    "title": "Close Grip Push Up",
+    "alias": [],
+    "primary": [
+      "triceps brachii"
+    ],
+    "secondary": [
+      "pectoralis major"
+    ],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "49BAF818-60DA-555F-B54F-6F72194AAFFA",
+    "id": 6035,
+    "title": "Pendulum Squat",
+    "alias": [],
+    "primary": [
+      "quadriceps"
+    ],
+    "secondary": [
+      "glutaeus maximus"
+    ],
+    "equipment": [
+      "machine"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "4EB23E5F-9725-5AB3-9AFA-12B457AFAD74",
+    "id": 6036,
+    "title": "Goblet Squat: Dumbbell",
+    "alias": [],
+    "primary": [
+      "quadriceps"
+    ],
+    "secondary": [
+      "glutaeus maximus"
+    ],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "0B994FEB-F9FC-5A50-AB6C-9377F974F5E3",
+    "id": 6037,
+    "title": "Bulgarian Split Squat: Dumbbell",
+    "alias": [],
+    "primary": [
+      "quadriceps"
+    ],
+    "secondary": [
+      "glutaeus maximus",
+      "ischiocrural muscles"
+    ],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "1BABD751-507B-5DB5-B6FA-BC825BAEA883",
+    "id": 6038,
+    "title": "Lunge: Dumbbell",
+    "alias": [],
+    "primary": [
+      "quadriceps"
+    ],
+    "secondary": [
+      "glutaeus maximus",
+      "ischiocrural muscles"
+    ],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "36681BE9-7C80-53B9-BE63-E6536686169A",
+    "id": 6039,
+    "title": "Leg Press (Machine)",
+    "alias": [],
+    "primary": [
+      "quadriceps"
+    ],
+    "secondary": [
+      "glutaeus maximus",
+      "ischiocrural muscles"
+    ],
+    "equipment": [
+      "machine"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "490F3FE8-2353-504D-BB55-32A91ADDD40D",
+    "id": 6040,
+    "title": "Hip Thrust: Barbell",
+    "alias": [],
+    "primary": [
+      "glutaeus maximus"
+    ],
+    "secondary": [
+      "ischiocrural muscles"
+    ],
+    "equipment": [
+      "barbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "B764DDBC-02A9-5B16-A512-23335EDA63C6",
+    "id": 6041,
+    "title": "Glute Kickback: Cable",
+    "alias": [],
+    "primary": [
+      "glutaeus maximus"
+    ],
+    "secondary": [
+      "ischiocrural muscles"
+    ],
+    "equipment": [
+      "cable"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "FFDFB5BE-FA4A-50D5-9DB1-60125041B95C",
+    "id": 6042,
+    "title": "Leg Curl (Seated, Machine)",
+    "alias": [],
+    "primary": [
+      "ischiocrural muscles"
+    ],
+    "secondary": [],
+    "equipment": [
+      "machine"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "7CBEB539-8BE9-55B8-B539-1E236A6BBEE3",
+    "id": 6043,
+    "title": "Nordic Curl",
+    "alias": [],
+    "primary": [
+      "ischiocrural muscles"
+    ],
+    "secondary": [
+      "glutaeus maximus"
+    ],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "7F8A5C50-42EE-578B-9137-580EED4AACAA",
+    "id": 6044,
+    "title": "Calf Raise: Leg Press",
+    "alias": [],
+    "primary": [
+      "gastrocnemius"
+    ],
+    "secondary": [
+      "soleus"
+    ],
+    "equipment": [
+      "machine"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "7EAAEE8F-F27C-51FC-AFB4-51DF43171540",
+    "id": 6045,
+    "title": "Standing Calf Raise: Machine",
+    "alias": [],
+    "primary": [
+      "gastrocnemius"
+    ],
+    "secondary": [
+      "soleus"
+    ],
+    "equipment": [
+      "machine"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "F97D8662-8BCC-5356-A241-4CE0751174E8",
+    "id": 6046,
+    "title": "Kettlebell Swing",
+    "alias": [],
+    "primary": [
+      "glutaeus maximus"
+    ],
+    "secondary": [
+      "ischiocrural muscles",
+      "erector spinae"
+    ],
+    "equipment": [
+      "kettlebell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "79967CE0-A190-5555-B024-819A94E8EFE1",
+    "id": 6047,
+    "title": "Goblet Squat: Kettlebell",
+    "alias": [],
+    "primary": [
+      "quadriceps"
+    ],
+    "secondary": [
+      "glutaeus maximus"
+    ],
+    "equipment": [
+      "kettlebell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "8B56E6A2-61F2-5B12-BCF2-773DE184664A",
+    "id": 6048,
+    "title": "Decline Crunch",
+    "alias": [],
+    "primary": [
+      "abdominals"
+    ],
+    "secondary": [],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "F2447D83-C514-5FEF-BA1D-3B4863092181",
+    "id": 6049,
+    "title": "Cable Crunch",
+    "alias": [],
+    "primary": [
+      "abdominals"
+    ],
+    "secondary": [],
+    "equipment": [
+      "cable"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "D8CBE2E8-56C9-50F9-855D-F58C91561E73",
+    "id": 6050,
+    "title": "Hanging Leg Raise",
+    "alias": [],
+    "primary": [
+      "abdominals"
+    ],
+    "secondary": [
+      "obliques"
+    ],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "8B861CF5-9B1E-5110-8051-A743EA7FB724",
+    "id": 6051,
+    "title": "Russian Twist",
+    "alias": [],
+    "primary": [
+      "obliques"
+    ],
+    "secondary": [
+      "abdominals"
+    ],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "57E956D4-BBF7-5899-A842-4AC9BD3C5471",
+    "id": 6052,
+    "title": "Ab Wheel Rollout",
+    "alias": [],
+    "primary": [
+      "abdominals"
+    ],
+    "secondary": [
+      "obliques"
+    ],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "C307E035-C166-5D0A-817A-3F5BD62F6758",
+    "id": 6053,
+    "title": "Pallof Press: Cable",
+    "alias": [],
+    "primary": [
+      "obliques"
+    ],
+    "secondary": [
+      "abdominals"
+    ],
+    "equipment": [
+      "cable"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
   }
 ]
