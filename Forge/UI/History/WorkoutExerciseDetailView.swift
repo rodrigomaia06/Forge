@@ -26,6 +26,7 @@ struct WorkoutExerciseDetailView : View {
     @State private var showExerciseNote = false
     @State private var showHistory = false
     @State private var showAllHistory = false
+    @State private var showWarmupCalculator = false
 
     /// Past sessions to show. Capped at the most recent few until the user asks for more.
     private var displayedHistory: [WorkoutExercise] {
@@ -363,6 +364,38 @@ struct WorkoutExerciseDetailView : View {
         managedObjectContext.saveOrCrash()
     }
 
+    /// Weight the warm-up ramp is based on: the first working set with a weight, else the most recent
+    /// session's first working set, else zero (the sheet then asks for a weight).
+    private var warmupBaseWeightKg: Double {
+        if let weight = workoutSets(for: workoutExercise)
+            .first(where: { $0.tagValue != .warmUp && $0.weightValue > 0 })?.weightValue {
+            return weight
+        }
+        if let history = workoutExerciseHistory.first?.workoutSets?.array as? [WorkoutSet],
+           let weight = history.first(where: { $0.weightValue > 0 })?.weightValue {
+            return weight
+        }
+        return 0
+    }
+
+    /// Inserts the computed warm-up sets before the first working set, so the ramp leads into the
+    /// working sets. Each is tagged as a warm-up and left uncompleted for the user to work through.
+    private func insertWarmupSets(_ plan: [WarmupSetPlan]) {
+        guard !plan.isEmpty, let context = workoutExercise.managedObjectContext else { return }
+        let existing = workoutSets(for: workoutExercise)
+        let insertIndex = existing.firstIndex(where: { $0.tagValue != .warmUp }) ?? existing.count
+        for (offset, warmup) in plan.enumerated() {
+            let set = WorkoutSet.create(context: context)
+            set.weightValue = warmup.weightKg
+            set.repetitionsValue = Int16(warmup.reps)
+            set.tagValue = .warmUp
+            set.isCompleted = false
+            workoutExercise.insertIntoWorkoutSets(set, at: insertIndex + offset)
+        }
+        Haptics.success()
+        context.saveOrCrash()
+    }
+
     /// The exercise name (with its note as a small line right under it) and the options menu.
     private var exerciseHeaderRow: some View {
         HStack(alignment: .firstTextBaseline) {
@@ -397,6 +430,11 @@ struct WorkoutExerciseDetailView : View {
         Button { showHistory = true } label: {
             Label("Previous sessions", systemImage: "clock.arrow.circlepath")
         }
+        if isCurrentWorkout {
+            Button { showWarmupCalculator = true } label: {
+                Label("Add warm-up sets", systemImage: "flame")
+            }
+        }
         if workoutExercise.exercise(in: exerciseStore.exercises) != nil {
             Button { showExerciseInfo = true } label: {
                 Label("Exercise info", systemImage: "info.circle")
@@ -424,6 +462,15 @@ struct WorkoutExerciseDetailView : View {
                                 }
                             }
                     }
+                }
+            }
+            .sheet(isPresented: $showWarmupCalculator) {
+                NavigationStack {
+                    WarmupCalculatorView(
+                        weightUnit: settingsStore.weightUnit,
+                        initialWorkingWeightKg: warmupBaseWeightKg,
+                        onAdd: { insertWarmupSets($0) }
+                    )
                 }
             }
             .sheet(item: $moreSheetSet) { set in
