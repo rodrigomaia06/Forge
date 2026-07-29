@@ -141,7 +141,7 @@ enum WorkoutDataExchange {
                             reps: set.repetitions?.int16Value,
                             isCompleted: set.isCompleted,
                             tag: set.tagValue?.rawValue,
-                            rpe: set.rpe?.doubleValue,
+                            rpe: set.rpeValue,
                             comment: set.comment,
                             minTargetReps: set.minTargetRepetitionsValue,
                             maxTargetReps: set.maxTargetRepetitionsValue
