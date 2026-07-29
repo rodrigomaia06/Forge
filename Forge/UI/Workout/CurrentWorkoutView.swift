@@ -214,9 +214,8 @@ struct CurrentWorkoutView: View {
                 .padding(.top, Theme.Spacing.s)
                 .padding(.bottom, Theme.Spacing.xs)
 
-                if #available(iOS 15.0, *) {
-                    Divider()
-                }
+                // The timer row sits directly under the title as one header group; a single rule separates
+                // it from the list below, so there is no boxed-in colored band.
                 TimerBannerView(workout: workout)
                 Divider()
                 List {

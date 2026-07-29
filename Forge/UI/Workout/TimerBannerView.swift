@@ -88,8 +88,8 @@ struct TimerBannerView: View {
                 .padding()
             }
         }
-        .background(Color(.systemFill).opacity(0.5))
-//        .background(VisualEffectView(effect: UIBlurEffect(style: .systemMaterial)))
+        // No fill: the timer row sits on the workout canvas so it reads as part of the header rather
+        // than a separate colored band.
         .sheet(item: $activeSheet) { sheet in
             if sheet == .editTime {
                 self.editTimeSheet
