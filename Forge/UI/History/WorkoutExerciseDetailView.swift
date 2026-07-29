@@ -387,6 +387,15 @@ struct WorkoutExerciseDetailView : View {
     /// working sets. Each is tagged as a warm-up and left uncompleted for the user to work through.
     private func insertWarmupSets(_ plan: [WarmupSetPlan]) {
         guard !plan.isEmpty, let context = workoutExercise.managedObjectContext else { return }
+        // Replace the leading warm-up sets that aren't done yet, so running the calculator again swaps the
+        // ramp instead of stacking a second one. Completed warm-ups and the working sets are left alone.
+        for set in workoutSets(for: workoutExercise) {
+            guard set.tagValue == .warmUp else { break }
+            if !set.isCompleted {
+                context.delete(set)
+                workoutExercise.removeFromWorkoutSets(set)
+            }
+        }
         let existing = workoutSets(for: workoutExercise)
         let insertIndex = existing.firstIndex(where: { $0.tagValue != .warmUp }) ?? existing.count
         for (offset, warmup) in plan.enumerated() {
@@ -680,23 +689,20 @@ private struct ActiveSetRow: View {
     private static let fieldHeight: CGFloat = 40
 
     private func setField(_ text: Binding<String>, field: Field, keyboard: UIKeyboardType, width: CGFloat, targetHint: String? = nil) -> some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .top) {
             TextField("", text: text)
                 .keyboardType(keyboard)
                 .focused($focus, equals: field)
-                // Numbers read from the right, so an entered value lines up with the column edge.
-                .multilineTextAlignment(.trailing)
+                .multilineTextAlignment(.center)
                 .font(.forgeValue)
-                .padding(.horizontal, 8)
                 .frame(width: width, height: Self.fieldHeight)
-            // The planned range sits in the top corner so the entered value stays clear of it.
+            // The planned range sits at the top so the entered value stays centered below it.
             if let targetHint {
                 Text(targetHint)
                     .font(.system(size: 10))
                     .foregroundColor(.forgeSecondaryLabel)
                     .allowsHitTesting(false)
                     .padding(.top, 2)
-                    .padding(.trailing, 6)
             }
         }
         .frame(width: width, height: Self.fieldHeight)
@@ -709,9 +715,8 @@ private struct ActiveSetRow: View {
     private func readValue(_ text: String, width: CGFloat) -> some View {
         Text(text)
             .font(.forgeValue)
-            .multilineTextAlignment(.trailing)
-            .padding(.horizontal, 8)
-            .frame(width: width, height: Self.fieldHeight, alignment: .trailing)
+            .multilineTextAlignment(.center)
+            .frame(width: width, height: Self.fieldHeight)
     }
 
     var body: some View {

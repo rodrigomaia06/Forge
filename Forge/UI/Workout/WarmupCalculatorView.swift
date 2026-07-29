@@ -63,7 +63,9 @@ struct WarmupCalculatorView: View {
 
             Section(header: Text("Warm-up sets")) {
                 if plan.isEmpty {
-                    Text("Enter a working weight to see warm-up sets.")
+                    Text(workingWeightKg > 0
+                         ? "This weight is light enough that warm-up sets aren't needed."
+                         : "Enter a working weight to see warm-up sets.")
                         .foregroundColor(.forgeSecondaryLabel)
                 } else {
                     ForEach(Array(plan.enumerated()), id: \.element.id) { index, set in
