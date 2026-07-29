@@ -23,13 +23,23 @@ struct StartWorkoutView: View {
     
     @FetchRequest(fetchRequest: StartWorkoutView.fetchRequest) var workoutPlans
 
+    @FetchRequest(fetchRequest: StartWorkoutView.standaloneRoutinesFetchRequest) var standaloneRoutines
+
     static var fetchRequest: NSFetchRequest<WorkoutPlan> {
         let request: NSFetchRequest<WorkoutPlan> = WorkoutPlan.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \WorkoutPlan.title, ascending: false)]
         return request
     }
-    
-    // Start a workout, or create a plan. The plus is the single entry point (no separate button).
+
+    // Routines that belong to no plan, shown in their own section.
+    static var standaloneRoutinesFetchRequest: NSFetchRequest<WorkoutRoutine> {
+        let request = NSFetchRequest<WorkoutRoutine>(entityName: "WorkoutRoutine")
+        request.predicate = NSPredicate(format: "workoutPlan == nil")
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \WorkoutRoutine.title, ascending: true)]
+        return request
+    }
+
+    // The plus is the single entry point: start a workout, or create a routine or a plan.
     private var addMenu: some View {
         Menu {
             Button {
@@ -37,6 +47,11 @@ struct StartWorkoutView: View {
                 Workout.create(context: self.managedObjectContext).startOrCrash()
             } label: {
                 Label("New workout", systemImage: "figure.strengthtraining.traditional")
+            }
+            Button {
+                self.newRoutine()
+            } label: {
+                Label("New routine", systemImage: "square.stack.3d.up.fill")
             }
             Button {
                 self.newWorkoutPlan()
@@ -69,6 +84,14 @@ struct StartWorkoutView: View {
                 .padding(.bottom, Theme.Spacing.m)
 
                 List {
+                    if !standaloneRoutines.isEmpty {
+                        Section(header: Text("Routines")) {
+                            ForEach(standaloneRoutines) { routine in
+                                RoutineMenuRow(routine: routine, allPlans: Array(workoutPlans), onStart: { start(routine: $0) }, onEdit: { routineToEdit = $0 })
+                            }
+                            .onDelete { deleteStandaloneRoutines($0) }
+                        }
+                    }
                     ForEach(workoutPlans) { workoutPlan in
                         Section {
                             WorkoutPlanCell(workoutPlan: workoutPlan)
@@ -109,6 +132,20 @@ struct StartWorkoutView: View {
 
     private func newWorkoutPlan() {
         _ = WorkoutPlan.create(context: managedObjectContext)
+        managedObjectContext.saveOrCrash()
+    }
+
+    /// Create a routine that belongs to no plan and open it for editing.
+    private func newRoutine() {
+        let routine = WorkoutRoutine.create(context: managedObjectContext)
+        managedObjectContext.saveOrCrash()
+        routineToEdit = routine
+    }
+
+    private func deleteStandaloneRoutines(_ offsets: IndexSet) {
+        for i in offsets {
+            managedObjectContext.delete(standaloneRoutines[i])
+        }
         managedObjectContext.saveOrCrash()
     }
     
@@ -162,11 +199,6 @@ private struct WorkoutPlanCell: View {
 }
 
 private struct WorkoutPlanRoutines: View {
-    @EnvironmentObject var settingsStore: SettingsStore
-    @EnvironmentObject var exerciseStore: ExerciseStore
-    
-    @Environment(\.managedObjectContext) var managedObjectContext
-    
     @ObservedObject var workoutPlan: WorkoutPlan
 
     /// All plans, so a routine can be moved to another one.
@@ -180,46 +212,60 @@ private struct WorkoutPlanRoutines: View {
 
     var body: some View {
         ForEach(workoutRoutines) { workoutRoutine in
-            // A menu anchored to the row, so the choices appear next to the routine rather than as a
-            // sheet from the bottom of the screen.
-            Menu {
-                Button { onStart(workoutRoutine) } label: { Label("Start", systemImage: "play.fill") }
-                Button { onEdit(workoutRoutine) } label: { Label("Edit", systemImage: "pencil") }
-                Button { duplicate(workoutRoutine) } label: { Label("Duplicate", systemImage: "doc.on.doc") }
-                let otherPlans = allPlans.filter { $0 != workoutPlan }
-                if !otherPlans.isEmpty {
-                    Menu {
-                        ForEach(otherPlans) { plan in
-                            Button(plan.displayTitle) { move(workoutRoutine, to: plan) }
-                        }
-                    } label: { Label("Move to plan", systemImage: "folder") }
-                }
-            } label: {
-                VStack(alignment: .leading) {
-                    Text(workoutRoutine.displayTitle).italic()
-                    Text(workoutRoutine.subtitle(in: self.exerciseStore.exercises))
-                        .lineLimit(1)
-                        .foregroundColor(.secondary)
-                        .font(.caption)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .foregroundColor(.primary)
+            RoutineMenuRow(routine: workoutRoutine, allPlans: allPlans, onStart: onStart, onEdit: onEdit)
         }
     }
+}
 
-    private func duplicate(_ routine: WorkoutRoutine) {
+/// A routine row whose tap opens a menu (start, edit, duplicate, move) anchored to the row, rather
+/// than a sheet from the bottom. Shared by the plan sections and the standalone routines section.
+private struct RoutineMenuRow: View {
+    @EnvironmentObject var exerciseStore: ExerciseStore
+    @Environment(\.managedObjectContext) var managedObjectContext
+
+    @ObservedObject var routine: WorkoutRoutine
+    var allPlans: [WorkoutPlan]
+    var onStart: (WorkoutRoutine) -> Void
+    var onEdit: (WorkoutRoutine) -> Void
+
+    var body: some View {
+        Menu {
+            Button { onStart(routine) } label: { Label("Start", systemImage: "play.fill") }
+            Button { onEdit(routine) } label: { Label("Edit", systemImage: "pencil") }
+            Button { duplicate() } label: { Label("Duplicate", systemImage: "doc.on.doc") }
+            Menu {
+                if routine.workoutPlan != nil {
+                    Button { move(to: nil) } label: { Label("No plan", systemImage: "tray") }
+                }
+                ForEach(allPlans.filter { $0 != routine.workoutPlan }) { plan in
+                    Button(plan.displayTitle) { move(to: plan) }
+                }
+            } label: { Label("Move to plan", systemImage: "folder") }
+        } label: {
+            VStack(alignment: .leading) {
+                Text(routine.displayTitle).italic()
+                Text(routine.subtitle(in: exerciseStore.exercises))
+                    .lineLimit(1)
+                    .foregroundColor(.secondary)
+                    .font(.caption)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(.primary)
+    }
+
+    private func duplicate() {
         Haptics.selection()
         let copy = routine.duplicate(context: managedObjectContext)
-        workoutPlan.addToWorkoutRoutines(copy)
+        copy.workoutPlan = routine.workoutPlan // same plan, or nil for a standalone routine
         managedObjectContext.saveOrCrash()
     }
 
-    private func move(_ routine: WorkoutRoutine, to plan: WorkoutPlan) {
+    private func move(to plan: WorkoutPlan?) {
         Haptics.selection()
-        // Setting the plan updates both sides of the relationship, moving the routine out of this plan.
+        // Setting the plan updates both sides of the relationship; nil makes the routine standalone.
         routine.workoutPlan = plan
         managedObjectContext.saveOrCrash()
     }
