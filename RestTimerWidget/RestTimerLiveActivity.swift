@@ -23,11 +23,11 @@ struct RestTimerLiveActivity: Widget {
             // Lock Screen / banner
             HStack(spacing: 12) {
                 Label("Rest", systemImage: "timer")
-                    .font(.headline)
+                    .font(.title2.weight(.semibold))
                 Spacer()
                 Text(timerInterval: context.state.startDate...context.state.endDate, countsDown: true)
-                    .font(.system(size: 34, weight: .semibold).monospacedDigit())
-                    .frame(maxWidth: 120)
+                    .font(.system(size: 42, weight: .semibold).monospacedDigit())
+                    .frame(maxWidth: 150)
                     .multilineTextAlignment(.trailing)
             }
             .padding()
@@ -36,11 +36,12 @@ struct RestTimerLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.center) {
-                    HStack {
+                    HStack(spacing: 8) {
                         Image(systemName: "timer")
+                            .font(.title2)
                             .foregroundStyle(.secondary)
                         Text(timerInterval: context.state.startDate...context.state.endDate, countsDown: true)
-                            .font(.title.monospacedDigit())
+                            .font(.largeTitle.monospacedDigit())
                             .multilineTextAlignment(.center)
                     }
                 }

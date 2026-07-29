@@ -127,13 +127,14 @@ struct HistoryView : View {
                     self.deleteAt(offsets: offsets)
                 }
             }
-            // FIXME: .placeholder() suddenly crashes the app when the last workout is deleted (iOS 13.4)
-            .placeholder(show: workouts.isEmpty,
-                         Text("Your finished workouts will appear here.")
-                            .multilineTextAlignment(.center)
-                            .foregroundColor(.secondary)
-                            .padding()
-            )
+            // The empty state is an overlay on the list, not a replacement for it. Swapping the whole
+            // list out (the old .placeholder modifier) while a delete was animating tore down the list
+            // mid-transaction and crashed when the last workout was removed.
+            .overlay {
+                if workouts.isEmpty {
+                    ContentUnavailableView("No workouts yet", systemImage: "clock.arrow.circlepath", description: Text("Your finished workouts will appear here."))
+                }
+            }
             .navigationBarTitle(Text("History"), displayMode: .inline)
         }
         .overlay(ActivitySheet(activityItems: self.$activityItems))
