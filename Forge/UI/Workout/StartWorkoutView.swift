@@ -18,8 +18,7 @@ struct StartWorkoutView: View {
 
     @State private var offsetsToDelete: IndexSet?
 
-    // Tapping a routine asks whether to start or edit it, rather than starting immediately.
-    @State private var routineToConfirm: WorkoutRoutine?
+    // Tapping a routine opens a menu (start, edit, duplicate, move) anchored to the row.
     @State private var routineToEdit: WorkoutRoutine?
     
     @FetchRequest(fetchRequest: StartWorkoutView.fetchRequest) var workoutPlans
@@ -73,7 +72,7 @@ struct StartWorkoutView: View {
                     ForEach(workoutPlans) { workoutPlan in
                         Section {
                             WorkoutPlanCell(workoutPlan: workoutPlan)
-                            WorkoutPlanRoutines(workoutPlan: workoutPlan, onTap: { routineToConfirm = $0 })
+                            WorkoutPlanRoutines(workoutPlan: workoutPlan, allPlans: Array(workoutPlans), onStart: { start(routine: $0) }, onEdit: { routineToEdit = $0 })
                                 .deleteDisabled(true)
                         }
                     }
@@ -91,10 +90,6 @@ struct StartWorkoutView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(item: $routineToEdit) { routine in
                 WorkoutRoutineView(workoutRoutine: routine)
-            }
-            .confirmationDialog(routineToConfirm?.displayTitle ?? "Routine", isPresented: Binding(get: { routineToConfirm != nil }, set: { if !$0 { routineToConfirm = nil } }), titleVisibility: .visible, presenting: routineToConfirm) { routine in
-                Button("Start workout") { self.start(routine: routine) }
-                Button("Edit routine") { self.routineToEdit = routine }
             }
             .confirmationDialog("This cannot be undone.", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } }), titleVisibility: .visible, presenting: offsetsToDelete) { offsets in
                 Button("Delete workout plan", role: .destructive) {
@@ -174,8 +169,10 @@ private struct WorkoutPlanRoutines: View {
     
     @ObservedObject var workoutPlan: WorkoutPlan
 
-    /// Called when a routine row is tapped, so the parent can offer start or edit.
-    var onTap: (WorkoutRoutine) -> Void
+    /// All plans, so a routine can be moved to another one.
+    var allPlans: [WorkoutPlan]
+    var onStart: (WorkoutRoutine) -> Void
+    var onEdit: (WorkoutRoutine) -> Void
 
     private var workoutRoutines: [WorkoutRoutine] {
         workoutPlan.workoutRoutines?.array as? [WorkoutRoutine] ?? []
@@ -183,10 +180,21 @@ private struct WorkoutPlanRoutines: View {
 
     var body: some View {
         ForEach(workoutRoutines) { workoutRoutine in
-            Button(action: {
-                Haptics.selection()
-                onTap(workoutRoutine)
-            }) {
+            // A menu anchored to the row, so the choices appear next to the routine rather than as a
+            // sheet from the bottom of the screen.
+            Menu {
+                Button { onStart(workoutRoutine) } label: { Label("Start", systemImage: "play.fill") }
+                Button { onEdit(workoutRoutine) } label: { Label("Edit", systemImage: "pencil") }
+                Button { duplicate(workoutRoutine) } label: { Label("Duplicate", systemImage: "doc.on.doc") }
+                let otherPlans = allPlans.filter { $0 != workoutPlan }
+                if !otherPlans.isEmpty {
+                    Menu {
+                        ForEach(otherPlans) { plan in
+                            Button(plan.displayTitle) { move(workoutRoutine, to: plan) }
+                        }
+                    } label: { Label("Move to plan", systemImage: "folder") }
+                }
+            } label: {
                 VStack(alignment: .leading) {
                     Text(workoutRoutine.displayTitle).italic()
                     Text(workoutRoutine.subtitle(in: self.exerciseStore.exercises))
@@ -194,8 +202,26 @@ private struct WorkoutPlanRoutines: View {
                         .foregroundColor(.secondary)
                         .font(.caption)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .foregroundColor(.primary)
         }
+    }
+
+    private func duplicate(_ routine: WorkoutRoutine) {
+        Haptics.selection()
+        let copy = routine.duplicate(context: managedObjectContext)
+        workoutPlan.addToWorkoutRoutines(copy)
+        managedObjectContext.saveOrCrash()
+    }
+
+    private func move(_ routine: WorkoutRoutine, to plan: WorkoutPlan) {
+        Haptics.selection()
+        // Setting the plan updates both sides of the relationship, moving the routine out of this plan.
+        routine.workoutPlan = plan
+        managedObjectContext.saveOrCrash()
     }
 }
 

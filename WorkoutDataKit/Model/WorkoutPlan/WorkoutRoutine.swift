@@ -18,6 +18,36 @@ public class WorkoutRoutine: NSManagedObject, Codable {
         workoutRoutine.uuid = UUID()
         return workoutRoutine
     }
+
+    /// A deep copy of this routine (title, comment, custom fields, exercises and their sets), not yet
+    /// attached to a plan. The caller adds it to a plan's ordered routines.
+    public func duplicate(context: NSManagedObjectContext) -> WorkoutRoutine {
+        let copy = WorkoutRoutine.create(context: context)
+        copy.title = title
+        copy.comment = comment
+        copy.customAttributes = customAttributes
+        copy.workoutRoutineExercises = NSOrderedSet(array:
+            (workoutRoutineExercises?.compactMap { $0 as? WorkoutRoutineExercise } ?? [])
+                .map { exercise in
+                    let exerciseCopy = WorkoutRoutineExercise.create(context: context)
+                    exerciseCopy.exerciseUuid = exercise.exerciseUuid
+                    exerciseCopy.comment = exercise.comment
+                    exerciseCopy.workoutRoutineSets = NSOrderedSet(array:
+                        (exercise.workoutRoutineSets?.compactMap { $0 as? WorkoutRoutineSet } ?? [])
+                            .map { set in
+                                let setCopy = WorkoutRoutineSet.create(context: context)
+                                setCopy.minRepetitions = set.minRepetitions
+                                setCopy.maxRepetitions = set.maxRepetitions
+                                setCopy.tagValue = set.tagValue
+                                setCopy.comment = set.comment
+                                return setCopy
+                            }
+                    )
+                    return exerciseCopy
+                }
+        )
+        return copy
+    }
     
     public var fallbackTitle: String? {
         guard let index = workoutPlan?.workoutRoutines?.index(of: self), index != NSNotFound else { return nil }
