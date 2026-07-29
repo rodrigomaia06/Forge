@@ -42,11 +42,8 @@ struct CreateCustomExerciseSheet: View {
                 self.exerciseStore.setRestTime(restTime, forExercise: created.uuid)
             }
             self.presentationMode.wrappedValue.dismiss()
-            
-            // haptic feedback
-            let feedbackGenerator = UINotificationFeedbackGenerator()
-            feedbackGenerator.prepare()
-            feedbackGenerator.notificationOccurred(.success)
+            // A success cue that the exercise was created.
+            Haptics.success()
         }.disabled(!canSave)
     }
     

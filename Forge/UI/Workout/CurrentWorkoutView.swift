@@ -175,10 +175,8 @@ struct CurrentWorkoutView: View {
             managedObjectContext.saveOrCrash()
         }
 
-        // haptic feedback
-        let feedbackGenerator = UINotificationFeedbackGenerator()
-        feedbackGenerator.prepare()
-        feedbackGenerator.notificationOccurred(.success)
+        // A success cue that the workout was saved.
+        Haptics.success()
         AudioServicesPlaySystemSound(1103) // Tink sound
 
         // Land back on the dashboard. Native tab selection does not animate on its own.

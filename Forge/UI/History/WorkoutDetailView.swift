@@ -259,9 +259,8 @@ extension WorkoutDetailView {
         
         guard let context = workout.managedObjectContext else { return }
         guard let count = try? context.count(for: Workout.currentWorkoutFetchRequest), count == 0 else {
-            let feedbackGenerator = UINotificationFeedbackGenerator()
-            feedbackGenerator.prepare()
-            feedbackGenerator.notificationOccurred(.error)
+            // Blocked: a workout is already in progress.
+            Haptics.error()
             return
         }
         
@@ -276,9 +275,8 @@ extension WorkoutDetailView {
         
         guard let context = workout.managedObjectContext else { return }
         guard let count = try? context.count(for: Workout.currentWorkoutFetchRequest), count == 0 else {
-            let feedbackGenerator = UINotificationFeedbackGenerator()
-            feedbackGenerator.prepare()
-            feedbackGenerator.notificationOccurred(.error)
+            // Blocked: a workout is already in progress.
+            Haptics.error()
             return
         }
         
