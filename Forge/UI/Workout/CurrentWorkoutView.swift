@@ -193,6 +193,20 @@ struct CurrentWorkoutView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                // A prominent title header, matching the Workout tab's greeting but a little smaller, so
+                // the active workout reads consistently with the rest of that tab.
+                HStack {
+                    Text(workout.displayTitle(in: exerciseStore.exercises))
+                        .font(.system(.title, design: .default).weight(.semibold))
+                        .foregroundColor(.forgeLabel)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Spacer()
+                }
+                .padding(.horizontal, Theme.Spacing.l)
+                .padding(.top, Theme.Spacing.s)
+                .padding(.bottom, Theme.Spacing.xs)
+
                 if #available(iOS 15.0, *) {
                     Divider()
                 }
@@ -277,7 +291,7 @@ struct CurrentWorkoutView: View {
                 .environment(\.editMode, $editMode)
                 .keyboardDoneToolbar()
             }
-            .navigationBarTitle(Text(workout.displayTitle(in: exerciseStore.exercises)), displayMode: .inline)
+            .navigationBarTitle(Text(""), displayMode: .inline)
             .navigationBarItems(leading: cancelButton, trailing: reorderButton)
         }
         .sheet(item: $activeSheet) { type in

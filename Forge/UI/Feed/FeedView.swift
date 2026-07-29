@@ -341,7 +341,7 @@ struct FeedView: View {
                 return cal.component(.year, from: s) == year && cal.component(.month, from: s) == month
             }
         case nil:
-            return Array(workouts.prefix(6))
+            return Array(workouts.prefix(5))
         }
     }
 

@@ -641,10 +641,18 @@ private struct ActiveSetRow: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.s) {
-            Button(action: onMore) { numberChip }
-                .buttonStyle(.plain)
-                .frame(width: 36)
-                .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title). Options" } ?? "Set \(index). Options")
+            // The chip opens the options sheet (tag, note, target, RPE) only when the set is editable.
+            // In read-only history, tapping a set does nothing until Edit is tapped.
+            if isEditable {
+                Button(action: onMore) { numberChip }
+                    .buttonStyle(.plain)
+                    .frame(width: 36)
+                    .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title). Options" } ?? "Set \(index). Options")
+            } else {
+                numberChip
+                    .frame(width: 36)
+                    .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title)" } ?? "Set \(index)")
+            }
 
             Text(previousText ?? "—")
                 .font(.forgeCaption)
