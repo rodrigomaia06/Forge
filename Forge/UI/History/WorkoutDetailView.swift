@@ -65,6 +65,7 @@ struct WorkoutDetailView : View {
         guard let newValue = workoutTitleInput?.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
         workoutTitleInput = newValue
         workout.title = newValue.isEmpty ? nil : newValue
+        self.managedObjectContext.saveOrCrash()
     }
 
     private var workoutExercises: [WorkoutExercise] {
@@ -190,6 +191,14 @@ struct WorkoutDetailView : View {
         }
         .listStyleCompat_InsetGroupedListStyle()
         .keyboardDoneToolbar()
+        // Commit the title and comment when Edit is turned off, so tapping Done saves even if the field
+        // never lost focus (the text field's own onCommit does not fire when it is removed).
+        .onChange(of: editMode?.wrappedValue.isEditing) { isEditing in
+            if isEditing == false {
+                adjustAndSaveWorkoutTitleInput()
+                adjustAndSaveWorkoutCommentInput()
+            }
+        }
         .navigationBarTitle(Text(workout.displayTitle(in: exerciseStore.exercises, showPlan: settingsStore.showPlanInWorkoutTitle)), displayMode: .inline)
         .navigationBarItems(trailing:
             HStack(spacing: NAVIGATION_BAR_SPACING) {

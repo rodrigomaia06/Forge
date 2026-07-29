@@ -152,6 +152,14 @@ struct WorkoutRoutineView: View {
         }
         .listStyleCompat_InsetGroupedListStyle()
         .keyboardDoneToolbar()
+        // Commit the title and comment when Edit is turned off, so tapping Done saves even if the field
+        // never lost focus (the text field's own onEditingChanged does not fire when it is removed).
+        .onChange(of: editMode?.wrappedValue.isEditing) { isEditing in
+            if isEditing == false {
+                adjustAndSaveWorkoutRoutineTitleInput()
+                adjustAndSaveWorkoutRoutineCommentInput()
+            }
+        }
         .navigationBarTitle(Text(workoutRoutine.displayTitle), displayMode: .inline)
         .navigationBarItems(trailing: EditButton())
         .sheet(isPresented: self.$showExerciseSelector) {
