@@ -12,18 +12,38 @@ struct WarmupSetPlan: Identifiable {
     let reps: Int
 }
 
-/// Builds a warm-up ramp from a working weight and its reps. It is a reference only: the app shows the
-/// ramp, it does not add sets. Weights round to the bar's plate increment in the display unit so they
-/// land on real plate loads and never drop below the empty bar. Reps are a fraction of the working reps,
-/// so a heavy low-rep day warms up with fewer reps than a lighter high-rep day.
+/// Builds a warm-up ramp from a working weight and its reps. It is a reference: the app shows the ramp
+/// and can add the sets. The ramp's shape follows intensity, which the working reps signal: a heavy
+/// low-rep set gets more ramp sets ending near the working weight with the warm-up reps dropping to
+/// prime the nervous system, while a lighter high-rep set gets a short ramp with higher rehearsal reps.
+/// Weights round to the bar's plate increment in the display unit and never drop below the empty bar.
+///
+/// The percentages and rep counts follow common strength-training guidance (progressive ~40/55/70/85%
+/// with reps decreasing as the weight rises, a top warm-up around 75-85%, and fewer sets for lighter,
+/// higher-rep work).
 enum WarmupCalculator {
-    /// (fraction of working weight, fraction of working reps) per warm-up set, lightest first.
-    static let scheme: [(weightFraction: Double, repFraction: Double)] = [
-        (0.40, 0.8),
-        (0.55, 0.6),
-        (0.70, 0.4),
-        (0.85, 0.2),
-    ]
+    struct Step {
+        let weightFraction: Double
+        let reps: Int
+        init(_ weightFraction: Double, _ reps: Int) {
+            self.weightFraction = weightFraction
+            self.reps = reps
+        }
+    }
+
+    /// Ramp steps for the working reps, lightest first. Unknown reps (0) use the moderate ramp.
+    static func steps(forWorkingReps reps: Int) -> [Step] {
+        if reps >= 12 {
+            // Light, high-rep work: a short ramp is enough.
+            return [Step(0.50, 8), Step(0.70, 5)]
+        } else if reps >= 1 && reps <= 5 {
+            // Heavy, low-rep work: more sets, ending close to the working weight, low reps near the top.
+            return [Step(0.40, 5), Step(0.55, 3), Step(0.70, 2), Step(0.85, 1)]
+        } else {
+            // Moderate work (6-11 reps), and the fallback when the reps are unknown.
+            return [Step(0.40, 8), Step(0.60, 5), Step(0.80, 3)]
+        }
+    }
 
     /// Warm-up sets for a working weight (kilograms) and working reps. Empty when the working weight is
     /// not set or is so light that every step rounds onto the bar or the working weight itself.
@@ -34,21 +54,18 @@ enum WarmupCalculator {
         let workingDisplay = WeightUnit.convert(weight: workingWeightKg, from: .metric, to: unit)
         let increment = unit.barbellIncrement
         let bar = unit.barbellWeight
-        // Reps only scale down from a real working-rep count; without one, fall back to a fixed light ramp.
-        let baseReps = workingReps > 0 ? Double(workingReps) : 5
 
         var plans: [WarmupSetPlan] = []
-        for step in scheme {
+        for step in steps(forWorkingReps: workingReps) {
             let raw = workingDisplay * step.weightFraction
             let rounded = max(bar, (raw / increment).rounded() * increment)
             // A warm-up must be lighter than the working weight to be worth showing.
             guard rounded < workingDisplay else { continue }
             let weightKg = WeightUnit.convert(weight: rounded, from: unit, to: .metric)
-            let reps = max(1, Int((baseReps * step.repFraction).rounded()))
 
             // Skip a step that collapses onto the previous one (light lifts can round several onto the bar).
             if let last = plans.last, abs(last.weightKg - weightKg) < 0.0001 { continue }
-            plans.append(WarmupSetPlan(weightKg: weightKg, reps: reps))
+            plans.append(WarmupSetPlan(weightKg: weightKg, reps: step.reps))
         }
         return plans
     }
