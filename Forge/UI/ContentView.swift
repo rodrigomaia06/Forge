@@ -19,13 +19,20 @@ struct ContentView : View {
     // Surfaces data errors from write paths that used to crash.
     @ObservedObject private var errorPresenter = AppErrorPresenter.shared
 
-    @State private var pendingImportURL: IdentifiableHolder<URL>?
+    @State private var importPreview: ImportPreview?
     @State private var importResult: ImportResult?
 
     private struct ImportResult: Identifiable {
         let id = UUID()
         let title: String
         let message: String
+    }
+
+    /// A validated, inspected backup awaiting the user's confirmation to replace the live store.
+    private struct ImportPreview: Identifiable {
+        let id = UUID()
+        let url: URL
+        let summary: SQLiteBackup.ImportSummary
     }
 
     private var selectedTab: Binding<SceneState.Tab> {
@@ -55,13 +62,20 @@ struct ContentView : View {
         .preferredColorScheme((ForgeAppearance(rawValue: settings.appearance) ?? .dark).colorScheme) // Forge is dark-first; overridable in Settings
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name.RestoreFromBackup)) { output in
             guard let url = output.userInfo?[restoreFromBackupDataUserInfoKey] as? URL else { return }
-            self.pendingImportURL = IdentifiableHolder(value: url)
+            // Validate and inspect before offering the destructive replace, so a bad or duplicate-laden
+            // file is rejected up front and the user sees what the backup contains.
+            do {
+                let summary = try SQLiteBackup.inspect(from: url)
+                self.importPreview = ImportPreview(url: url, summary: summary)
+            } catch {
+                self.importResult = ImportResult(title: "Import failed", message: (error as? LocalizedError)?.errorDescription ?? "This file could not be read.")
+            }
         }
-        .alert(item: $pendingImportURL) { holder in
+        .alert(item: $importPreview) { preview in
             Alert(
-                title: Text("Import Database?"),
-                message: Text("This replaces all workouts and exercises with the contents of this file. A safety copy of your current data is kept first. Reopen Forge afterwards to load the imported data."),
-                primaryButton: .destructive(Text("Import")) { self.importDatabase(from: holder.value) },
+                title: Text("Import backup?"),
+                message: Text("This replaces your current data with the backup: \(preview.summary.workouts) workouts, \(preview.summary.routines) routines, \(preview.summary.customExercises) custom exercises. A safety copy of your current data is kept first. Reopen Forge afterwards to load it."),
+                primaryButton: .destructive(Text("Import")) { self.importDatabase(from: preview.url) },
                 secondaryButton: .cancel()
             )
         }
@@ -76,9 +90,9 @@ struct ContentView : View {
     private func importDatabase(from url: URL) {
         do {
             try SQLiteBackup.import(from: url)
-            importResult = ImportResult(title: "Import Complete", message: "Please reopen Forge to load the imported data.")
+            importResult = ImportResult(title: "Import complete", message: "Reopen Forge to load the imported data.")
         } catch {
-            importResult = ImportResult(title: "Import Failed", message: error.localizedDescription)
+            importResult = ImportResult(title: "Import failed", message: (error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
         }
     }
 }

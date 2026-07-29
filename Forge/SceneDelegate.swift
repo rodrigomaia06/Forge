@@ -154,7 +154,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 }
 
 class SceneState: ObservableObject {
-    @Published var selectedTabNumber: Int = Tab.workout.rawValue
+    private static let selectedTabKey = "sceneState.selectedTabNumber"
+
+    // Persisted so a relaunch (including after the app is killed mid-workout) returns to the same tab.
+    @Published var selectedTabNumber: Int = UserDefaults.standard.object(forKey: SceneState.selectedTabKey) as? Int ?? Tab.workout.rawValue {
+        didSet { UserDefaults.standard.set(selectedTabNumber, forKey: SceneState.selectedTabKey) }
+    }
 
     /// A finished workout the History tab should open. Set this together with `selectedTab = .history`
     /// to deep-link into a past workout from elsewhere (for example, tapping a past session while a

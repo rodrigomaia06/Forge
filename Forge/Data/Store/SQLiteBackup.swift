@@ -22,13 +22,74 @@ enum SQLiteBackup {
     enum BackupError: LocalizedError {
         case noStore
         case incompatibleDatabase
+        case duplicateIdentifiers
 
         var errorDescription: String? {
             switch self {
             case .noStore: return "The workout database could not be found."
             case .incompatibleDatabase: return "This file isn't a compatible Forge database."
+            case .duplicateIdentifiers: return "This backup contains duplicate records and can't be imported safely. Your current data was not changed."
             }
         }
+    }
+
+    /// What an incoming backup contains, shown to the user before the destructive replace.
+    struct ImportSummary {
+        let workouts: Int
+        let routines: Int
+        let customExercises: Int
+    }
+
+    /// Opens the incoming file read-only and validates it against the current model, rejects duplicate
+    /// identifiers, and returns its entity counts. Does not touch the live store.
+    static func inspect(from srcURL: URL) throws -> ImportSummary {
+        let coordinator = NSPersistentStoreCoordinator(managedObjectModel: model)
+        let store: NSPersistentStore
+        do {
+            store = try coordinator.addPersistentStore(
+                ofType: NSSQLiteStoreType,
+                configurationName: nil,
+                at: srcURL,
+                options: [NSReadOnlyPersistentStoreOption: true]
+            )
+        } catch {
+            os_log("Rejected incompatible import: %@", log: .backup, type: .error, error.localizedDescription)
+            throw BackupError.incompatibleDatabase
+        }
+        defer { try? coordinator.remove(store) }
+
+        let context = NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType)
+        context.persistentStoreCoordinator = coordinator
+
+        var summary: ImportSummary?
+        var thrown: Error?
+        context.performAndWait {
+            do {
+                // Duplicate top-level identifiers indicate a corrupt backup; refuse before replacing.
+                if try hasDuplicateUUIDs(entity: "Workout", in: context)
+                    || hasDuplicateUUIDs(entity: "WorkoutRoutine", in: context) {
+                    throw BackupError.duplicateIdentifiers
+                }
+                summary = ImportSummary(
+                    workouts: try context.count(for: NSFetchRequest<NSFetchRequestResult>(entityName: "Workout")),
+                    routines: try context.count(for: NSFetchRequest<NSFetchRequestResult>(entityName: "WorkoutRoutine")),
+                    customExercises: try context.count(for: NSFetchRequest<NSFetchRequestResult>(entityName: "CustomExercise"))
+                )
+            } catch {
+                thrown = error
+            }
+        }
+        if let thrown { throw thrown }
+        guard let summary else { throw BackupError.incompatibleDatabase }
+        return summary
+    }
+
+    private static func hasDuplicateUUIDs(entity: String, in context: NSManagedObjectContext) throws -> Bool {
+        let request = NSFetchRequest<NSDictionary>(entityName: entity)
+        request.resultType = .dictionaryResultType
+        request.propertiesToFetch = ["uuid"]
+        let uuids = try context.fetch(request).compactMap { $0["uuid"] as? UUID }
+        return Set(uuids).count != uuids.count
     }
 
     private static var coordinator: NSPersistentStoreCoordinator {
