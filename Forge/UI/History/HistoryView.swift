@@ -135,7 +135,7 @@ struct HistoryView : View {
                     ContentUnavailableView("No workouts yet", systemImage: "clock.arrow.circlepath", description: Text("Your finished workouts will appear here."))
                 }
             }
-            .navigationBarTitle(Text("History"), displayMode: .inline)
+            .forgeScreenTitle("History")
         }
         .overlay(ActivitySheet(activityItems: self.$activityItems))
         // A deep-link from another tab (e.g. a past session tapped during a workout) lands here.

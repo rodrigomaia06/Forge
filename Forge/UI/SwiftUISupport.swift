@@ -97,6 +97,28 @@ extension View {
 }
 
 extension View {
+    /// A prominent screen title placed above the content, with the navigation bar title hidden, so the
+    /// active workout, History, and Settings share the same title size instead of mixing a big header
+    /// with small inline titles.
+    func forgeScreenTitle(_ title: String) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(title)
+                    .font(.system(.title, design: .default).weight(.semibold))
+                    .foregroundColor(.forgeLabel)
+                Spacer()
+            }
+            .padding(.horizontal, Theme.Spacing.l)
+            .padding(.top, Theme.Spacing.s)
+            .padding(.bottom, Theme.Spacing.xs)
+
+            self
+        }
+        .navigationBarTitle(Text(""), displayMode: .inline)
+    }
+}
+
+extension View {
     /// Circular translucent backing for a header icon button. Uses Liquid Glass on iOS 26 and a
     /// system material circle on earlier versions, so the plus reads as a native control on both.
     @ViewBuilder func forgeGlassCircle() -> some View {
