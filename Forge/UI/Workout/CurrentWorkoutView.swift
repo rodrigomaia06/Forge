@@ -235,9 +235,10 @@ struct CurrentWorkoutView: View {
                             Text(comment).foregroundColor(.forgeSecondaryLabel)
                         }
                     }
-                    // Attributes show read-only when present and are edited only through Edit, like the
-                    // name and comment. Naming a blank workout is the only thing editable directly.
-                    CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: editMode == .active)
+                    // The value of an attribute already present can be filled in directly (like naming a
+                    // blank workout), so routine-seeded fields (location, mood) are quick to set. Adding a
+                    // new attribute still goes through Edit.
+                    CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: editMode == .active, valuesEditable: true)
                     // In edit mode the exercises collapse to a plain, reorderable list of names (drag to
                     // reorder, swipe/– to remove). Otherwise each exercise is a full card with its set
                     // table inline, so logging never leaves this screen.
