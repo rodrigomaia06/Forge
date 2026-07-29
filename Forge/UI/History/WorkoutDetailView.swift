@@ -191,7 +191,7 @@ struct WorkoutDetailView : View {
         }
         .listStyleCompat_InsetGroupedListStyle()
         .keyboardDoneToolbar()
-        .navigationBarTitle(Text(workout.displayTitle(in: exerciseStore.exercises)), displayMode: .inline)
+        .navigationBarTitle(Text(workout.displayTitle(in: exerciseStore.exercises, showPlan: settingsStore.showPlanInWorkoutTitle)), displayMode: .inline)
         .navigationBarItems(trailing:
             HStack(spacing: NAVIGATION_BAR_SPACING) {
                 // A Menu attached to the button, rather than an action sheet, so the options appear

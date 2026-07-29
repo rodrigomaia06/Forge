@@ -196,7 +196,7 @@ struct CurrentWorkoutView: View {
                 // A prominent title header, matching the Workout tab's greeting but a little smaller, so
                 // the active workout reads consistently with the rest of that tab.
                 HStack {
-                    Text(workout.displayTitle(in: exerciseStore.exercises))
+                    Text(workout.displayTitle(in: exerciseStore.exercises, showPlan: settingsStore.showPlanInWorkoutTitle))
                         .font(.system(.title, design: .default).weight(.semibold))
                         .foregroundColor(.forgeLabel)
                         .lineLimit(1)

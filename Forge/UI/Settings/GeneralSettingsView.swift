@@ -99,11 +99,19 @@ struct GeneralSettingsView: View {
         }
     }
 
+    private var workoutNameSection: some View {
+        Section(header: Text("Workout name"), footer: Text("Name a workout started from a routine as \"Plan - Routine\", or just the routine name. Workouts you name yourself keep their name.")) {
+            Toggle("Show plan in name", isOn: $settingsStore.showPlanInWorkoutTitle)
+                .tint(.forgeSuccess)
+        }
+    }
+
     var body: some View {
         Form {
             appearanceSection
             weightPickerSection
             calendarSection
+            workoutNameSection
             restTimerSection
             restTimerAlertSection
             reminderSection

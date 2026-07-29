@@ -20,6 +20,7 @@ private enum ActivityFilter: Equatable {
 struct FeedView: View {
     @Environment(\.managedObjectContext) private var context
     @EnvironmentObject private var settingsStore: SettingsStore
+    @EnvironmentObject private var exerciseStore: ExerciseStore
     @EnvironmentObject private var sceneState: SceneState
 
     @FetchRequest private var workouts: FetchedResults<Workout>
@@ -397,7 +398,7 @@ struct FeedView: View {
         } label: {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text(dateLabel(workout.start)).font(.forgeSectionLabel).tracking(1).foregroundColor(.forgeSecondaryLabel)
-                Text(workout.title ?? "Workout").font(.forgeHeadline).foregroundColor(.forgeLabel)
+                Text(workout.displayTitle(in: exerciseStore.exercises, showPlan: settingsStore.showPlanInWorkoutTitle)).font(.forgeHeadline).foregroundColor(.forgeLabel)
                 Text("\(s.exercises) exercises · \(s.sets) sets\(durationSuffix(workout))")
                     .font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)
             }

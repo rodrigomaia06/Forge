@@ -112,6 +112,17 @@ extension Workout {
     }
 }
 
+extension Workout {
+    /// Display title honoring the "show plan in workout title" setting. An explicit title always wins.
+    /// Otherwise a routine-linked workout shows "Plan - Routine" or just the routine name per `showPlan`.
+    func displayTitle(in exercises: [Exercise], showPlan: Bool) -> String {
+        if showPlan { return displayTitle(in: exercises) }
+        if let title = title, !title.isEmpty { return title }
+        if let routineTitle = workoutRoutine?.displayTitle { return routineTitle }
+        return generatedTitle(in: exercises) ?? "Workout"
+    }
+}
+
 import CoreData
 extension Workout {
     /// Roll back so the store keeps its last valid state, then surface a plain-language message.

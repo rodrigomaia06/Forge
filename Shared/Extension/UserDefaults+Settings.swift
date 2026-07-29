@@ -25,6 +25,14 @@ extension UserDefaults {
         case restTimerSound
         case restTimerHaptic
         case appearance
+        case showPlanInWorkoutTitle
+    }
+
+    /// Whether a workout started from a routine is named "Plan - Routine" (true) or just the routine
+    /// name (false). Defaults to true. Workouts with their own explicit title are unaffected.
+    var showPlanInWorkoutTitle: Bool {
+        set { self.set(newValue, forKey: SettingsKeys.showPlanInWorkoutTitle.rawValue) }
+        get { self.value(forKey: SettingsKeys.showPlanInWorkoutTitle.rawValue) as? Bool ?? true }
     }
 
     /// App appearance preference: "system", "light", or "dark". Defaults to dark (Forge is dark-first).

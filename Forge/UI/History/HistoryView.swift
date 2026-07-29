@@ -164,7 +164,7 @@ private struct WorkoutCell: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text(workout.displayTitle(in: self.exerciseStore.exercises))
+                Text(workout.displayTitle(in: self.exerciseStore.exercises, showPlan: settingsStore.showPlanInWorkoutTitle))
                     .font(.body)
                 
                 Text(Workout.dateFormatter.string(from: workout.start, fallback: "Unknown date"))

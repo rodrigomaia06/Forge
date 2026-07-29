@@ -68,6 +68,16 @@ final class SettingsStore: ObservableObject {
             userDefaults.keepRestTimerRunning = newValue
         }
     }
+
+    var showPlanInWorkoutTitle: Bool {
+        get {
+            userDefaults.showPlanInWorkoutTitle
+        }
+        set {
+            self.objectWillChange.send()
+            userDefaults.showPlanInWorkoutTitle = newValue
+        }
+    }
     
     var maxRepetitionsOneRepMax: Int {
         get {
