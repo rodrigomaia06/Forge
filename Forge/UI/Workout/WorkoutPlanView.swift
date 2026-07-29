@@ -8,14 +8,29 @@
 
 import SwiftUI
 import WorkoutDataKit
+import os.log
 
 struct WorkoutPlanView: View {
     @EnvironmentObject var exerciseStore: ExerciseStore
     @Environment(\.managedObjectContext) var managedObjectContext
     
     @ObservedObject var workoutPlan: WorkoutPlan
-    
+
     @State private var offsetsToDelete: IndexSet?
+    @State private var activityItems: [Any]?
+
+    /// Write this plan to a JSON file and open the share sheet, so it can be sent to someone who can
+    /// import it into their own Forge.
+    private func shareAsJSON() {
+        do {
+            let data = try WorkoutDataExchange.export(plans: [workoutPlan])
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("workout-plan.json")
+            try data.write(to: url)
+            self.activityItems = [url]
+        } catch {
+            os_log("Could not export plan as JSON: %@", type: .error, error.localizedDescription)
+        }
+    }
     
     @State private var workoutPlanTitleInput: String? = nil
     private var workoutPlanTitle: Binding<String> {
@@ -87,7 +102,18 @@ struct WorkoutPlanView: View {
         .listStyleCompat_InsetGroupedListStyle()
         .keyboardDoneToolbar()
         .navigationBarTitle(Text(workoutPlan.displayTitle), displayMode: .inline)
-        .navigationBarItems(trailing: EditButton())
+        .navigationBarItems(trailing:
+            HStack(spacing: NAVIGATION_BAR_SPACING) {
+                Menu {
+                    Button { shareAsJSON() } label: { Label("Share as file", systemImage: "doc.badge.arrow.up") }
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .accessibilityLabel("Share plan")
+                EditButton()
+            }
+        )
+        .overlay(ActivitySheet(activityItems: $activityItems))
         .confirmationDialog("This cannot be undone.", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } }), titleVisibility: .visible, presenting: offsetsToDelete) { offsets in
             Button("Delete workout routine", role: .destructive) {
                 self.deleteAt(offsets: offsets)

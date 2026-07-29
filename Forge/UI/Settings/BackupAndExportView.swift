@@ -19,6 +19,7 @@ struct BackupAndExportView: View {
 
     @State private var showExportWorkoutDataSheet = false
     @State private var showImporter = false
+    @State private var showJSONImporter = false
     @State private var activityItems: [Any]?
     @State private var message: Message?
 
@@ -45,12 +46,25 @@ struct BackupAndExportView: View {
             Section(header: Text("Export".uppercased())) {
                 Button("Workout Data") { showExportWorkoutDataSheet = true }
             }
+
+            Section(
+                header: Text("Share".uppercased()),
+                footer: Text("Import a workout or plan someone shared as a JSON file. It is added to your data with new identifiers, so it never overwrites what you already have. Share a plan from the plan's screen, or a workout from its page in History.")
+            ) {
+                Button("Import from file") { showJSONImporter = true }
+            }
         }
         .navigationBarTitle("Backup & Export", displayMode: .inline)
         .fileImporter(isPresented: $showImporter, allowedContentTypes: Self.databaseTypes) { result in
             switch result {
             case .success(let url): importDatabase(from: url)
             case .failure(let error): message = Message(title: "Import Failed", text: error.localizedDescription)
+            }
+        }
+        .fileImporter(isPresented: $showJSONImporter, allowedContentTypes: [.json]) { result in
+            switch result {
+            case .success(let url): importJSON(from: url)
+            case .failure(let error): message = Message(title: "Import failed", text: error.localizedDescription)
             }
         }
         .confirmationDialog("Workout data", isPresented: $showExportWorkoutDataSheet, titleVisibility: .visible) {
@@ -112,6 +126,22 @@ struct BackupAndExportView: View {
         } catch {
             os_log("Could not import database: %@", log: .backup, type: .error, error.localizedDescription)
             message = Message(title: "Import Failed", text: error.localizedDescription)
+        }
+    }
+
+    private func importJSON(from url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let data = try Data(contentsOf: url)
+            let result = try WorkoutDataExchange.import(data, into: managedObjectContext)
+            var parts: [String] = []
+            if result.plans > 0 { parts.append(result.plans == 1 ? "1 plan" : "\(result.plans) plans") }
+            if result.workouts > 0 { parts.append(result.workouts == 1 ? "1 workout" : "\(result.workouts) workouts") }
+            message = Message(title: "Import complete", text: "Added \(parts.joined(separator: " and ")).")
+        } catch {
+            os_log("Could not import JSON: %@", log: .backup, type: .error, error.localizedDescription)
+            message = Message(title: "Import failed", text: (error as? LocalizedError)?.errorDescription ?? "This file could not be read.")
         }
     }
 

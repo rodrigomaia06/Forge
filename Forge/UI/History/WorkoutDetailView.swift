@@ -94,6 +94,19 @@ struct WorkoutDetailView : View {
         }
     }
     
+    /// Write this workout to a JSON file and open the share sheet, so it can be sent to someone who
+    /// can import it into their own Forge.
+    private func shareAsJSON() {
+        do {
+            let data = try WorkoutDataExchange.export(workouts: [workout])
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("workout.json")
+            try data.write(to: url)
+            self.activityItems = [url]
+        } catch {
+            os_log("Could not export workout as JSON: %@", type: .error, error.localizedDescription)
+        }
+    }
+
     var body: some View {
         List {
             Section {
@@ -188,7 +201,12 @@ struct WorkoutDetailView : View {
                         guard let logText = self.workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit) else { return }
                         self.activityItems = [logText]
                     } label: {
-                        Label("Share", systemImage: "square.and.arrow.up")
+                        Label("Share as text", systemImage: "square.and.arrow.up")
+                    }
+                    Button {
+                        self.shareAsJSON()
+                    } label: {
+                        Label("Share as file", systemImage: "doc.badge.arrow.up")
                     }
                     Button {
                         Self.repeatWorkout(workout: self.workout, settingsStore: self.settingsStore, sceneState: sceneState)
