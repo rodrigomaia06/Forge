@@ -228,6 +228,17 @@ struct WorkoutExerciseDetailView : View {
         return sets[index].displayTitle(weightUnit: settingsStore.weightUnit)
     }
 
+    /// The next-time target weight planned on the matching set last session, formatted for the display
+    /// unit. Shown as a faint hint in the weight box (both an indicator and a fill guide), the same way
+    /// the routine's rep range fills the reps box.
+    private func targetWeightHint(atZeroBased index: Int) -> String? {
+        guard index >= 0,
+              let sets = workoutExerciseHistory.first?.workoutSets?.array as? [WorkoutSet],
+              index < sets.count,
+              let target = sets[index].targetWeightValue, target > 0 else { return nil }
+        return settingsStore.weightUnit.numberFormatter.string(from: WeightUnit.convert(weight: target, from: .metric, to: settingsStore.weightUnit) as NSNumber)
+    }
+
     private func deleteSet(_ workoutSet: WorkoutSet) {
         managedObjectContext.delete(workoutSet)
         workoutSet.workoutExercise?.removeFromWorkoutSets(workoutSet)
@@ -246,6 +257,7 @@ struct WorkoutExerciseDetailView : View {
                 isUpNext: firstUncompletedSet == workoutSet,
                 showRPE: settingsStore.showRPE,
                 previousText: previousPerformance(atZeroBased: index - 1),
+                weightPlaceholder: targetWeightHint(atZeroBased: index - 1) ?? "",
                 isEditable: setsEditable,
                 onToggleComplete: { toggleComplete(workoutSet) },
                 onMore: { moreSheetSet = workoutSet }
@@ -503,7 +515,8 @@ struct WorkoutExerciseDetailView : View {
                             trailing: Button("Done") { moreSheetSet = nil }
                         )
                 }
-                .presentationDetents([.medium, .large])
+                // Open tall so the whole editor, including the next-time target weight, is visible.
+                .presentationDetents([.large])
             }
             .sheet(isPresented: $showHistory) {
                 NavigationStack {
@@ -612,6 +625,8 @@ private struct ActiveSetRow: View {
     let isUpNext: Bool
     let showRPE: Bool
     let previousText: String?
+    /// The planned next-time target weight, shown as a faint hint in the weight box. Empty when none.
+    var weightPlaceholder: String = ""
     let isEditable: Bool
     var onToggleComplete: () -> Void
     var onMore: () -> Void
@@ -762,7 +777,7 @@ private struct ActiveSetRow: View {
                 .frame(maxWidth: .infinity, alignment: .center)
 
             if isEditable {
-                setField($weightInput, keyboard: .decimalPad, width: 68, invalid: weightInvalid)
+                setField($weightInput, keyboard: .decimalPad, width: 68, placeholder: weightPlaceholder, invalid: weightInvalid)
                 setField($repsInput, keyboard: .numberPad, width: 60, placeholder: targetRepsString ?? "", invalid: repsInvalid)
             } else {
                 readValue(workoutSet.weight == nil ? "—" : weightText, width: 68)
