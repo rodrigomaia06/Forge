@@ -684,15 +684,16 @@ private struct ActiveSetRow: View {
         )
     }
 
-    /// A near-square box so digits fill from the right edge. The whole box is a forgiving tap target:
-    /// tapping anywhere in it focuses the field and opens the keyboard, not just the text itself.
-    private static let fieldHeight: CGFloat = 44
-    private static let hintStripHeight: CGFloat = 13
+    private static let boxHeight: CGFloat = 40
+    private static let hintStripHeight: CGFloat = 11
+    /// Height of a value column (range strip + spacing + box), used to size the chip's tap target to match.
+    private static let columnHeight: CGFloat = hintStripHeight + 3 + boxHeight
 
+    /// A value box. The planned range sits above the box (empty on the weight column so both line up),
+    /// so it never sits under the value or its cursor. Values are right-aligned, entered from the right.
+    /// The whole box is a forgiving tap target that focuses the field.
     private func setField(_ text: Binding<String>, field: Field, keyboard: UIKeyboardType, width: CGFloat, targetHint: String? = nil) -> some View {
-        VStack(spacing: 0) {
-            // A fixed top strip holds the planned range (empty on the weight field, so both columns line
-            // up). The value and its blinking cursor live below it and never cover the range.
+        VStack(spacing: 3) {
             Text(targetHint ?? " ")
                 .font(.system(size: 10))
                 .foregroundColor(.forgeSecondaryLabel)
@@ -701,22 +702,27 @@ private struct ActiveSetRow: View {
             TextField("", text: text)
                 .keyboardType(keyboard)
                 .focused($focus, equals: field)
-                .multilineTextAlignment(.center)
+                .multilineTextAlignment(.trailing)
                 .font(.forgeValue)
-                .frame(width: width, height: Self.fieldHeight - Self.hintStripHeight)
+                .frame(width: width - 16, height: Self.boxHeight, alignment: .trailing)
+                .padding(.horizontal, 8)
+                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
+                .contentShape(Rectangle())
+                .onTapGesture { focus = field }
         }
-        .frame(width: width, height: Self.fieldHeight)
-        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
-        .contentShape(Rectangle())
-        .onTapGesture { focus = field }
     }
 
-    /// Read-only value shown in place of the editable field (history, outside edit mode).
+    /// Read-only value shown in place of the editable field (history, outside edit mode), aligned to the
+    /// editable box so a row keeps its height and column positions across Edit.
     private func readValue(_ text: String, width: CGFloat) -> some View {
-        Text(text)
-            .font(.forgeValue)
-            .multilineTextAlignment(.center)
-            .frame(width: width, height: Self.fieldHeight)
+        VStack(spacing: 3) {
+            Color.clear.frame(height: Self.hintStripHeight)
+            Text(text)
+                .font(.forgeValue)
+                .multilineTextAlignment(.trailing)
+                .frame(width: width - 16, height: Self.boxHeight, alignment: .trailing)
+                .padding(.horizontal, 8)
+        }
     }
 
     var body: some View {
@@ -727,7 +733,7 @@ private struct ActiveSetRow: View {
                 // Full row-height tap target so the chip is easy to hit mid-workout, not just the 28pt circle.
                 Button(action: onMore) { numberChip }
                     .buttonStyle(.plain)
-                    .frame(width: 36, height: Self.fieldHeight)
+                    .frame(width: 36, height: Self.columnHeight)
                     .contentShape(Rectangle())
                     .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title). Options" } ?? "Set \(index). Options")
             } else {
