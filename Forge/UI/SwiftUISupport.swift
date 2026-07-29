@@ -154,12 +154,13 @@ extension View {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                 } label: {
                     // The keyboard-down chevron is the standard dismiss affordance and reads as part of
-                    // the keyboard, unlike a lone "Done" word floating above the number pad. A little
-                    // bottom padding lifts it off the keyboard so it does not sit flush against the keys.
+                    // the keyboard, unlike a lone "Done" word floating above the number pad.
                     Image(systemName: "keyboard.chevron.compact.down")
-                        .padding(.bottom, Theme.Spacing.xs)
                 }
                 .accessibilityLabel("Dismiss keyboard")
+                // Pad the whole button so its glass circle lifts off the keyboard, rather than padding the
+                // icon inside the circle.
+                .padding(.bottom, Theme.Spacing.xs)
             }
         }
     }
