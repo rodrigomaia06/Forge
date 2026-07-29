@@ -211,7 +211,8 @@ struct WorkoutExerciseDetailView : View {
             Text("Previous").frame(maxWidth: .infinity, alignment: .center)
             Text(settingsStore.weightUnit.unit.symbol).frame(width: 68)
             Text("Reps").frame(width: 60)
-            if isCurrentWorkout { Color.clear.frame(width: 34, height: 0) }
+            // Matches the 44pt complete-set button so the kg and reps headers sit over their boxes.
+            if isCurrentWorkout { Color.clear.frame(width: 44, height: 0) }
         }
         .font(.forgeCaption)
         .foregroundColor(.forgeSecondaryLabel)
@@ -249,6 +250,8 @@ struct WorkoutExerciseDetailView : View {
                 onToggleComplete: { toggleComplete(workoutSet) },
                 onMore: { moreSheetSet = workoutSet }
             )
+            // Tighter vertical insets so the set rows sit closer together, less separation between sets.
+            .listRowInsets(EdgeInsets(top: 3, leading: Theme.Spacing.m, bottom: 3, trailing: Theme.Spacing.m))
             // Explicit red tint: the app-wide white tint was overriding the destructive colour, so the
             // swipe button rendered white on the dark background instead of a full red delete action.
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -681,15 +684,49 @@ private struct ActiveSetRow: View {
         )
     }
 
-    private static let boxHeight: CGFloat = 40
+    private static let boxHeight: CGFloat = 36
+
+    // Briefly outlined in red when the user tries to complete a set with this field empty.
+    @State private var weightInvalid = false
+    @State private var repsInvalid = false
 
     /// A value box, entered from the right. A planned rep range (when there is one) shows as the
     /// placeholder inside the box, so it disappears once a value is typed and never floats out of place.
     /// The field fills the box, so tapping anywhere in it opens the keyboard.
-    private func setField(_ text: Binding<String>, keyboard: UIKeyboardType, width: CGFloat, placeholder: String = "") -> some View {
+    private func setField(_ text: Binding<String>, keyboard: UIKeyboardType, width: CGFloat, placeholder: String = "", invalid: Bool = false) -> some View {
         RightAlignedNumberField(text: text, placeholder: placeholder, keyboardType: keyboard)
             .frame(width: width, height: Self.boxHeight)
             .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(Color.forgeDestructive, lineWidth: invalid ? 2 : 0)
+            )
+    }
+
+    /// A set needs a weight and reps before it can be completed. Bodyweight sets can enter 0 for weight;
+    /// what is blocked is completing an empty field.
+    private func attemptComplete() {
+        if workoutSet.isCompleted {
+            onToggleComplete()
+            return
+        }
+        let hasWeight = !weightInput.trimmingCharacters(in: .whitespaces).isEmpty
+        let hasReps = (Int(repsInput.trimmingCharacters(in: .whitespaces)) ?? 0) > 0
+        guard hasWeight, hasReps else {
+            Haptics.error()
+            withAnimation(.easeInOut(duration: 0.15)) {
+                weightInvalid = !hasWeight
+                repsInvalid = !hasReps
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    weightInvalid = false
+                    repsInvalid = false
+                }
+            }
+            return
+        }
+        onToggleComplete()
     }
 
     /// Read-only value shown in place of the editable field (history, outside edit mode), right-aligned
@@ -725,15 +762,15 @@ private struct ActiveSetRow: View {
                 .frame(maxWidth: .infinity, alignment: .center)
 
             if isEditable {
-                setField($weightInput, keyboard: .decimalPad, width: 68)
-                setField($repsInput, keyboard: .numberPad, width: 60, placeholder: targetRepsString ?? "")
+                setField($weightInput, keyboard: .decimalPad, width: 68, invalid: weightInvalid)
+                setField($repsInput, keyboard: .numberPad, width: 60, placeholder: targetRepsString ?? "", invalid: repsInvalid)
             } else {
                 readValue(workoutSet.weight == nil ? "—" : weightText, width: 68)
                 readValue(workoutSet.repetitions == nil ? "—" : "\(workoutSet.repetitionsValue)", width: 60)
             }
 
             if isCurrentWorkout {
-                Button(action: onToggleComplete) {
+                Button(action: attemptComplete) {
                     Image(systemName: workoutSet.isCompleted ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 23))
                         .foregroundColor(workoutSet.isCompleted ? .forgeSuccess : (isUpNext ? .forgeLabel : .forgeSecondaryLabel))

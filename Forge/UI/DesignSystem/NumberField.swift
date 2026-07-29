@@ -37,7 +37,9 @@ struct RightAlignedNumberField: UIViewRepresentable {
         let field = PaddedTextField()
         field.delegate = context.coordinator
         field.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged(_:)), for: .editingChanged)
-        field.textAlignment = .right
+        // Centered while empty so the rep-range placeholder sits centered in the box; right-aligned once
+        // a value is entered so digits fill from the right.
+        field.textAlignment = text.isEmpty ? .center : .right
         field.font = Self.valueFont()
         field.adjustsFontForContentSizeCategory = true
         field.textColor = .label
@@ -50,6 +52,7 @@ struct RightAlignedNumberField: UIViewRepresentable {
     func updateUIView(_ field: UITextField, context: Context) {
         context.coordinator.parent = self
         if field.text != text { field.text = text }
+        field.textAlignment = text.isEmpty ? .center : .right
         // The placeholder (a planned rep range like "8-12") is smaller than the value so it fits the
         // narrow box and reads as a hint rather than an entered number.
         field.attributedPlaceholder = NSAttributedString(
@@ -70,6 +73,7 @@ struct RightAlignedNumberField: UIViewRepresentable {
 
         @objc func editingChanged(_ field: UITextField) {
             parent.text = field.text ?? ""
+            field.textAlignment = (field.text ?? "").isEmpty ? .center : .right
         }
 
         /// Keep the caret at the end so the value is always edited from the right, never mid-number.

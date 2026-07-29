@@ -28,4 +28,9 @@ enum Haptics {
     static func warning() {
         UINotificationFeedbackGenerator().notificationOccurred(.warning)
     }
+
+    /// Signals a blocked action (e.g. trying to complete a set with no weight or reps).
+    static func error() {
+        UINotificationFeedbackGenerator().notificationOccurred(.error)
+    }
 }
