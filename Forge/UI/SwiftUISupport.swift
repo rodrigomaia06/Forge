@@ -143,7 +143,46 @@ extension View {
     }
 }
 
+/// Ends editing when the user taps outside a text field. A single recognizer on the key window with
+/// cancelsTouchesInView = false, so buttons, rows, and fields still get their taps; the delegate skips
+/// taps on a text field so tapping one focuses it instead of dismissing the keyboard.
+final class KeyboardDismissInstaller: NSObject, UIGestureRecognizerDelegate {
+    static let shared = KeyboardDismissInstaller()
+    private weak var installedWindow: UIWindow?
+
+    func install() {
+        let windows = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+        guard let window = windows.first(where: { $0.isKeyWindow }) ?? windows.first else { return }
+        if installedWindow === window { return }
+        let tap = UITapGestureRecognizer(target: self, action: #selector(dismiss))
+        tap.cancelsTouchesInView = false
+        tap.delegate = self
+        window.addGestureRecognizer(tap)
+        installedWindow = window
+    }
+
+    @objc private func dismiss() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        var view = touch.view
+        while let current = view {
+            if current is UITextField || current is UITextView { return false }
+            view = current.superview
+        }
+        return true
+    }
+}
+
 extension View {
+    /// Dismisses the keyboard when tapping outside a text field. Apply once at the root.
+    func dismissesKeyboardOnBackgroundTap() -> some View {
+        onAppear { KeyboardDismissInstaller.shared.install() }
+    }
+
     /// A single "Done" above the keyboard that dismisses whatever field is focused (numbers or text).
     /// Apply once per screen, not per field, or several Done buttons stack up.
     func keyboardDoneToolbar() -> some View {
