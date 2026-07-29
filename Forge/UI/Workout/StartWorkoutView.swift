@@ -192,8 +192,7 @@ private struct WorkoutPlanCell: View {
     
     var body: some View {
         NavigationLink(destination: WorkoutPlanView(workoutPlan: workoutPlan)) {
-            // A container icon marks this as a plan holding the routines listed beneath it.
-            Label(workoutPlan.displayTitle, systemImage: "list.bullet.rectangle")
+            Text(workoutPlan.displayTitle)
                 .font(.headline)
             .contextMenu {
                 Button(action: {
@@ -231,6 +230,7 @@ private struct WorkoutPlanRoutines: View {
     var body: some View {
         ForEach(workoutRoutines) { workoutRoutine in
             RoutineMenuRow(routine: workoutRoutine, allPlans: allPlans, nested: true, onStart: onStart, onEdit: onEdit, onShare: onShare)
+                .listRowInsets(EdgeInsets(top: 3, leading: Theme.Spacing.m, bottom: 3, trailing: Theme.Spacing.m))
         }
     }
 }
@@ -270,24 +270,21 @@ private struct RoutineMenuRow: View {
                 if (routine.workoutRoutineExercises?.count ?? 0) == 0 { delete() } else { confirmingDelete = true }
             } label: { Label("Delete", systemImage: "trash") }
         } label: {
-            HStack(spacing: Theme.Spacing.m) {
-                if nested {
-                    // A short vertical rail plus the indent marks the routine as part of the plan above.
-                    RoundedRectangle(cornerRadius: 1.5)
-                        .fill(Color.forgeSeparator)
-                        .frame(width: 3)
-                }
-                VStack(alignment: .leading) {
-                    Text(routine.displayTitle).italic()
-                    Text(routine.subtitle(in: exerciseStore.exercises))
-                        .lineLimit(1)
-                        .foregroundColor(.secondary)
-                        .font(.caption)
-                }
-                Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(routine.displayTitle).italic()
+                Text(routine.subtitle(in: exerciseStore.exercises))
+                    .lineLimit(1)
+                    .foregroundColor(.secondary)
+                    .font(.caption)
             }
-            .padding(.leading, nested ? Theme.Spacing.s : 0)
             .frame(maxWidth: .infinity, alignment: .leading)
+            // In a plan, each routine is an inset sub-card inside the plan card, so the nesting is clear.
+            .padding(nested ? Theme.Spacing.s : 0)
+            .background {
+                if nested {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color(.tertiarySystemFill))
+                }
+            }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

@@ -197,6 +197,8 @@ struct WorkoutDetailView : View {
             if isEditing == false {
                 adjustAndSaveWorkoutTitleInput()
                 adjustAndSaveWorkoutCommentInput()
+                // A clear success cue that the edits to this past workout were saved.
+                Haptics.success()
             }
         }
         .navigationBarTitle(Text(workout.displayTitle(in: exerciseStore.exercises, showPlan: settingsStore.showPlanInWorkoutTitle)), displayMode: .inline)

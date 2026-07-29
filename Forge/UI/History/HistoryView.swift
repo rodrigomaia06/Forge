@@ -218,14 +218,25 @@ private struct WorkoutCell: View {
         guard let duration = workout.duration else { return nil }
         return Workout.durationFormatter.string(from: duration)
     }
-    
+
+    /// Exercise and set counts, matching the dashboard cards, e.g. "6 exercises · 18 sets".
+    private var summaryLine: String {
+        let exercises = workout.workoutExercises?.array as? [WorkoutExercise] ?? []
+        let sets = exercises.reduce(0) { $0 + ($1.workoutSets?.count ?? 0) }
+        return "\(exercises.count) exercises · \(sets) sets"
+    }
+
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
                 Text(workout.displayTitle(in: self.exerciseStore.exercises, showPlan: settingsStore.showPlanInWorkoutTitle))
                     .font(.body)
-                
+
                 Text(Workout.dateFormatter.string(from: workout.start, fallback: "Unknown date"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Text(summaryLine)
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
