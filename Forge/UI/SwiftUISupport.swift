@@ -158,6 +158,9 @@ final class KeyboardDismissInstaller: NSObject, UIGestureRecognizerDelegate {
         if installedWindow === window { return }
         let tap = UITapGestureRecognizer(target: self, action: #selector(dismiss))
         tap.cancelsTouchesInView = false
+        // Don't hold up the touch: buttons (Done, etc.) must fire on the first tap even while the
+        // recognizer is deciding, not wait for it.
+        tap.delaysTouchesEnded = false
         tap.delegate = self
         window.addGestureRecognizer(tap)
         installedWindow = window

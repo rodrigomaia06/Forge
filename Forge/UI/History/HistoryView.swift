@@ -86,6 +86,25 @@ struct HistoryView : View {
         }
     }
 
+    /// Marks workouts for deletion. Empty ones go immediately; ones with logged sets wait for the
+    /// confirmation alert, staying in the list (highlighted) until then, so nothing disappears early.
+    private func requestDelete(_ workouts: [Workout]) {
+        if needsConfirmBeforeDelete(workouts) {
+            workoutsToDelete = workouts
+        } else {
+            delete(workouts)
+        }
+    }
+
+    private var deleteMessage: String {
+        guard let workouts = workoutsToDelete else { return "This cannot be undone." }
+        if workouts.count == 1, let workout = workouts.first {
+            let title = workout.displayTitle(in: exerciseStore.exercises, showPlan: settingsStore.showPlanInWorkoutTitle)
+            return "Delete \"\(title)\"? This cannot be undone."
+        }
+        return "Delete \(workouts.count) workouts? This cannot be undone."
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
             List {
@@ -117,14 +136,20 @@ struct HistoryView : View {
                                         }
                                 }
                             }
+                            // Tint the row while it waits for the delete confirmation, so it is clear which
+                            // workout is about to be removed. It stays in the list until Delete is confirmed.
+                            .listRowBackground(workoutsToDelete?.contains(workout) == true ? Color.forgeDestructive.opacity(0.18) : nil)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    requestDelete([workout])
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                .tint(Color.forgeDestructive)
+                            }
                         }
                         .onDelete { offsets in
-                            let toDelete = offsets.map { section.workouts[$0] }
-                            if self.needsConfirmBeforeDelete(toDelete) {
-                                self.workoutsToDelete = toDelete
-                            } else {
-                                self.delete(toDelete)
-                            }
+                            requestDelete(offsets.map { section.workouts[$0] })
                         }
                     }
                 }
@@ -141,7 +166,7 @@ struct HistoryView : View {
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("This cannot be undone.")
+                Text(deleteMessage)
             }
             // The empty state is an overlay on the list, not a replacement for it. Swapping the whole
             // list out (the old .placeholder modifier) while a delete was animating tore down the list

@@ -615,6 +615,16 @@ private struct NoteDot: View {
     }
 }
 
+/// A small accent dot that marks a set whose weight comes from the previous workout's plan.
+private struct PreviousValueDot: View {
+    var body: some View {
+        Circle()
+            .fill(Color.forgeAccent)
+            .frame(width: 6, height: 6)
+            .overlay(Circle().strokeBorder(Color.forgeBackground, lineWidth: 1))
+    }
+}
+
 /// A single set row laid out as a table: number chip (tap for options), the previous session's
 /// result, editable weight and reps, and a checkmark to complete it.
 private struct ActiveSetRow: View {
@@ -632,6 +642,10 @@ private struct ActiveSetRow: View {
     var onMore: () -> Void
 
     private var hasNote: Bool { !(workoutSet.comment ?? "").isEmpty }
+
+    /// True when this set carries a weight planned last session (shown as the box hint), so the row can
+    /// mark that the value comes from the previous workout.
+    private var hasPreviousValue: Bool { !weightPlaceholder.isEmpty }
 
     private var weightText: String {
         let value = WeightUnit.convert(weight: workoutSet.weightValue, from: .metric, to: weightUnit)
@@ -688,6 +702,9 @@ private struct ActiveSetRow: View {
             .background(Circle().fill((tint ?? .forgeSecondaryLabel).opacity(tint == nil ? 0.14 : 0.22)))
             .overlay(alignment: .topTrailing) {
                 if hasNote { NoteDot() }
+            }
+            .overlay(alignment: .bottomLeading) {
+                if hasPreviousValue { PreviousValueDot() }
             }
     }
 
@@ -749,8 +766,7 @@ private struct ActiveSetRow: View {
     private func readValue(_ text: String, width: CGFloat) -> some View {
         Text(text)
             .font(.forgeValue)
-            .frame(width: width - 8, height: Self.boxHeight, alignment: .trailing)
-            .padding(.trailing, 8)
+            .frame(width: width, height: Self.boxHeight)
     }
 
     var body: some View {
