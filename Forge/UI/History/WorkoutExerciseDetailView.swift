@@ -43,10 +43,14 @@ struct WorkoutExerciseDetailView : View {
     /// When true, renders as a card embedded in the current-workout list (name header + set table,
     /// no navigation bar). When false, renders as the pushed full-screen view used from history.
     let embedded: Bool
+    /// Header for the embedded card's section. Set only on the first exercise so the group gets a
+    /// single "Exercises" header in the same grouped style as the Characteristics and Attributes ones.
+    private let sectionHeader: String?
 
-    init(workoutExercise: WorkoutExercise, embedded: Bool = false) {
+    init(workoutExercise: WorkoutExercise, embedded: Bool = false, sectionHeader: String? = nil) {
         self.workoutExercise = workoutExercise
         self.embedded = embedded
+        self.sectionHeader = sectionHeader
         _workoutExerciseHistory = FetchRequest(fetchRequest: workoutExercise.historyFetchRequest)
     }
 
@@ -464,6 +468,8 @@ struct WorkoutExerciseDetailView : View {
             setsHeader
             currentWorkoutSets
             if setsEditable { addSetButton }
+        } header: {
+            if let sectionHeader { Text(sectionHeader) }
         }
     }
 

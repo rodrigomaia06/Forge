@@ -246,16 +246,10 @@ struct CurrentWorkoutView: View {
                             }
                         }
                     } else {
-                        // A header row on the canvas (not a grouped section header, since each exercise
-                        // card is its own section and can't be nested under one) labels the third group.
-                        Text("Exercises".uppercased())
-                            .font(.forgeSectionLabel)
-                            .tracking(1)
-                            .foregroundColor(.forgeSecondaryLabel)
-                            .listRowBackground(Color.clear)
-                            .listRowInsets(EdgeInsets(top: Theme.Spacing.l, leading: Theme.Spacing.l, bottom: Theme.Spacing.xs, trailing: Theme.Spacing.l))
-                        ForEach(workoutExercises) { workoutExercise in
-                            WorkoutExerciseDetailView(workoutExercise: workoutExercise, embedded: true)
+                        // The first card carries the "Exercises" section header, so it renders in the
+                        // same grouped style as the Characteristics and Attributes headers.
+                        ForEach(Array(workoutExercises.enumerated()), id: \.element.objectID) { index, workoutExercise in
+                            WorkoutExerciseDetailView(workoutExercise: workoutExercise, embedded: true, sectionHeader: index == 0 ? "Exercises" : nil)
                         }
                     }
 

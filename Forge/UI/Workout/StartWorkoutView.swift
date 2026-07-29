@@ -15,8 +15,12 @@ struct StartWorkoutView: View {
     @Environment(\.managedObjectContext) var managedObjectContext
     
     @State private var quote = Quotes.quotes.randomElement()
-    
+
     @State private var offsetsToDelete: IndexSet?
+
+    // Tapping a routine asks whether to start or edit it, rather than starting immediately.
+    @State private var routineToConfirm: WorkoutRoutine?
+    @State private var routineToEdit: WorkoutRoutine?
     
     @FetchRequest(fetchRequest: StartWorkoutView.fetchRequest) var workoutPlans
 
@@ -69,7 +73,7 @@ struct StartWorkoutView: View {
                     ForEach(workoutPlans) { workoutPlan in
                         Section {
                             WorkoutPlanCell(workoutPlan: workoutPlan)
-                            WorkoutPlanRoutines(workoutPlan: workoutPlan)
+                            WorkoutPlanRoutines(workoutPlan: workoutPlan, onTap: { routineToConfirm = $0 })
                                 .deleteDisabled(true)
                         }
                     }
@@ -85,11 +89,26 @@ struct StartWorkoutView: View {
             }
             .background(Color.forgeBackground.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(item: $routineToEdit) { routine in
+                WorkoutRoutineView(workoutRoutine: routine)
+            }
+            .confirmationDialog(routineToConfirm?.displayTitle ?? "Routine", isPresented: Binding(get: { routineToConfirm != nil }, set: { if !$0 { routineToConfirm = nil } }), titleVisibility: .visible, presenting: routineToConfirm) { routine in
+                Button("Start workout") { self.start(routine: routine) }
+                Button("Edit routine") { self.routineToEdit = routine }
+            }
             .confirmationDialog("This cannot be undone.", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } }), titleVisibility: .visible, presenting: offsetsToDelete) { offsets in
                 Button("Delete workout plan", role: .destructive) {
                     self.deleteAt(offsets: offsets)
                 }
             }
+        }
+    }
+
+    /// Start a workout from a routine. Animated so the live workout slides in rather than snapping.
+    private func start(routine: WorkoutRoutine) {
+        Haptics.impact(.medium)
+        withAnimation(.smooth) {
+            routine.createWorkout(context: self.managedObjectContext).startOrCrash()
         }
     }
 
@@ -154,16 +173,19 @@ private struct WorkoutPlanRoutines: View {
     @Environment(\.managedObjectContext) var managedObjectContext
     
     @ObservedObject var workoutPlan: WorkoutPlan
-    
+
+    /// Called when a routine row is tapped, so the parent can offer start or edit.
+    var onTap: (WorkoutRoutine) -> Void
+
     private var workoutRoutines: [WorkoutRoutine] {
         workoutPlan.workoutRoutines?.array as? [WorkoutRoutine] ?? []
     }
-    
+
     var body: some View {
         ForEach(workoutRoutines) { workoutRoutine in
             Button(action: {
-                Haptics.impact(.medium)
-                workoutRoutine.createWorkout(context: self.managedObjectContext).startOrCrash()
+                Haptics.selection()
+                onTap(workoutRoutine)
             }) {
                 VStack(alignment: .leading) {
                     Text(workoutRoutine.displayTitle).italic()

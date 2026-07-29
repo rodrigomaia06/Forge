@@ -20,7 +20,10 @@ extension Workout {
             return
         }
 
-        start = Date()
+        // Leave `start` unset until the first set is completed (see completeSet), so the elapsed timer
+        // counts real training time rather than the setup time before the first set. isCurrentWorkout,
+        // a separate flag, is what marks this as the active workout.
+        start = nil
         isCurrentWorkout = true
         try context.save() // this also checks that there is only one currentWorkout
 
