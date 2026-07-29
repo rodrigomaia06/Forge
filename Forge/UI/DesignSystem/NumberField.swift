@@ -50,7 +50,15 @@ struct RightAlignedNumberField: UIViewRepresentable {
     func updateUIView(_ field: UITextField, context: Context) {
         context.coordinator.parent = self
         if field.text != text { field.text = text }
-        field.placeholder = placeholder
+        // The placeholder (a planned rep range like "8-12") is smaller than the value so it fits the
+        // narrow box and reads as a hint rather than an entered number.
+        field.attributedPlaceholder = NSAttributedString(
+            string: placeholder,
+            attributes: [
+                .font: UIFont.preferredFont(forTextStyle: .footnote),
+                .foregroundColor: UIColor.secondaryLabel,
+            ]
+        )
         field.keyboardType = keyboardType
     }
 
