@@ -20,8 +20,16 @@ struct BackupAndExportView: View {
     @State private var showExportWorkoutDataSheet = false
     @State private var showImporter = false
     @State private var showJSONImporter = false
+    @State private var pendingJSONImport: PendingJSONImport?
     @State private var activityItems: [Any]?
     @State private var message: Message?
+
+    /// A validated JSON file awaiting the user's confirmation to import.
+    private struct PendingJSONImport: Identifiable {
+        let id = UUID()
+        let data: Data
+        let summary: WorkoutDataExchange.ImportResult
+    }
 
     private struct Message: Identifiable {
         let id = UUID()
@@ -49,7 +57,7 @@ struct BackupAndExportView: View {
 
             Section(
                 header: Text("Share".uppercased()),
-                footer: Text("Import a workout or plan someone shared as a JSON file. It is added to your data with new identifiers, so it never overwrites what you already have. Share a plan from the plan's screen, or a workout from its page in History.")
+                footer: Text("Import a JSON file someone shared. Plans and routines are added, and any workouts in the file are added to your History. Everything comes in with new identifiers, so it never overwrites what you already have. You'll see what a file contains before it's imported.")
             ) {
                 Button("Import from file") { showJSONImporter = true }
             }
@@ -63,9 +71,16 @@ struct BackupAndExportView: View {
         }
         .fileImporter(isPresented: $showJSONImporter, allowedContentTypes: [.json]) { result in
             switch result {
-            case .success(let url): importJSON(from: url)
+            case .success(let url): prepareJSONImport(from: url)
             case .failure(let error): message = Message(title: "Import failed", text: error.localizedDescription)
             }
+        }
+        .confirmationDialog("Import this file?", isPresented: Binding(get: { pendingJSONImport != nil }, set: { if !$0 { pendingJSONImport = nil } }), titleVisibility: .visible, presenting: pendingJSONImport) { pending in
+            Button(pending.summary.workouts > 0 ? "Add to my data and History" : "Add to my data") {
+                confirmJSONImport(pending)
+            }
+        } message: { pending in
+            Text(Self.importWarning(for: pending.summary))
         }
         .confirmationDialog("Workout data", isPresented: $showExportWorkoutDataSheet, titleVisibility: .visible) {
             Button("JSON") {
@@ -129,21 +144,47 @@ struct BackupAndExportView: View {
         }
     }
 
-    private func importJSON(from url: URL) {
+    /// Read and validate the file, then show a confirmation describing what it will add.
+    private func prepareJSONImport(from url: URL) {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         do {
             let data = try Data(contentsOf: url)
-            let result = try WorkoutDataExchange.import(data, into: managedObjectContext)
-            var parts: [String] = []
-            if result.plans > 0 { parts.append(result.plans == 1 ? "1 plan" : "\(result.plans) plans") }
-            if result.routines > 0 { parts.append(result.routines == 1 ? "1 routine" : "\(result.routines) routines") }
-            if result.workouts > 0 { parts.append(result.workouts == 1 ? "1 workout" : "\(result.workouts) workouts") }
-            message = Message(title: "Import complete", text: "Added \(parts.joined(separator: " and ")).")
+            let summary = try WorkoutDataExchange.summary(data)
+            pendingJSONImport = PendingJSONImport(data: data, summary: summary)
         } catch {
-            os_log("Could not import JSON: %@", log: .backup, type: .error, error.localizedDescription)
+            os_log("Could not read JSON import: %@", log: .backup, type: .error, error.localizedDescription)
             message = Message(title: "Import failed", text: (error as? LocalizedError)?.errorDescription ?? "This file could not be read.")
         }
+    }
+
+    private func confirmJSONImport(_ pending: PendingJSONImport) {
+        do {
+            let result = try WorkoutDataExchange.import(pending.data, into: managedObjectContext, includeWorkouts: true)
+            message = Message(title: "Import complete", text: "Added \(Self.countsPhrase(for: result)).")
+        } catch {
+            os_log("Could not import JSON: %@", log: .backup, type: .error, error.localizedDescription)
+            message = Message(title: "Import failed", text: (error as? LocalizedError)?.errorDescription ?? "This file could not be imported.")
+        }
+    }
+
+    /// "2 plans, 3 routines and 15 workouts" — used in the warning and the result.
+    private static func countsPhrase(for r: WorkoutDataExchange.ImportResult) -> String {
+        var parts: [String] = []
+        if r.plans > 0 { parts.append(r.plans == 1 ? "1 plan" : "\(r.plans) plans") }
+        if r.routines > 0 { parts.append(r.routines == 1 ? "1 routine" : "\(r.routines) routines") }
+        if r.workouts > 0 { parts.append(r.workouts == 1 ? "1 workout" : "\(r.workouts) workouts") }
+        guard !parts.isEmpty else { return "nothing" }
+        if parts.count == 1 { return parts[0] }
+        return parts.dropLast().joined(separator: ", ") + " and " + parts.last!
+    }
+
+    private static func importWarning(for r: WorkoutDataExchange.ImportResult) -> String {
+        var text = "This adds \(countsPhrase(for: r)) with new identifiers. It won't change or overwrite your existing data."
+        if r.workouts > 0 {
+            text += r.workouts == 1 ? " The workout is added to your History." : " The workouts are added to your History."
+        }
+        return text
     }
 
     private func fetchWorkouts() -> [Workout]? {

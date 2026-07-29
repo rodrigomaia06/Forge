@@ -172,23 +172,39 @@ enum WorkoutDataExchange {
         )
     }
 
-    // MARK: Import
+    // MARK: Inspect
 
-    /// Decodes the file and inserts fresh copies into `context`, then saves. Returns what was added.
-    @discardableResult
-    static func `import`(_ data: Data, into context: NSManagedObjectContext) throws -> ImportResult {
+    /// Decode-only: counts what a file would add, for a confirmation shown before importing. Does not
+    /// touch the store. Throws the same version/empty errors as import.
+    static func summary(_ data: Data) throws -> ImportResult {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let file = try decoder.decode(File.self, from: data)
         guard file.formatVersion <= formatVersion else { throw ExchangeError.unsupportedVersion }
         guard !file.plans.isEmpty || !file.routines.isEmpty || !file.workouts.isEmpty else { throw ExchangeError.empty }
+        return ImportResult(plans: file.plans.count, routines: file.routines.count, workouts: file.workouts.count)
+    }
+
+    // MARK: Import
+
+    /// Decodes the file and inserts fresh copies into `context`, then saves. Returns what was added.
+    /// Workouts (past history) are only imported when `includeWorkouts` is true; the ordinary share
+    /// import leaves them out so a shared file can only add plans and routines, never inject history.
+    @discardableResult
+    static func `import`(_ data: Data, into context: NSManagedObjectContext, includeWorkouts: Bool = false) throws -> ImportResult {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let file = try decoder.decode(File.self, from: data)
+        guard file.formatVersion <= formatVersion else { throw ExchangeError.unsupportedVersion }
+        let workouts = includeWorkouts ? file.workouts : []
+        guard !file.plans.isEmpty || !file.routines.isEmpty || !workouts.isEmpty else { throw ExchangeError.empty }
 
         for planDTO in file.plans { insert(planDTO, into: context) }
         for routineDTO in file.routines { makeRoutine(routineDTO, plan: nil, into: context) } // standalone
-        for workoutDTO in file.workouts { insert(workoutDTO, into: context) }
+        for workoutDTO in workouts { insert(workoutDTO, into: context) }
 
         try context.save()
-        return ImportResult(plans: file.plans.count, routines: file.routines.count, workouts: file.workouts.count)
+        return ImportResult(plans: file.plans.count, routines: file.routines.count, workouts: workouts.count)
     }
 
     private static func insert(_ dto: PlanDTO, into context: NSManagedObjectContext) {

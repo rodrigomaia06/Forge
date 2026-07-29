@@ -52,7 +52,7 @@ final class WorkoutDataExchangeTests: XCTestCase {
         let data = try WorkoutDataExchange.export(plans: [plan])
 
         let other = setUpInMemoryNSPersistentContainer().viewContext
-        let result = try WorkoutDataExchange.import(data, into: other)
+        let result = try WorkoutDataExchange.import(data, into: other, includeWorkouts: true)
         XCTAssertEqual(result.plans, 1)
         XCTAssertEqual(result.workouts, 0)
 
@@ -98,7 +98,7 @@ final class WorkoutDataExchangeTests: XCTestCase {
         let data = try WorkoutDataExchange.export(routines: [routine])
 
         let other = setUpInMemoryNSPersistentContainer().viewContext
-        let result = try WorkoutDataExchange.import(data, into: other)
+        let result = try WorkoutDataExchange.import(data, into: other, includeWorkouts: true)
         XCTAssertEqual(result.routines, 1)
         XCTAssertEqual(result.plans, 0)
 
@@ -135,7 +135,7 @@ final class WorkoutDataExchangeTests: XCTestCase {
         let data = try WorkoutDataExchange.export(workouts: [workout])
 
         let other = setUpInMemoryNSPersistentContainer().viewContext
-        let result = try WorkoutDataExchange.import(data, into: other)
+        let result = try WorkoutDataExchange.import(data, into: other, includeWorkouts: true)
         XCTAssertEqual(result.workouts, 1)
 
         let workouts = try fetch(Workout.self, "Workout", in: other)
