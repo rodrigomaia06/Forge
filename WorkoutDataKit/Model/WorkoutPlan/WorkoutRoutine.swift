@@ -26,26 +26,23 @@ public class WorkoutRoutine: NSManagedObject, Codable {
         copy.title = title
         copy.comment = comment
         copy.customAttributes = customAttributes
-        copy.workoutRoutineExercises = NSOrderedSet(array:
-            (workoutRoutineExercises?.compactMap { $0 as? WorkoutRoutineExercise } ?? [])
-                .map { exercise in
-                    let exerciseCopy = WorkoutRoutineExercise.create(context: context)
-                    exerciseCopy.exerciseUuid = exercise.exerciseUuid
-                    exerciseCopy.comment = exercise.comment
-                    exerciseCopy.workoutRoutineSets = NSOrderedSet(array:
-                        (exercise.workoutRoutineSets?.compactMap { $0 as? WorkoutRoutineSet } ?? [])
-                            .map { set in
-                                let setCopy = WorkoutRoutineSet.create(context: context)
-                                setCopy.minRepetitions = set.minRepetitions
-                                setCopy.maxRepetitions = set.maxRepetitions
-                                setCopy.tagValue = set.tagValue
-                                setCopy.comment = set.comment
-                                return setCopy
-                            }
-                    )
-                    return exerciseCopy
-                }
-        )
+        // Build the ordered relationships by setting each child's to-one inverse (which appends it in
+        // order). Assigning an NSOrderedSet does not maintain the required inverse, so the copy would
+        // fail validation on save.
+        for exercise in (workoutRoutineExercises?.compactMap { $0 as? WorkoutRoutineExercise } ?? []) {
+            let exerciseCopy = WorkoutRoutineExercise.create(context: context)
+            exerciseCopy.exerciseUuid = exercise.exerciseUuid
+            exerciseCopy.comment = exercise.comment
+            exerciseCopy.workoutRoutine = copy
+            for set in (exercise.workoutRoutineSets?.compactMap { $0 as? WorkoutRoutineSet } ?? []) {
+                let setCopy = WorkoutRoutineSet.create(context: context)
+                setCopy.minRepetitions = set.minRepetitions
+                setCopy.maxRepetitions = set.maxRepetitions
+                setCopy.tagValue = set.tagValue
+                setCopy.comment = set.comment
+                setCopy.workoutRoutineExercise = exerciseCopy
+            }
+        }
         return copy
     }
     

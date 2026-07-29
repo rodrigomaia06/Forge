@@ -184,7 +184,7 @@ enum WorkoutDataExchange {
         guard !file.plans.isEmpty || !file.routines.isEmpty || !file.workouts.isEmpty else { throw ExchangeError.empty }
 
         for planDTO in file.plans { insert(planDTO, into: context) }
-        for routineDTO in file.routines { _ = makeRoutine(routineDTO, into: context) } // no plan: a standalone routine
+        for routineDTO in file.routines { makeRoutine(routineDTO, plan: nil, into: context) } // standalone
         for workoutDTO in file.workouts { insert(workoutDTO, into: context) }
 
         try context.save()
@@ -194,28 +194,33 @@ enum WorkoutDataExchange {
     private static func insert(_ dto: PlanDTO, into context: NSManagedObjectContext) {
         let plan = WorkoutPlan.create(context: context)
         plan.title = dto.title
-        plan.workoutRoutines = NSOrderedSet(array: dto.routines.map { makeRoutine($0, into: context) })
+        for routineDTO in dto.routines { makeRoutine(routineDTO, plan: plan, into: context) }
     }
 
-    private static func makeRoutine(_ dto: RoutineDTO, into context: NSManagedObjectContext) -> WorkoutRoutine {
+    // Ordered relationships are built by setting the to-one inverse on each child (which appends it in
+    // order). Assigning an NSOrderedSet on the parent does not maintain the inverse, so a required
+    // inverse would be left nil and fail validation on save.
+    @discardableResult
+    private static func makeRoutine(_ dto: RoutineDTO, plan: WorkoutPlan?, into context: NSManagedObjectContext) -> WorkoutRoutine {
         let routine = WorkoutRoutine.create(context: context)
         routine.title = dto.title
         routine.comment = dto.comment
         if let attributes = dto.attributes { routine.customAttributes = attributes }
-        routine.workoutRoutineExercises = NSOrderedSet(array: dto.exercises.map { exerciseDTO in
+        routine.workoutPlan = plan
+        for exerciseDTO in dto.exercises {
             let exercise = WorkoutRoutineExercise.create(context: context)
             exercise.exerciseUuid = exerciseDTO.exerciseUuid
             exercise.comment = exerciseDTO.comment
-            exercise.workoutRoutineSets = NSOrderedSet(array: exerciseDTO.sets.map { setDTO in
+            exercise.workoutRoutine = routine
+            for setDTO in exerciseDTO.sets {
                 let set = WorkoutRoutineSet.create(context: context)
                 set.minRepetitionsValue = setDTO.minReps
                 set.maxRepetitionsValue = setDTO.maxReps
                 if let tag = setDTO.tag { set.tagValue = WorkoutSetTag(rawValue: tag) }
                 set.comment = setDTO.comment
-                return set
-            })
-            return exercise
-        })
+                set.workoutRoutineExercise = exercise
+            }
+        }
         return routine
     }
 
@@ -229,11 +234,12 @@ enum WorkoutDataExchange {
         workout.end = dto.end ?? dto.start
         workout.isCurrentWorkout = false
         if let attributes = dto.attributes { workout.customAttributes = attributes }
-        workout.workoutExercises = NSOrderedSet(array: dto.exercises.map { exerciseDTO in
+        for exerciseDTO in dto.exercises {
             let exercise = WorkoutExercise.create(context: context)
             exercise.exerciseUuid = exerciseDTO.exerciseUuid
             exercise.comment = exerciseDTO.comment
-            exercise.workoutSets = NSOrderedSet(array: exerciseDTO.sets.map { setDTO in
+            exercise.workout = workout
+            for setDTO in exerciseDTO.sets {
                 let set = WorkoutSet.create(context: context)
                 if let weight = setDTO.weight { set.weightValue = weight }
                 if let reps = setDTO.reps { set.repetitionsValue = reps }
@@ -243,10 +249,9 @@ enum WorkoutDataExchange {
                 set.comment = setDTO.comment
                 set.minTargetRepetitionsValue = setDTO.minTargetReps
                 set.maxTargetRepetitionsValue = setDTO.maxTargetReps
-                return set
-            })
-            return exercise
-        })
+                set.workoutExercise = exercise
+            }
+        }
     }
 
     // MARK: Ordered helpers
