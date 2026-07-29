@@ -192,9 +192,9 @@ private struct WorkoutPlanCell: View {
     
     var body: some View {
         NavigationLink(destination: WorkoutPlanView(workoutPlan: workoutPlan)) {
-            VStack(alignment: .leading) {
-                Text(workoutPlan.displayTitle).font(.headline)
-            }
+            // A container icon marks this as a plan holding the routines listed beneath it.
+            Label(workoutPlan.displayTitle, systemImage: "list.bullet.rectangle")
+                .font(.headline)
             .contextMenu {
                 Button(action: {
                     _ = self.workoutPlan.duplicate(context: self.managedObjectContext)
@@ -230,7 +230,7 @@ private struct WorkoutPlanRoutines: View {
 
     var body: some View {
         ForEach(workoutRoutines) { workoutRoutine in
-            RoutineMenuRow(routine: workoutRoutine, allPlans: allPlans, onStart: onStart, onEdit: onEdit, onShare: onShare)
+            RoutineMenuRow(routine: workoutRoutine, allPlans: allPlans, nested: true, onStart: onStart, onEdit: onEdit, onShare: onShare)
         }
     }
 }
@@ -243,6 +243,8 @@ private struct RoutineMenuRow: View {
 
     @ObservedObject var routine: WorkoutRoutine
     var allPlans: [WorkoutPlan]
+    /// When the routine belongs to a plan, it is indented with a left rail so the nesting is clear.
+    var nested: Bool = false
     var onStart: (WorkoutRoutine) -> Void
     var onEdit: (WorkoutRoutine) -> Void
     var onShare: (WorkoutRoutine) -> Void
@@ -268,13 +270,23 @@ private struct RoutineMenuRow: View {
                 if (routine.workoutRoutineExercises?.count ?? 0) == 0 { delete() } else { confirmingDelete = true }
             } label: { Label("Delete", systemImage: "trash") }
         } label: {
-            VStack(alignment: .leading) {
-                Text(routine.displayTitle).italic()
-                Text(routine.subtitle(in: exerciseStore.exercises))
-                    .lineLimit(1)
-                    .foregroundColor(.secondary)
-                    .font(.caption)
+            HStack(spacing: Theme.Spacing.m) {
+                if nested {
+                    // A short vertical rail plus the indent marks the routine as part of the plan above.
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(Color.forgeSeparator)
+                        .frame(width: 3)
+                }
+                VStack(alignment: .leading) {
+                    Text(routine.displayTitle).italic()
+                    Text(routine.subtitle(in: exerciseStore.exercises))
+                        .lineLimit(1)
+                        .foregroundColor(.secondary)
+                        .font(.caption)
+                }
+                Spacer(minLength: 0)
             }
+            .padding(.leading, nested ? Theme.Spacing.s : 0)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
