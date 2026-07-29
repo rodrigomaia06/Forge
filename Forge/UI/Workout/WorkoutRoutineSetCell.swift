@@ -22,48 +22,47 @@ struct WorkoutRoutineSetCell: View {
        )
     }
     
+    private var tagColor: Color? { workoutRoutineSet.tagValue?.color }
+
+    // The number chip on the left, tinted by set type, mirrors the live workout row.
+    private var numberChip: some View {
+        Text("\(index)")
+            .font(.forgeCaption)
+            .foregroundColor(tagColor ?? .forgeSecondaryLabel)
+            .frame(width: 28, height: 28)
+            .background(Circle().fill((tagColor ?? .forgeSecondaryLabel).opacity(tagColor == nil ? 0.14 : 0.22)))
+    }
+
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text("Set")
-                    
-                    Text(repetitionIntervalString ?? " ")
-                        .background(
-                            Group {
-                                if isSelected {
-                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                        .stroke(Color.accentColor)
-                                        .padding(-4)
-                                }
-                            }
-                        )
-                }
-                
-                workoutRoutineSet.comment.map {
-                    Text($0.enquoted)
-                        .lineLimit(1)
-                        .font(Font.caption.italic())
-                        .foregroundColor(.secondary)
-                }
+        HStack(spacing: Theme.Spacing.s) {
+            numberChip
+
+            workoutRoutineSet.comment.map {
+                Text($0.enquoted)
+                    .lineLimit(1)
+                    .font(Font.caption.italic())
+                    .foregroundColor(.secondary)
             }
-            
+
             Spacer()
 
-            Text("\(index)")
-                .font(Font.body.monospacedDigit())
-                .foregroundColor(workoutRoutineSet.tagValue != nil ? .clear : .secondary)
-                .background(
-                    Group {
-                        workoutRoutineSet.tagValue.map {
-                            Text($0.title.first!.uppercased())
-                                .fontWeight(.semibold)
-                                .foregroundColor($0.color)
-                                .fixedSize()
-                        }
-                    }
+            // The rep target sits in a field like the live workout's reps column; the selected set is
+            // outlined, and the bottom draggers edit it.
+            Text(repetitionIntervalString ?? "—")
+                .font(.forgeValue)
+                .multilineTextAlignment(.center)
+                .padding(.vertical, 7)
+                .frame(minWidth: 64)
+                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(isSelected ? Color.forgeAccent : Color.clear, lineWidth: 2)
                 )
+            Text("reps")
+                .font(.forgeCaption)
+                .foregroundColor(.forgeSecondaryLabel)
         }
+        .contentShape(Rectangle())
     }
 }
 
