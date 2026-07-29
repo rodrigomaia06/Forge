@@ -228,6 +228,8 @@ private struct RoutineMenuRow: View {
     var onStart: (WorkoutRoutine) -> Void
     var onEdit: (WorkoutRoutine) -> Void
 
+    @State private var confirmingDelete = false
+
     var body: some View {
         Menu {
             Button { onStart(routine) } label: { Label("Start", systemImage: "play.fill") }
@@ -241,6 +243,10 @@ private struct RoutineMenuRow: View {
                     Button(plan.displayTitle) { move(to: plan) }
                 }
             } label: { Label("Move to plan", systemImage: "folder") }
+            Button(role: .destructive) {
+                // Confirm only when there is something to lose; an empty routine deletes immediately.
+                if (routine.workoutRoutineExercises?.count ?? 0) == 0 { delete() } else { confirmingDelete = true }
+            } label: { Label("Delete", systemImage: "trash") }
         } label: {
             VStack(alignment: .leading) {
                 Text(routine.displayTitle).italic()
@@ -254,6 +260,15 @@ private struct RoutineMenuRow: View {
         }
         .buttonStyle(.plain)
         .foregroundColor(.primary)
+        .confirmationDialog("This can't be undone.", isPresented: $confirmingDelete, titleVisibility: .visible) {
+            Button("Delete routine", role: .destructive) { delete() }
+        }
+    }
+
+    private func delete() {
+        Haptics.warning()
+        managedObjectContext.delete(routine)
+        managedObjectContext.saveOrCrash()
     }
 
     private func duplicate() {
