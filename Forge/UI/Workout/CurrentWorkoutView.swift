@@ -214,18 +214,30 @@ struct CurrentWorkoutView: View {
                 TimerBannerView(workout: workout)
                 Divider()
                 List {
-                    // Characteristics. A workout started from a routine can be given a custom name and
-                    // comment, and shows its attributes (seeded from the routine), all editable directly
-                    // so they can be added mid-workout and appear right away. A blank workout keeps it to
-                    // a single empty name field, editable directly, so naming a quick workout is easy.
-                    let fromRoutine = workout.workoutPlanAndRoutineTitle() != nil
-                    Section(header: Text("Characteristics")) {
-                        ClearableTextField(titleKey: "Name", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
-                        if fromRoutine || editMode == .active {
+                    // Characteristics. Edit mode always exposes the name and comment. Otherwise a blank
+                    // workout shows a single empty name field, editable directly for quick naming, while
+                    // a workout that already has a name (its own, or a routine's) shows only the comment
+                    // it has; name, comment, and attributes are edited through Edit. Added content still
+                    // appears read-only when present.
+                    let hasName = !(workout.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        || workout.workoutPlanAndRoutineTitle() != nil
+                    if editMode == .active {
+                        Section(header: Text("Characteristics")) {
+                            ClearableTextField(titleKey: "Name", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
                             ClearableTextField(titleKey: "Comment", text: workoutComment, onCommit: { self.adjustAndSaveWorkoutCommentInput() })
                         }
+                    } else if !hasName {
+                        Section(header: Text("Characteristics")) {
+                            ClearableTextField(titleKey: "Name", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
+                        }
+                    } else if let comment = workout.comment, !comment.isEmpty {
+                        Section(header: Text("Characteristics")) {
+                            Text(comment).foregroundColor(.forgeSecondaryLabel)
+                        }
                     }
-                    CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: fromRoutine || editMode == .active, valuesEditable: true)
+                    // Attributes are edited in edit mode; a field already present can have its value filled
+                    // in directly, so routine-seeded fields (location, mood) still show and can be set.
+                    CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: editMode == .active, valuesEditable: true)
                     // In edit mode the exercises collapse to a plain, reorderable list of names (drag to
                     // reorder, swipe/– to remove). Otherwise each exercise is a full card with its set
                     // table inline, so logging never leaves this screen.
