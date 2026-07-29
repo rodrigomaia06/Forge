@@ -294,8 +294,10 @@ struct CurrentWorkoutView: View {
                         }
                     }
                     Section {
-                        Button("Finish workout") {
+                        Button {
                             self.requestFinish()
+                        } label: {
+                            Label("Finish workout", systemImage: "checkmark")
                         }
                         .buttonStyle(ForgeGlassButtonStyle())
                         // Inset from the card edges so the rounded button reads as a button, not a bar.

@@ -27,7 +27,7 @@ struct HistoryView : View {
     
     @State private var activityItems: [Any]?
 
-    @State private var offsetsToDelete: IndexSet?
+    @State private var workoutsToDelete: [Workout]?
 
     @State private var filterActive = false
     // Owned here and injected into the list, so the Edit/Done button can live in the header (the nav
@@ -52,21 +52,37 @@ struct HistoryView : View {
         }
     }
 
-    /// Returns `true` if at least one of the workouts to delete has workout exercises.
-    private func needsConfirmBeforeDelete(offsets: IndexSet) -> Bool {
-        let displayed = displayedWorkouts
-        for index in offsets {
-            if displayed[index].workoutExercises?.count ?? 0 != 0 {
-                return true
-            }
+    private static let monthFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("MMMM yyyy")
+        return formatter
+    }()
+
+    /// Workouts grouped into month sections, newest month first and newest workout first within a month,
+    /// so a long history reads as organized blocks rather than one flat scroll.
+    private var monthSections: [(id: String, title: String, workouts: [Workout])] {
+        let calendar = Calendar.current
+        let groups = Dictionary(grouping: displayedWorkouts) { workout in
+            calendar.dateComponents([.year, .month], from: workout.start ?? Date.distantPast)
         }
-        return false
+        return groups
+            .map { components, workouts -> (id: String, title: String, workouts: [Workout], sort: Date) in
+                let date = calendar.date(from: components) ?? Date.distantPast
+                let sorted = workouts.sorted { ($0.start ?? .distantPast) > ($1.start ?? .distantPast) }
+                return ("\(components.year ?? 0)-\(components.month ?? 0)", Self.monthFormatter.string(from: date), sorted, date)
+            }
+            .sorted { $0.sort > $1.sort }
+            .map { (id: $0.id, title: $0.title, workouts: $0.workouts) }
     }
 
-    private func deleteAt(offsets: IndexSet) {
-        let displayed = displayedWorkouts
-        for i in offsets.sorted().reversed() {
-            displayed[i].deleteOrCrash()
+    /// Returns `true` if at least one of the workouts to delete has workout exercises.
+    private func needsConfirmBeforeDelete(_ workouts: [Workout]) -> Bool {
+        workouts.contains { ($0.workoutExercises?.count ?? 0) != 0 }
+    }
+
+    private func delete(_ workouts: [Workout]) {
+        for workout in workouts {
+            workout.deleteOrCrash()
         }
     }
 
@@ -79,32 +95,37 @@ struct HistoryView : View {
                         DatePicker("To", selection: $toDate, in: fromDate..., displayedComponents: .date)
                     }
                 }
-                ForEach(displayedWorkouts) { workout in
-                    NavigationLink(value: workout) {
-                        WorkoutCell(workout: workout)
-                            .contextMenu {
-                                // TODO add images when SwiftUI fixes the image size
-                                if UIDevice.current.userInterfaceIdiom != .pad {
-                                    // not working on iPad, last checked iOS 13.4
-                                    Button("Share") {
-                                        guard let logText = workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit) else { return }
-                                        self.activityItems = [logText]
-                                    }
+                ForEach(monthSections, id: \.id) { section in
+                    Section(header: Text(section.title)) {
+                        ForEach(section.workouts) { workout in
+                            NavigationLink(value: workout) {
+                                WorkoutCell(workout: workout)
+                                    .contextMenu {
+                                        // TODO add images when SwiftUI fixes the image size
+                                        if UIDevice.current.userInterfaceIdiom != .pad {
+                                            // not working on iPad, last checked iOS 13.4
+                                            Button("Share") {
+                                                guard let logText = workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit) else { return }
+                                                self.activityItems = [logText]
+                                            }
+                                        }
+                                        Button("Repeat") {
+                                            WorkoutDetailView.repeatWorkout(workout: workout, settingsStore: self.settingsStore, sceneState: sceneState)
+                                        }
+                                        Button("Repeat (Blank)") {
+                                            WorkoutDetailView.repeatWorkoutBlank(workout: workout, settingsStore: self.settingsStore, sceneState: sceneState)
+                                        }
                                 }
-                                Button("Repeat") {
-                                    WorkoutDetailView.repeatWorkout(workout: workout, settingsStore: self.settingsStore, sceneState: sceneState)
-                                }
-                                Button("Repeat (Blank)") {
-                                    WorkoutDetailView.repeatWorkoutBlank(workout: workout, settingsStore: self.settingsStore, sceneState: sceneState)
-                                }
+                            }
                         }
-                    }
-                }
-                .onDelete { offsets in
-                    if self.needsConfirmBeforeDelete(offsets: offsets) {
-                        self.offsetsToDelete = offsets
-                    } else {
-                        self.deleteAt(offsets: offsets)
+                        .onDelete { offsets in
+                            let toDelete = offsets.map { section.workouts[$0] }
+                            if self.needsConfirmBeforeDelete(toDelete) {
+                                self.workoutsToDelete = toDelete
+                            } else {
+                                self.delete(toDelete)
+                            }
+                        }
                     }
                 }
             }
@@ -114,10 +135,13 @@ struct HistoryView : View {
                 WorkoutDetailView(workout: workout)
                     .environmentObject(self.settingsStore)
             }
-            .confirmationDialog("This cannot be undone.", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } }), titleVisibility: .visible, presenting: offsetsToDelete) { offsets in
-                Button("Delete workout", role: .destructive) {
-                    self.deleteAt(offsets: offsets)
+            .alert("Delete workout?", isPresented: Binding(get: { workoutsToDelete != nil }, set: { if !$0 { workoutsToDelete = nil } })) {
+                Button("Delete", role: .destructive) {
+                    self.delete(self.workoutsToDelete ?? [])
                 }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("This cannot be undone.")
             }
             // The empty state is an overlay on the list, not a replacement for it. Swapping the whole
             // list out (the old .placeholder modifier) while a delete was animating tore down the list
