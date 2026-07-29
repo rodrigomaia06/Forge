@@ -150,17 +150,13 @@ extension View {
         toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button {
+                // A trailing "Done" button is the standard way to dismiss a number pad, which has no
+                // return key. It reads as a normal toolbar action rather than a floating icon.
+                Button("Done") {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                } label: {
-                    // The keyboard-down chevron is the standard dismiss affordance and reads as part of
-                    // the keyboard, unlike a lone "Done" word floating above the number pad.
-                    Image(systemName: "keyboard.chevron.compact.down")
                 }
+                .fontWeight(.semibold)
                 .accessibilityLabel("Dismiss keyboard")
-                // Pad the whole button so its glass circle lifts off the keyboard, rather than padding the
-                // icon inside the circle.
-                .padding(.bottom, Theme.Spacing.xs)
             }
         }
     }

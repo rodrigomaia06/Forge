@@ -364,34 +364,24 @@ struct WorkoutExerciseDetailView : View {
         managedObjectContext.saveOrCrash()
     }
 
-    /// Weight the warm-up ramp is based on: the first working set with a weight, else the most recent
-    /// session's first working set, else zero (the sheet then asks for a weight).
-    private var warmupBaseWeightKg: Double {
-        if let weight = workoutSets(for: workoutExercise)
-            .first(where: { $0.tagValue != .warmUp && $0.weightValue > 0 })?.weightValue {
-            return weight
-        }
+    /// Weight and reps the warm-up ramp defaults to, easy to override in the sheet. The last workout's
+    /// first working set is preferred, since that is what you are warming up toward. Otherwise it uses a
+    /// weight already entered this session with its reps or the routine's target reps.
+    private var warmupBaseSet: (weightKg: Double, reps: Int) {
         if let history = workoutExerciseHistory.first?.workoutSets?.array as? [WorkoutSet],
-           let weight = history.first(where: { $0.weightValue > 0 })?.weightValue {
-            return weight
+           let set = history.first(where: { $0.tagValue != .warmUp && ($0.weightValue > 0 || $0.repetitionsValue > 0) }) {
+            return (set.weightValue, Int(set.repetitionsValue))
         }
-        return 0
+        if let set = workoutSets(for: workoutExercise).first(where: { $0.tagValue != .warmUp }) {
+            let reps = set.repetitionsValue > 0
+                ? Int(set.repetitionsValue)
+                : Int(set.maxTargetRepetitionsValue ?? set.minTargetRepetitionsValue ?? 0)
+            return (set.weightValue, reps)
+        }
+        return (0, 0)
     }
-
-    /// Reps the warm-up ramp is based on: the first working set's reps or target reps, else the most
-    /// recent session's first working set, else zero (a light default ramp is used).
-    private var warmupBaseReps: Int {
-        let working = workoutSets(for: workoutExercise).first(where: { $0.tagValue != .warmUp })
-        if let reps = working?.repetitionsValue, reps > 0 { return Int(reps) }
-        if let target = working?.maxTargetRepetitionsValue ?? working?.minTargetRepetitionsValue, target > 0 {
-            return Int(target)
-        }
-        if let history = workoutExerciseHistory.first?.workoutSets?.array as? [WorkoutSet],
-           let reps = history.first(where: { $0.repetitionsValue > 0 })?.repetitionsValue {
-            return Int(reps)
-        }
-        return 0
-    }
+    private var warmupBaseWeightKg: Double { warmupBaseSet.weightKg }
+    private var warmupBaseReps: Int { warmupBaseSet.reps }
 
     /// Inserts the computed warm-up sets before the first working set, so the ramp leads into the
     /// working sets. Each is tagged as a warm-up and left uncompleted for the user to work through.
@@ -685,35 +675,43 @@ private struct ActiveSetRow: View {
         )
     }
 
+    /// A near-square box so digits fill from the right edge. The whole box is a forgiving tap target:
+    /// tapping anywhere in it focuses the field and opens the keyboard, not just the text itself.
+    private static let fieldHeight: CGFloat = 40
+
     private func setField(_ text: Binding<String>, field: Field, keyboard: UIKeyboardType, width: CGFloat, targetHint: String? = nil) -> some View {
-        ZStack(alignment: .top) {
+        ZStack(alignment: .topTrailing) {
             TextField("", text: text)
                 .keyboardType(keyboard)
                 .focused($focus, equals: field)
-                .multilineTextAlignment(.center)
+                // Numbers read from the right, so an entered value lines up with the column edge.
+                .multilineTextAlignment(.trailing)
                 .font(.forgeValue)
-                .padding(.vertical, 7)
-                .frame(width: width)
-            // The planned range sits at the top of the reps field so the entered value stays centered.
+                .padding(.horizontal, 8)
+                .frame(width: width, height: Self.fieldHeight)
+            // The planned range sits in the top corner so the entered value stays clear of it.
             if let targetHint {
                 Text(targetHint)
                     .font(.system(size: 10))
                     .foregroundColor(.forgeSecondaryLabel)
                     .allowsHitTesting(false)
-                    .padding(.top, 1)
+                    .padding(.top, 2)
+                    .padding(.trailing, 6)
             }
         }
-        .frame(width: width)
+        .frame(width: width, height: Self.fieldHeight)
         .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
+        .contentShape(Rectangle())
+        .onTapGesture { focus = field }
     }
 
     /// Read-only value shown in place of the editable field (history, outside edit mode).
     private func readValue(_ text: String, width: CGFloat) -> some View {
         Text(text)
             .font(.forgeValue)
-            .multilineTextAlignment(.center)
-            .padding(.vertical, 7)
-            .frame(width: width)
+            .multilineTextAlignment(.trailing)
+            .padding(.horizontal, 8)
+            .frame(width: width, height: Self.fieldHeight, alignment: .trailing)
     }
 
     var body: some View {
