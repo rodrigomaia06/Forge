@@ -114,10 +114,13 @@ struct WorkoutPlanView: View {
             }
         )
         .overlay(ActivitySheet(activityItems: $activityItems))
-        .confirmationDialog("This cannot be undone.", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } }), titleVisibility: .visible, presenting: offsetsToDelete) { offsets in
-            Button("Delete workout routine", role: .destructive) {
-                self.deleteAt(offsets: offsets)
+        .alert("Delete workout routine?", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } })) {
+            Button("Delete", role: .destructive) {
+                if let offsets = offsetsToDelete { self.deleteAt(offsets: offsets) }
             }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This cannot be undone.")
         }
     }
     
