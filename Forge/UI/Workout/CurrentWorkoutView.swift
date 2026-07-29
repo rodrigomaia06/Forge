@@ -187,6 +187,12 @@ struct CurrentWorkoutView: View {
     private var reorderButton: some View {
         Button(editMode == .active ? "Done" : "Edit") {
             Haptics.selection()
+            if editMode == .active {
+                // Commit the name and comment before the fields are torn down, so a name typed in edit
+                // mode is saved even if the field never lost focus on its own.
+                adjustAndSaveWorkoutTitleInput()
+                adjustAndSaveWorkoutCommentInput()
+            }
             withAnimation { editMode = editMode == .active ? .inactive : .active }
         }
     }
@@ -221,18 +227,23 @@ struct CurrentWorkoutView: View {
                     // appears read-only when present.
                     let hasName = !(workout.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                         || workout.workoutPlanAndRoutineTitle() != nil
+                    let readComment = (workout.comment ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                     if editMode == .active {
                         Section(header: Text("Characteristics")) {
                             ClearableTextField(titleKey: "Name", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
                             ClearableTextField(titleKey: "Comment", text: workoutComment, onCommit: { self.adjustAndSaveWorkoutCommentInput() })
                         }
-                    } else if !hasName {
+                    } else if !hasName || !readComment.isEmpty {
+                        // A blank workout keeps its quick, directly editable name field. A comment shows
+                        // read-only whenever it exists, even on a blank workout, so it never disappears
+                        // after being entered. The name field and the comment can appear together.
                         Section(header: Text("Characteristics")) {
-                            ClearableTextField(titleKey: "Name", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
-                        }
-                    } else if let comment = workout.comment, !comment.isEmpty {
-                        Section(header: Text("Characteristics")) {
-                            Text(comment).foregroundColor(.forgeSecondaryLabel)
+                            if !hasName {
+                                ClearableTextField(titleKey: "Name", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
+                            }
+                            if !readComment.isEmpty {
+                                Text(readComment).foregroundColor(.forgeSecondaryLabel)
+                            }
                         }
                     }
                     // The value of an attribute already present can be filled in directly (like naming a

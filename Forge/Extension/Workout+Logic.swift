@@ -20,10 +20,10 @@ extension Workout {
             return
         }
 
-        // Leave `start` unset until the first set is completed (see completeSet), so the elapsed timer
-        // counts real training time rather than the setup time before the first set. isCurrentWorkout,
-        // a separate flag, is what marks this as the active workout.
-        start = nil
+        // Stamp the start now so the elapsed timer counts up from the moment the workout begins. Leaving
+        // it unset until the first set made the stopwatch sit at 00:00:00 during warm-up, which reads as
+        // a stopped timer.
+        start = Date()
         isCurrentWorkout = true
         try context.save() // this also checks that there is only one currentWorkout
 
