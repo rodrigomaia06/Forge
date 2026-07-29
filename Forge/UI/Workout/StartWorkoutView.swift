@@ -18,8 +18,9 @@ struct StartWorkoutView: View {
 
     @State private var offsetsToDelete: IndexSet?
 
-    // Tapping a routine opens a menu (start, edit, duplicate, move) anchored to the row.
+    // Tapping a routine opens a menu (start, edit, duplicate, move, share, delete) anchored to the row.
     @State private var routineToEdit: WorkoutRoutine?
+    @State private var activityItems: [Any]?
     
     @FetchRequest(fetchRequest: StartWorkoutView.fetchRequest) var workoutPlans
 
@@ -87,7 +88,7 @@ struct StartWorkoutView: View {
                     if !standaloneRoutines.isEmpty {
                         Section(header: Text("Routines")) {
                             ForEach(standaloneRoutines) { routine in
-                                RoutineMenuRow(routine: routine, allPlans: Array(workoutPlans), onStart: { start(routine: $0) }, onEdit: { routineToEdit = $0 })
+                                RoutineMenuRow(routine: routine, allPlans: Array(workoutPlans), onStart: { start(routine: $0) }, onEdit: { routineToEdit = $0 }, onShare: { shareRoutine($0) })
                             }
                             .onDelete { deleteStandaloneRoutines($0) }
                         }
@@ -95,7 +96,7 @@ struct StartWorkoutView: View {
                     ForEach(workoutPlans) { workoutPlan in
                         Section {
                             WorkoutPlanCell(workoutPlan: workoutPlan)
-                            WorkoutPlanRoutines(workoutPlan: workoutPlan, allPlans: Array(workoutPlans), onStart: { start(routine: $0) }, onEdit: { routineToEdit = $0 })
+                            WorkoutPlanRoutines(workoutPlan: workoutPlan, allPlans: Array(workoutPlans), onStart: { start(routine: $0) }, onEdit: { routineToEdit = $0 }, onShare: { shareRoutine($0) })
                                 .deleteDisabled(true)
                         }
                     }
@@ -114,6 +115,7 @@ struct StartWorkoutView: View {
             .navigationDestination(item: $routineToEdit) { routine in
                 WorkoutRoutineView(workoutRoutine: routine)
             }
+            .overlay(ActivitySheet(activityItems: $activityItems))
             .confirmationDialog("This cannot be undone.", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } }), titleVisibility: .visible, presenting: offsetsToDelete) { offsets in
                 Button("Delete workout plan", role: .destructive) {
                     self.deleteAt(offsets: offsets)
@@ -123,6 +125,18 @@ struct StartWorkoutView: View {
     }
 
     /// Start a workout from a routine. Animated so the live workout slides in rather than snapping.
+    /// Write the routine to a JSON file and open the share sheet.
+    private func shareRoutine(_ routine: WorkoutRoutine) {
+        do {
+            let data = try WorkoutDataExchange.export(routines: [routine])
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("routine.json")
+            try data.write(to: url)
+            self.activityItems = [url]
+        } catch {
+            os_log("Could not export routine as JSON: %@", type: .error, error.localizedDescription)
+        }
+    }
+
     private func start(routine: WorkoutRoutine) {
         Haptics.impact(.medium)
         withAnimation(.smooth) {
@@ -205,6 +219,7 @@ private struct WorkoutPlanRoutines: View {
     var allPlans: [WorkoutPlan]
     var onStart: (WorkoutRoutine) -> Void
     var onEdit: (WorkoutRoutine) -> Void
+    var onShare: (WorkoutRoutine) -> Void
 
     private var workoutRoutines: [WorkoutRoutine] {
         workoutPlan.workoutRoutines?.array as? [WorkoutRoutine] ?? []
@@ -212,7 +227,7 @@ private struct WorkoutPlanRoutines: View {
 
     var body: some View {
         ForEach(workoutRoutines) { workoutRoutine in
-            RoutineMenuRow(routine: workoutRoutine, allPlans: allPlans, onStart: onStart, onEdit: onEdit)
+            RoutineMenuRow(routine: workoutRoutine, allPlans: allPlans, onStart: onStart, onEdit: onEdit, onShare: onShare)
         }
     }
 }
@@ -227,6 +242,7 @@ private struct RoutineMenuRow: View {
     var allPlans: [WorkoutPlan]
     var onStart: (WorkoutRoutine) -> Void
     var onEdit: (WorkoutRoutine) -> Void
+    var onShare: (WorkoutRoutine) -> Void
 
     @State private var confirmingDelete = false
 
@@ -235,6 +251,7 @@ private struct RoutineMenuRow: View {
             Button { onStart(routine) } label: { Label("Start", systemImage: "play.fill") }
             Button { onEdit(routine) } label: { Label("Edit", systemImage: "pencil") }
             Button { duplicate() } label: { Label("Duplicate", systemImage: "doc.on.doc") }
+            Button { onShare(routine) } label: { Label("Share as file", systemImage: "doc.badge.arrow.up") }
             Menu {
                 if routine.workoutPlan != nil {
                     Button { move(to: nil) } label: { Label("No plan", systemImage: "tray") }

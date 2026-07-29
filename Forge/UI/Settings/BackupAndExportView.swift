@@ -137,6 +137,7 @@ struct BackupAndExportView: View {
             let result = try WorkoutDataExchange.import(data, into: managedObjectContext)
             var parts: [String] = []
             if result.plans > 0 { parts.append(result.plans == 1 ? "1 plan" : "\(result.plans) plans") }
+            if result.routines > 0 { parts.append(result.routines == 1 ? "1 routine" : "\(result.routines) routines") }
             if result.workouts > 0 { parts.append(result.workouts == 1 ? "1 workout" : "\(result.workouts) workouts") }
             message = Message(title: "Import complete", text: "Added \(parts.joined(separator: " and ")).")
         } catch {

@@ -33,6 +33,7 @@ enum WorkoutDataExchange {
     /// Counts of what was imported, for a plain-language confirmation.
     struct ImportResult {
         let plans: Int
+        let routines: Int
         let workouts: Int
     }
 
@@ -41,7 +42,24 @@ enum WorkoutDataExchange {
     struct File: Codable {
         var formatVersion: Int
         var plans: [PlanDTO]
+        var routines: [RoutineDTO]
         var workouts: [WorkoutDTO]
+
+        init(formatVersion: Int, plans: [PlanDTO] = [], routines: [RoutineDTO] = [], workouts: [WorkoutDTO] = []) {
+            self.formatVersion = formatVersion
+            self.plans = plans
+            self.routines = routines
+            self.workouts = workouts
+        }
+
+        // Tolerant decoding: a file may carry any subset (only plans, only a routine, only workouts).
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            formatVersion = try container.decode(Int.self, forKey: .formatVersion)
+            plans = try container.decodeIfPresent([PlanDTO].self, forKey: .plans) ?? []
+            routines = try container.decodeIfPresent([RoutineDTO].self, forKey: .routines) ?? []
+            workouts = try container.decodeIfPresent([WorkoutDTO].self, forKey: .workouts) ?? []
+        }
     }
 
     struct PlanDTO: Codable {
@@ -97,8 +115,8 @@ enum WorkoutDataExchange {
 
     // MARK: Export
 
-    static func export(plans: [WorkoutPlan] = [], workouts: [Workout] = []) throws -> Data {
-        let file = File(formatVersion: formatVersion, plans: plans.map(dto(from:)), workouts: workouts.map(dto(from:)))
+    static func export(plans: [WorkoutPlan] = [], routines: [WorkoutRoutine] = [], workouts: [Workout] = []) throws -> Data {
+        let file = File(formatVersion: formatVersion, plans: plans.map(dto(from:)), routines: routines.map(routineDTO(from:)), workouts: workouts.map(dto(from:)))
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
@@ -106,22 +124,24 @@ enum WorkoutDataExchange {
     }
 
     private static func dto(from plan: WorkoutPlan) -> PlanDTO {
-        PlanDTO(title: plan.title, routines: orderedRoutines(plan).map { routine in
-            RoutineDTO(
-                title: routine.title,
-                comment: routine.comment,
-                attributes: routine.customAttributes.isEmpty ? nil : routine.customAttributes,
-                exercises: orderedRoutineExercises(routine).map { exercise in
-                    RoutineExerciseDTO(
-                        exerciseUuid: exercise.exerciseUuid ?? UUID(),
-                        comment: exercise.comment,
-                        sets: orderedRoutineSets(exercise).map { set in
-                            RoutineSetDTO(minReps: set.minRepetitionsValue, maxReps: set.maxRepetitionsValue, tag: set.tagValue?.rawValue, comment: set.comment)
-                        }
-                    )
-                }
-            )
-        })
+        PlanDTO(title: plan.title, routines: orderedRoutines(plan).map(routineDTO(from:)))
+    }
+
+    private static func routineDTO(from routine: WorkoutRoutine) -> RoutineDTO {
+        RoutineDTO(
+            title: routine.title,
+            comment: routine.comment,
+            attributes: routine.customAttributes.isEmpty ? nil : routine.customAttributes,
+            exercises: orderedRoutineExercises(routine).map { exercise in
+                RoutineExerciseDTO(
+                    exerciseUuid: exercise.exerciseUuid ?? UUID(),
+                    comment: exercise.comment,
+                    sets: orderedRoutineSets(exercise).map { set in
+                        RoutineSetDTO(minReps: set.minRepetitionsValue, maxReps: set.maxRepetitionsValue, tag: set.tagValue?.rawValue, comment: set.comment)
+                    }
+                )
+            }
+        )
     }
 
     private static func dto(from workout: Workout) -> WorkoutDTO {
@@ -161,39 +181,42 @@ enum WorkoutDataExchange {
         decoder.dateDecodingStrategy = .iso8601
         let file = try decoder.decode(File.self, from: data)
         guard file.formatVersion <= formatVersion else { throw ExchangeError.unsupportedVersion }
-        guard !file.plans.isEmpty || !file.workouts.isEmpty else { throw ExchangeError.empty }
+        guard !file.plans.isEmpty || !file.routines.isEmpty || !file.workouts.isEmpty else { throw ExchangeError.empty }
 
         for planDTO in file.plans { insert(planDTO, into: context) }
+        for routineDTO in file.routines { _ = makeRoutine(routineDTO, into: context) } // no plan: a standalone routine
         for workoutDTO in file.workouts { insert(workoutDTO, into: context) }
 
         try context.save()
-        return ImportResult(plans: file.plans.count, workouts: file.workouts.count)
+        return ImportResult(plans: file.plans.count, routines: file.routines.count, workouts: file.workouts.count)
     }
 
     private static func insert(_ dto: PlanDTO, into context: NSManagedObjectContext) {
         let plan = WorkoutPlan.create(context: context)
         plan.title = dto.title
-        plan.workoutRoutines = NSOrderedSet(array: dto.routines.map { routineDTO in
-            let routine = WorkoutRoutine.create(context: context)
-            routine.title = routineDTO.title
-            routine.comment = routineDTO.comment
-            if let attributes = routineDTO.attributes { routine.customAttributes = attributes }
-            routine.workoutRoutineExercises = NSOrderedSet(array: routineDTO.exercises.map { exerciseDTO in
-                let exercise = WorkoutRoutineExercise.create(context: context)
-                exercise.exerciseUuid = exerciseDTO.exerciseUuid
-                exercise.comment = exerciseDTO.comment
-                exercise.workoutRoutineSets = NSOrderedSet(array: exerciseDTO.sets.map { setDTO in
-                    let set = WorkoutRoutineSet.create(context: context)
-                    set.minRepetitionsValue = setDTO.minReps
-                    set.maxRepetitionsValue = setDTO.maxReps
-                    if let tag = setDTO.tag { set.tagValue = WorkoutSetTag(rawValue: tag) }
-                    set.comment = setDTO.comment
-                    return set
-                })
-                return exercise
+        plan.workoutRoutines = NSOrderedSet(array: dto.routines.map { makeRoutine($0, into: context) })
+    }
+
+    private static func makeRoutine(_ dto: RoutineDTO, into context: NSManagedObjectContext) -> WorkoutRoutine {
+        let routine = WorkoutRoutine.create(context: context)
+        routine.title = dto.title
+        routine.comment = dto.comment
+        if let attributes = dto.attributes { routine.customAttributes = attributes }
+        routine.workoutRoutineExercises = NSOrderedSet(array: dto.exercises.map { exerciseDTO in
+            let exercise = WorkoutRoutineExercise.create(context: context)
+            exercise.exerciseUuid = exerciseDTO.exerciseUuid
+            exercise.comment = exerciseDTO.comment
+            exercise.workoutRoutineSets = NSOrderedSet(array: exerciseDTO.sets.map { setDTO in
+                let set = WorkoutRoutineSet.create(context: context)
+                set.minRepetitionsValue = setDTO.minReps
+                set.maxRepetitionsValue = setDTO.maxReps
+                if let tag = setDTO.tag { set.tagValue = WorkoutSetTag(rawValue: tag) }
+                set.comment = setDTO.comment
+                return set
             })
-            return routine
+            return exercise
         })
+        return routine
     }
 
     private static func insert(_ dto: WorkoutDTO, into context: NSManagedObjectContext) {

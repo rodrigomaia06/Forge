@@ -94,20 +94,10 @@ struct WorkoutRoutineExerciseView: View {
     
     private var addSetButton: some View {
         Button(action: {
-            // get the lastSet before adding a new set
-            let lastSet = self.workoutRoutineExercise.workoutRoutineSets?.lastObject as? WorkoutRoutineSet
-            
+            // New sets start with no rep target, so the range is entered deliberately rather than
+            // defaulting to a number the user has to clear.
             let workoutRoutineSet = WorkoutRoutineSet.create(context: self.managedObjectContext)
             workoutRoutineSet.workoutRoutineExercise = self.workoutRoutineExercise
-            
-            if let previousSet = lastSet {
-                workoutRoutineSet.minRepetitionsValue = previousSet.minRepetitionsValue
-                workoutRoutineSet.maxRepetitionsValue = previousSet.maxRepetitionsValue
-            } else {
-                workoutRoutineSet.minRepetitionsValue = 5
-                workoutRoutineSet.maxRepetitionsValue = 5
-            }
-            
             self.managedObjectContext.saveOrCrash()
         }) {
             HStack {

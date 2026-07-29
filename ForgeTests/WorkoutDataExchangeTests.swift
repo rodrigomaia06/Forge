@@ -81,6 +81,38 @@ final class WorkoutDataExchangeTests: XCTestCase {
         XCTAssertEqual(sets[0].tagValue, .dropSet)
     }
 
+    func testStandaloneRoutineRoundTrip() throws {
+        let context = container.viewContext
+
+        let routine = WorkoutRoutine.create(context: context)
+        routine.title = "Push"
+        let exercise = WorkoutRoutineExercise.create(context: context)
+        exercise.exerciseUuid = UUID()
+        exercise.workoutRoutine = routine
+        let set = WorkoutRoutineSet.create(context: context)
+        set.minRepetitionsValue = 8
+        set.maxRepetitionsValue = 12
+        set.workoutRoutineExercise = exercise
+        try context.save()
+
+        let data = try WorkoutDataExchange.export(routines: [routine])
+
+        let other = setUpInMemoryNSPersistentContainer().viewContext
+        let result = try WorkoutDataExchange.import(data, into: other)
+        XCTAssertEqual(result.routines, 1)
+        XCTAssertEqual(result.plans, 0)
+
+        let routines = try fetch(WorkoutRoutine.self, "WorkoutRoutine", in: other)
+        XCTAssertEqual(routines.count, 1)
+        XCTAssertEqual(routines[0].title, "Push")
+        // Imported as a standalone routine (no plan).
+        XCTAssertNil(routines[0].workoutPlan)
+        let sets = (routines[0].workoutRoutineExercises?.array as? [WorkoutRoutineExercise] ?? [])
+            .flatMap { $0.workoutRoutineSets?.array as? [WorkoutRoutineSet] ?? [] }
+        XCTAssertEqual(sets.first?.minRepetitionsValue, 8)
+        XCTAssertEqual(sets.first?.maxRepetitionsValue, 12)
+    }
+
     func testWorkoutRoundTrip() throws {
         let context = container.viewContext
 

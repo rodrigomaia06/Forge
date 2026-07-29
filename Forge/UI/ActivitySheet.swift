@@ -42,16 +42,30 @@ private class UIActivityViewControllerHost: UIViewController {
     var applicationActivities: [UIActivity]?
     var completionWithItemsHandler: UIActivityViewController.CompletionWithItemsHandler? = nil
 
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // This host sits in a full-screen overlay only to present the share sheet. Keep it clear and
+        // pass touches through, so the screen behind stays visible instead of going black.
+        view.backgroundColor = .clear
+        view.isUserInteractionEnabled = false
+    }
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         presentActivityViewController()
     }
 
     private func presentActivityViewController() {
+        guard presentedViewController == nil else { return }
         let activityViewController = UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
 
         activityViewController.completionWithItemsHandler = completionWithItemsHandler
-        activityViewController.popoverPresentationController?.sourceView = self.view // so that iPads won't crash
+        // Anchor the popover to the bottom center on iPad; ignored on iPhone (bottom sheet).
+        if let popover = activityViewController.popoverPresentationController {
+            popover.sourceView = self.view
+            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.maxY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
 
         self.present(activityViewController, animated: true, completion: nil)
     }
