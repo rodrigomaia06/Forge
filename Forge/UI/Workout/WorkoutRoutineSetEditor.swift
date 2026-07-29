@@ -352,7 +352,11 @@ struct WorkoutRoutineSetEditor: View {
                 }
                 .frame(width: geometry.size.width / 4)
             }
-        }.frame(height: NumericKeyboard.HEIGHT)
+        }
+        .frame(height: NumericKeyboard.HEIGHT)
+        // Match the system keyboard's surface so the custom number pad reads as a keyboard and adapts
+        // to light and dark, instead of showing the editor's background behind its transparent keys.
+        .background(Color(uiColor: .systemGray5))
     }
     
     var body: some View {

@@ -561,17 +561,47 @@ private struct ActiveSetRow: View {
     @FocusState private var focus: Field?
     private enum Field { case weight, reps }
 
-    private var weightField: Binding<Double> {
+    // Locale-aware formatters that map an empty field to nil, so an unset weight or rep count shows a
+    // blank field to type into rather than a "0" the user has to clear first.
+    private static let weightFormatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.minimumFractionDigits = 0
+        f.maximumFractionDigits = 3
+        f.minimum = 0
+        return f
+    }()
+    private static let repsFormatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .none
+        f.allowsFloats = false
+        f.minimum = 0
+        return f
+    }()
+
+    private var weightField: Binding<NSNumber?> {
         Binding(
-            get: { WeightUnit.convert(weight: workoutSet.weightValue, from: .metric, to: weightUnit) },
-            set: { workoutSet.weightValue = max(0, min(WeightUnit.convert(weight: $0, from: weightUnit, to: .metric), WorkoutSet.MAX_WEIGHT)) }
+            get: {
+                guard workoutSet.weight != nil else { return nil }
+                return NSNumber(value: WeightUnit.convert(weight: workoutSet.weightValue, from: .metric, to: weightUnit))
+            },
+            set: { newValue in
+                guard let newValue else { workoutSet.weight = nil; return }
+                workoutSet.weightValue = max(0, min(WeightUnit.convert(weight: newValue.doubleValue, from: weightUnit, to: .metric), WorkoutSet.MAX_WEIGHT))
+            }
         )
     }
 
-    private var repsField: Binding<Double> {
+    private var repsField: Binding<NSNumber?> {
         Binding(
-            get: { Double(workoutSet.repetitionsValue) },
-            set: { workoutSet.repetitionsValue = Int16(max(0, min($0, Double(WorkoutSet.MAX_REPETITIONS)))) }
+            get: {
+                guard workoutSet.repetitions != nil else { return nil }
+                return NSNumber(value: workoutSet.repetitionsValue)
+            },
+            set: { newValue in
+                guard let newValue else { workoutSet.repetitions = nil; return }
+                workoutSet.repetitionsValue = Int16(max(0, min(newValue.doubleValue, Double(WorkoutSet.MAX_REPETITIONS))))
+            }
         )
     }
 
@@ -589,8 +619,8 @@ private struct ActiveSetRow: View {
             }
     }
 
-    private func setField(_ binding: Binding<Double>, field: Field, keyboard: UIKeyboardType, width: CGFloat) -> some View {
-        TextField("0", value: binding, format: .number)
+    private func setField(_ binding: Binding<NSNumber?>, field: Field, keyboard: UIKeyboardType, width: CGFloat) -> some View {
+        TextField("", value: binding, formatter: field == .reps ? Self.repsFormatter : Self.weightFormatter)
             .keyboardType(keyboard)
             .focused($focus, equals: field)
             .multilineTextAlignment(.center)
