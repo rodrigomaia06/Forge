@@ -61,7 +61,6 @@ struct GeneralSettingsView: View {
                 settingsStore.keepRestTimerRunning
             }, set: { newValue in
                 settingsStore.keepRestTimerRunning = newValue
-                RestTimerStore.shared.notifyKeepRestTimerRunningChanged()
             }))
             .tint(.forgeSuccess)
         }

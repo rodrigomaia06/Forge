@@ -28,9 +28,15 @@ final class RestTimerStore: ObservableObject {
     let objectWillChange = ObservableObjectPublisher()
     
     private var userDefaults: UserDefaults
-    
+
+    private var settingsCancellable: AnyCancellable?
+
     private init(userDefaults: UserDefaults) {
         self.userDefaults = userDefaults
+        // restTimerRemainingTime depends on SettingsStore.keepRestTimerRunning. Forward that store's
+        // changes so the timer reacts when the setting flips, instead of callers poking us manually.
+        settingsCancellable = SettingsStore.shared.objectWillChange
+            .sink { [weak self] in self?.objectWillChange.send() }
     }
     
     private convenience init() {
@@ -69,10 +75,6 @@ final class RestTimerStore: ObservableObject {
         }
     }
     
-    func notifyKeepRestTimerRunningChanged() { // TODO in future somehow subscribe to SettingsStore.shared.keepRestTimerRunning changes
-        self.objectWillChange.send()
-    }
-
     private func updateNotification() {
         NotificationManager.shared.updateRestTimerUpNotificationRequest(remainingTime: self.restTimerRemainingTime, totalTime: self.restTimerDuration)
         RestTimerLiveActivityController.shared.sync(start: self.restTimerStart, end: self.restTimerEnd)

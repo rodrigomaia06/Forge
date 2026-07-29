@@ -21,7 +21,7 @@ struct ExerciseHistoryView : View {
     }
     
     private func workoutSets(for workoutExercise: WorkoutExercise) -> [WorkoutSet] {
-        workoutExercise.workoutSets?.array as! [WorkoutSet]
+        workoutExercise.workoutSets?.array as? [WorkoutSet] ?? []
     }
     
     private func indexedWorkoutSets(for workoutExercise: WorkoutExercise) -> [(Int, WorkoutSet)] {

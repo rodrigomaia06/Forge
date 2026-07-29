@@ -417,8 +417,10 @@ struct FeedView: View {
 
     private func stats(_ workout: Workout) -> (exercises: Int, sets: Int) {
         let exercises = (workout.workoutExercises?.array as? [WorkoutExercise]) ?? []
-        let sets = exercises.flatMap { ($0.workoutSets?.array as? [WorkoutSet]) ?? [] }
-        return (exercises.count, sets.count)
+        // Count only completed sets, matching History. Finished workouts already drop uncompleted sets,
+        // but this stays correct for any workout and never overcounts placeholders.
+        let completedSets = exercises.flatMap { ($0.workoutSets?.array as? [WorkoutSet]) ?? [] }.filter { $0.isCompleted }
+        return (exercises.count, completedSets.count)
     }
 
     private func dateLabel(_ date: Date?) -> String {
