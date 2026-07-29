@@ -1,6 +1,6 @@
 //
 //  ExerciseStatisticsView.swift
-//  Sunrise Fit
+//  Forge
 //
 //  Created by Karim Abou Zeid on 06.07.19.
 //  Copyright © 2019 Karim Abou Zeid Software. All rights reserved.
@@ -12,12 +12,22 @@ import WorkoutDataKit
 
 struct ExerciseStatisticsView : View {
     var exercise: Exercise
-    
+
+    @State private var timeFrame: WorkoutExerciseChartData.TimeFrame = .threeMonths
+
     var body: some View {
         List {
+            Section {
+                Picker("Time frame", selection: $timeFrame) {
+                    ForEach(WorkoutExerciseChartData.TimeFrame.allCases, id: \.self) { timeFrame in
+                        Text(timeFrame.title).tag(timeFrame)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
             ForEach(WorkoutExerciseChartData.MeasurementType.allCases, id: \.self) { measurementType in
                 Section {
-                    ExerciseChartViewCell(exercise: self.exercise, measurementType: measurementType)
+                    ExerciseChartViewCell(exercise: self.exercise, measurementType: measurementType, timeFrame: timeFrame)
                 }
             }
         }

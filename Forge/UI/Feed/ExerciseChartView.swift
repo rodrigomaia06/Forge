@@ -1,6 +1,6 @@
 //
 //  ExerciseChartView.swift
-//  Sunrise Fit
+//  Forge
 //
 //  Created by Karim Abou Zeid on 20.06.19.
 //  Copyright © 2019 Karim Abou Zeid Software. All rights reserved.
@@ -18,10 +18,10 @@ struct ExerciseChartView : View {
     
     var exercise: Exercise
     var measurementType: WorkoutExerciseChartData.MeasurementType
+    var timeFrame: WorkoutExerciseChartData.TimeFrame = .threeMonths
 
     private var workoutExercises: [WorkoutExercise] {
-        let timeFrame = WorkoutExerciseChartData.TimeFrame.threeMonths
-        return (try? managedObjectContext.fetch(WorkoutExercise.historyFetchRequest(of: exercise.uuid, from: timeFrame.from, until: timeFrame.until))) ?? []
+        (try? managedObjectContext.fetch(WorkoutExercise.historyFetchRequest(of: exercise.uuid, from: timeFrame.from, until: timeFrame.until))) ?? []
     }
     
     private var chartData: ChartData {

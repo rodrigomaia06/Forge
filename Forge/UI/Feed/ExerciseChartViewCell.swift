@@ -12,9 +12,10 @@ import WorkoutDataKit
 struct ExerciseChartViewCell : View {
     var exercise: Exercise
     var measurementType: WorkoutExerciseChartData.MeasurementType
-    
+    var timeFrame: WorkoutExerciseChartData.TimeFrame = .threeMonths
+
     private var chartView: some View {
-        ExerciseChartView(exercise: exercise, measurementType: measurementType)
+        ExerciseChartView(exercise: exercise, measurementType: measurementType, timeFrame: timeFrame)
     }
     
     var body: some View {
