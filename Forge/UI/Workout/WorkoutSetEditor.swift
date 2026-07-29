@@ -472,6 +472,7 @@ struct SetMoreView: View {
             }
         }
         .listStyleCompat_InsetGroupedListStyle()
+        .keyboardDoneToolbar()
         .alert(item: $activeAlert) { self.alertFor(type: $0) }
     }
 }

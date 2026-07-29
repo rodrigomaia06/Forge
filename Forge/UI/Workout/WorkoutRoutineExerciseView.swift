@@ -158,6 +158,7 @@ struct WorkoutRoutineExerciseView: View {
                 }
             }
             .listStyleCompat_InsetGroupedListStyle()
+            .keyboardDoneToolbar()
             
             if selectedWorkoutRoutineSet != nil &&
                 (self.workoutRoutineExercise.workoutRoutineSets?.contains(self.selectedWorkoutRoutineSet!) ?? false) &&

@@ -486,6 +486,7 @@ private struct MoreView: View {
             }
         }
         .listStyleCompat_InsetGroupedListStyle()
+        .keyboardDoneToolbar()
     }
 }
 

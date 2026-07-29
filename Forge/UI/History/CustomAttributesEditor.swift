@@ -101,6 +101,7 @@ private struct AttributeForm: View {
                 TextField("Value", text: $field.value)
             }
         }
+        .keyboardDoneToolbar()
         .navigationBarTitle(field.originalKey == nil ? "Add attribute" : "Edit attribute", displayMode: .inline)
         .navigationBarItems(
             leading: Button("Cancel") { onCancel() },

@@ -90,6 +90,7 @@ struct EditCustomExerciseView: View {
                 }
             }
         }
+        .keyboardDoneToolbar()
         .sheet(isPresented: $showingMuscleSelectionSheet) {
             NavigationStack {
                 MuscleSelectionView(muscles: Exercise.muscleNames, selection: self.$exerciseValues.muscles)

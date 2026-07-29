@@ -85,6 +85,7 @@ struct WorkoutPlanView: View {
             }
         }
         .listStyleCompat_InsetGroupedListStyle()
+        .keyboardDoneToolbar()
         .navigationBarTitle(Text(workoutPlan.displayTitle), displayMode: .inline)
         .navigationBarItems(trailing: EditButton())
         .confirmationDialog("This cannot be undone.", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } }), titleVisibility: .visible, presenting: offsetsToDelete) { offsets in
