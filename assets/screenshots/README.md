@@ -1,14 +1,13 @@
 # Screenshots
 
-Drop PNG screenshots here to fill the gallery at the top of the project README.
+These fill the gallery at the top of the project README. They are device screenshots
+with the bottom tab bar cropped off. To refresh one, replace the file with the same name:
 
-The README references these filenames, so use them exactly:
-
-- `dashboard.png` — the Home tab
+- `dashboard.png` — Home tab
 - `workout.png` — a live workout with the inline set table
 - `warmup.png` — the warm-up calculator sheet
+- `routines.png` — the Workout tab (plans and routines)
 - `history.png` — the History tab
+- `about.png` — the About screen
 
-Use portrait iPhone screenshots (for example 1290×2796). They are displayed at 200px
-wide, so any recent iPhone size works. To feature different screens, change the same
-filenames in `../../README.md`.
+Portrait iPhone screenshots work at any recent size; they are displayed at 200px wide.

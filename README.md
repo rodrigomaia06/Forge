@@ -15,7 +15,11 @@ and careful with your data.
     <td align="center"><img src="assets/screenshots/dashboard.png" width="200" alt="Dashboard"><br>Dashboard</td>
     <td align="center"><img src="assets/screenshots/workout.png" width="200" alt="Live workout"><br>Live workout</td>
     <td align="center"><img src="assets/screenshots/warmup.png" width="200" alt="Warm-up calculator"><br>Warm-up calculator</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="assets/screenshots/routines.png" width="200" alt="Routines"><br>Routines</td>
     <td align="center"><img src="assets/screenshots/history.png" width="200" alt="History"><br>History</td>
+    <td align="center"><img src="assets/screenshots/about.png" width="200" alt="About"><br>About</td>
   </tr>
 </table>
 
