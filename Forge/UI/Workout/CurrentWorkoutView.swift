@@ -186,6 +186,7 @@ struct CurrentWorkoutView: View {
     // Edit collapses the exercises to a reorderable list of names; Done returns to the inline cards.
     private var reorderButton: some View {
         Button(editMode == .active ? "Done" : "Edit") {
+            Haptics.selection()
             withAnimation { editMode = editMode == .active ? .inactive : .active }
         }
     }

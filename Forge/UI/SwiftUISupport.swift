@@ -97,24 +97,27 @@ extension View {
 }
 
 extension View {
-    /// A prominent screen title placed above the content, with the navigation bar title hidden, so the
-    /// active workout, History, and Settings share the same title size instead of mixing a big header
-    /// with small inline titles.
-    func forgeScreenTitle(_ title: String) -> some View {
+    /// A big greeting-style header matching the Home and Workout tabs: the navigation bar is hidden and
+    /// the whole screen sits on the dashboard canvas, so History and Settings read the same as those
+    /// tabs instead of a small inline title on a differently-black navigation bar. `trailing` holds any
+    /// header actions (Edit, filter) that would otherwise live in the navigation bar.
+    func forgeScreenTitle<Trailing: View>(_ title: String, @ViewBuilder trailing: () -> Trailing = { EmptyView() }) -> some View {
         VStack(spacing: 0) {
-            HStack {
+            HStack(alignment: .center) {
                 Text(title)
-                    .font(.system(.title, design: .default).weight(.semibold))
+                    .font(.forgeGreeting)
                     .foregroundColor(.forgeLabel)
                 Spacer()
+                trailing()
             }
             .padding(.horizontal, Theme.Spacing.l)
-            .padding(.top, Theme.Spacing.s)
-            .padding(.bottom, Theme.Spacing.xs)
+            .padding(.top, Theme.Spacing.xxl)
+            .padding(.bottom, Theme.Spacing.m)
 
             self
         }
-        .navigationBarTitle(Text(""), displayMode: .inline)
+        .background(Color.forgeBackground.ignoresSafeArea())
+        .toolbar(.hidden, for: .navigationBar)
     }
 }
 

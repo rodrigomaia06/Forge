@@ -499,6 +499,7 @@ struct WorkoutExerciseDetailView : View {
                         .imageScale(.large)
                 }
                 Button(historyEditMode == .active ? "Done" : "Edit") {
+                    Haptics.selection()
                     withAnimation { historyEditMode = historyEditMode == .active ? .inactive : .active }
                 }
             }

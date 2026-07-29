@@ -128,6 +128,38 @@ enum WorkoutDataExchange {
         return try encoder.encode(file)
     }
 
+    /// Export a workout as a shareable routine (a template), not as history. Sets keep their rep range
+    /// or fall back to the reps performed; weights aren't part of a routine.
+    static func exportRoutine(fromWorkout workout: Workout) throws -> Data {
+        let file = File(formatVersion: formatVersion, routines: [routineDTO(fromWorkout: workout)])
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        return try encoder.encode(file)
+    }
+
+    private static func routineDTO(fromWorkout workout: Workout) -> RoutineDTO {
+        RoutineDTO(
+            title: workout.workoutRoutine?.title ?? workout.title,
+            comment: workout.comment,
+            attributes: workout.customAttributes.isEmpty ? nil : workout.customAttributes,
+            exercises: orderedWorkoutExercises(workout).map { exercise in
+                RoutineExerciseDTO(
+                    exerciseUuid: exercise.exerciseUuid ?? UUID(),
+                    comment: exercise.comment,
+                    sets: orderedWorkoutSets(exercise).map { set in
+                        RoutineSetDTO(
+                            minReps: set.minTargetRepetitionsValue ?? set.repetitions?.int16Value,
+                            maxReps: set.maxTargetRepetitionsValue ?? set.repetitions?.int16Value,
+                            tag: set.tagValue?.rawValue,
+                            comment: set.comment
+                        )
+                    }
+                )
+            }
+        )
+    }
+
     private static func dto(from plan: WorkoutPlan) -> PlanDTO {
         PlanDTO(title: plan.title, routines: orderedRoutines(plan).map(routineDTO(from:)))
     }

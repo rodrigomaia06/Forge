@@ -30,6 +30,9 @@ struct HistoryView : View {
     @State private var offsetsToDelete: IndexSet?
 
     @State private var filterActive = false
+    // Owned here and injected into the list, so the Edit/Done button can live in the header (the nav
+    // bar is hidden) and still drive the list's edit mode.
+    @State private var editMode: EditMode = .inactive
     @State private var fromDate = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
     @State private var toDate = Date()
 
@@ -106,22 +109,11 @@ struct HistoryView : View {
                 }
             }
             .listStyleCompat_InsetGroupedListStyle()
+            .environment(\.editMode, $editMode)
             .navigationDestination(for: Workout.self) { workout in
                 WorkoutDetailView(workout: workout)
                     .environmentObject(self.settingsStore)
             }
-            .navigationBarItems(trailing:
-                HStack(spacing: NAVIGATION_BAR_SPACING) {
-                    Button {
-                        Haptics.selection()
-                        withAnimation { filterActive.toggle() }
-                    } label: {
-                        Image(systemName: filterActive ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-                    }
-                    .accessibilityLabel(filterActive ? "Hide date filter" : "Filter by date")
-                    EditButton()
-                }
-            )
             .confirmationDialog("This cannot be undone.", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } }), titleVisibility: .visible, presenting: offsetsToDelete) { offsets in
                 Button("Delete workout", role: .destructive) {
                     self.deleteAt(offsets: offsets)
@@ -135,7 +127,21 @@ struct HistoryView : View {
                     ContentUnavailableView("No workouts yet", systemImage: "clock.arrow.circlepath", description: Text("Your finished workouts will appear here."))
                 }
             }
-            .forgeScreenTitle("History")
+            .forgeScreenTitle("History") {
+                HStack(spacing: NAVIGATION_BAR_SPACING) {
+                    Button {
+                        Haptics.selection()
+                        withAnimation { filterActive.toggle() }
+                    } label: {
+                        Image(systemName: filterActive ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                    }
+                    .accessibilityLabel(filterActive ? "Hide date filter" : "Filter by date")
+                    Button(editMode == .active ? "Done" : "Edit") {
+                        Haptics.selection()
+                        withAnimation { editMode = editMode == .active ? .inactive : .active }
+                    }
+                }
+            }
         }
         .overlay(ActivitySheet(activityItems: self.$activityItems))
         // A deep-link from another tab (e.g. a past session tapped during a workout) lands here.

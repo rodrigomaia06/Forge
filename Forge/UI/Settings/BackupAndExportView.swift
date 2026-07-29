@@ -19,6 +19,7 @@ struct BackupAndExportView: View {
 
     @State private var showImporter = false
     @State private var showJSONImporter = false
+    @State private var showResetConfirm = false
     @State private var pendingJSONImport: PendingJSONImport?
     @State private var activityItems: [Any]?
     @State private var message: Message?
@@ -63,6 +64,13 @@ struct BackupAndExportView: View {
             ) {
                 Button("Import from file") { showJSONImporter = true }
             }
+
+            Section(
+                header: Text("Reset".uppercased()),
+                footer: Text("Removes all workouts, routines, plans, and custom exercises, returning Forge to a clean state. The built-in exercises remain. Export a backup first if you might want your data later.")
+            ) {
+                Button("Reset all data", role: .destructive) { showResetConfirm = true }
+            }
         }
         .navigationBarTitle("Backup & Export", displayMode: .inline)
         .fileImporter(isPresented: $showImporter, allowedContentTypes: Self.databaseTypes) { result in
@@ -84,6 +92,12 @@ struct BackupAndExportView: View {
             Button("Cancel", role: .cancel) {}
         } message: { pending in
             Text(Self.importWarning(for: pending.summary))
+        }
+        .alert("Reset all data?", isPresented: $showResetConfirm) {
+            Button("Reset everything", role: .destructive) { resetAllData() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently removes all workouts, routines, plans, and custom exercises. The built-in exercises remain. This cannot be undone.")
         }
         .alert(item: $message) { message in
             Alert(title: Text(message.title), message: Text(message.text))
@@ -119,6 +133,24 @@ struct BackupAndExportView: View {
         } catch {
             os_log("Could not import database: %@", log: .backup, type: .error, error.localizedDescription)
             message = Message(title: "Import Failed", text: error.localizedDescription)
+        }
+    }
+
+    /// Delete all user-created data, returning Forge to a clean state. The built-in exercise catalog is
+    /// loaded from the bundle, not the store, so it remains.
+    private func resetAllData() {
+        for name in ["Workout", "WorkoutPlan", "WorkoutRoutine", "CustomExercise", "ExerciseSettings"] {
+            let request = NSFetchRequest<NSFetchRequestResult>(entityName: name)
+            if let objects = try? managedObjectContext.fetch(request) as? [NSManagedObject] {
+                objects.forEach { managedObjectContext.delete($0) }
+            }
+        }
+        do {
+            try managedObjectContext.save()
+            message = Message(title: "Data reset", text: "All workouts, routines, plans, and custom exercises were removed.")
+        } catch {
+            os_log("Could not reset data: %@", log: .backup, type: .error, error.localizedDescription)
+            message = Message(title: "Reset failed", text: error.localizedDescription)
         }
     }
 

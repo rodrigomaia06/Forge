@@ -94,16 +94,16 @@ struct WorkoutDetailView : View {
         }
     }
     
-    /// Write this workout to a JSON file and open the share sheet, so it can be sent to someone who
-    /// can import it into their own Forge.
+    /// Share this workout as a routine (a template), so importing it adds a routine rather than
+    /// injecting a past workout into someone's History.
     private func shareAsJSON() {
         do {
-            let data = try WorkoutDataExchange.export(workouts: [workout])
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent("workout.json")
+            let data = try WorkoutDataExchange.exportRoutine(fromWorkout: workout)
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("routine.json")
             try data.write(to: url)
             self.activityItems = [url]
         } catch {
-            os_log("Could not export workout as JSON: %@", type: .error, error.localizedDescription)
+            os_log("Could not export workout as routine: %@", type: .error, error.localizedDescription)
         }
     }
 
@@ -113,11 +113,10 @@ struct WorkoutDetailView : View {
                 WorkoutDetailBannerView(workout: workout)
                     .padding([.top, .bottom])
                     .frame(maxWidth: .infinity)
-                    // The stats sit on the normal surface. A thin rule in the muscle-group color keeps
-                    // the "which muscles" cue without a full colored block behind the numbers.
+                    // A thin white rule under the summary, in place of the old muscle-group color.
                     .overlay(alignment: .bottom) {
                         Capsule()
-                            .fill(workout.muscleGroupColor(in: self.exerciseStore.exercises))
+                            .fill(Color.forgeLabel)
                             .frame(height: 3)
                             .padding(.horizontal, Theme.Spacing.m)
                     }
@@ -206,7 +205,7 @@ struct WorkoutDetailView : View {
                     Button {
                         self.shareAsJSON()
                     } label: {
-                        Label("Share as file", systemImage: "doc.badge.arrow.up")
+                        Label("Share as routine", systemImage: "doc.badge.arrow.up")
                     }
                     Button {
                         Self.repeatWorkout(workout: self.workout, settingsStore: self.settingsStore, sceneState: sceneState)
