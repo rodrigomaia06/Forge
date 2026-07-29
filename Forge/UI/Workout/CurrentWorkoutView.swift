@@ -292,6 +292,7 @@ struct CurrentWorkoutView: View {
                 .environment(\.editMode, $editMode)
                 .keyboardDoneToolbar()
             }
+            .background(Color.forgeBackground.ignoresSafeArea())
             .navigationBarTitle(Text(""), displayMode: .inline)
             .navigationBarItems(leading: cancelButton, trailing: reorderButton)
         }

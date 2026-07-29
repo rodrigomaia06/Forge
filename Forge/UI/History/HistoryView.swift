@@ -141,6 +141,9 @@ struct HistoryView : View {
                         withAnimation { editMode = editMode == .active ? .inactive : .active }
                     }
                 }
+                .padding(.horizontal, Theme.Spacing.m)
+                .padding(.vertical, Theme.Spacing.s)
+                .forgeGlassCapsule()
             }
         }
         .overlay(ActivitySheet(activityItems: self.$activityItems))

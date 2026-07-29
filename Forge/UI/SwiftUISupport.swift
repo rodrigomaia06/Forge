@@ -131,6 +131,16 @@ extension View {
             self.background(.ultraThinMaterial, in: Circle())
         }
     }
+
+    /// Liquid Glass pill for a group of header actions (Edit, filter) that used to sit in the navigation
+    /// bar and get the glass treatment for free. Falls back to a system material capsule below iOS 26.
+    @ViewBuilder func forgeGlassCapsule() -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.interactive(), in: Capsule())
+        } else {
+            self.background(.ultraThinMaterial, in: Capsule())
+        }
+    }
 }
 
 extension View {
