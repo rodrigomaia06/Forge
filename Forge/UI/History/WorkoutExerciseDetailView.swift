@@ -619,15 +619,34 @@ private struct ActiveSetRow: View {
             }
     }
 
-    private func setField(_ binding: Binding<NSNumber?>, field: Field, keyboard: UIKeyboardType, width: CGFloat) -> some View {
-        TextField("", value: binding, formatter: field == .reps ? Self.repsFormatter : Self.weightFormatter)
-            .keyboardType(keyboard)
-            .focused($focus, equals: field)
-            .multilineTextAlignment(.center)
-            .font(.forgeValue)
-            .padding(.vertical, 7)
-            .frame(width: width)
-            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
+    /// The planned rep range from the routine (e.g. "6–8"), shown as a faint hint over the reps field.
+    private var targetRepsString: String? {
+        WorkoutRoutineSetCell.repetitionIntervalString(
+            minRepetitions: workoutSet.minTargetRepetitionsValue.map(Int.init),
+            maxRepetitions: workoutSet.maxTargetRepetitionsValue.map(Int.init)
+        )
+    }
+
+    private func setField(_ binding: Binding<NSNumber?>, field: Field, keyboard: UIKeyboardType, width: CGFloat, targetHint: String? = nil) -> some View {
+        ZStack(alignment: .top) {
+            TextField("", value: binding, formatter: field == .reps ? Self.repsFormatter : Self.weightFormatter)
+                .keyboardType(keyboard)
+                .focused($focus, equals: field)
+                .multilineTextAlignment(.center)
+                .font(.forgeValue)
+                .padding(.vertical, 7)
+                .frame(width: width)
+            // The planned range sits at the top of the reps field so the entered value stays centered.
+            if let targetHint {
+                Text(targetHint)
+                    .font(.system(size: 10))
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .allowsHitTesting(false)
+                    .padding(.top, 1)
+            }
+        }
+        .frame(width: width)
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
     }
 
     /// Read-only value shown in place of the editable field (history, outside edit mode).
@@ -662,7 +681,7 @@ private struct ActiveSetRow: View {
 
             if isEditable {
                 setField(weightField, field: .weight, keyboard: .decimalPad, width: 68)
-                setField(repsField, field: .reps, keyboard: .numberPad, width: 60)
+                setField(repsField, field: .reps, keyboard: .numberPad, width: 60, targetHint: targetRepsString)
             } else {
                 readValue(weightText, width: 68)
                 readValue("\(workoutSet.repetitionsValue)", width: 60)

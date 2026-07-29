@@ -14,7 +14,9 @@ struct WorkoutRoutineView: View {
     @Environment(\.managedObjectContext) var managedObjectContext
     
     @ObservedObject var workoutRoutine: WorkoutRoutine
-    
+
+    @Environment(\.editMode) var editMode
+
     @State private var showExerciseSelector = false
     
     @State private var workoutRoutineTitleInput: String? = nil
@@ -85,22 +87,31 @@ struct WorkoutRoutineView: View {
     
     var body: some View {
         List {
-            Section {
-                TextField("Title", text: workoutRoutineTitle, onEditingChanged: { isEditingTextField in
-                    if !isEditingTextField {
-                        self.adjustAndSaveWorkoutRoutineTitleInput()
+            // Characteristics: the fields all show when viewing, but are editable only after Edit, so a
+            // stray tap can't change the routine.
+            Section(header: Text("Characteristics")) {
+                if editMode?.wrappedValue.isEditing == true {
+                    TextField("Title", text: workoutRoutineTitle, onEditingChanged: { isEditingTextField in
+                        if !isEditingTextField {
+                            self.adjustAndSaveWorkoutRoutineTitleInput()
+                        }
+                    })
+                    TextField("Comment", text: workoutRoutineComment, onEditingChanged: { isEditingTextField in
+                        if !isEditingTextField {
+                            self.adjustAndSaveWorkoutRoutineCommentInput()
+                        }
+                    })
+                } else {
+                    LabeledContent("Title") { Text(workoutRoutine.title ?? "Untitled").foregroundColor(.secondary) }
+                    if let comment = workoutRoutine.comment, !comment.isEmpty {
+                        LabeledContent("Comment") { Text(comment).foregroundColor(.secondary) }
                     }
-                })
-                TextField("Comment", text: workoutRoutineComment, onEditingChanged: { isEditingTextField in
-                    if !isEditingTextField {
-                        self.adjustAndSaveWorkoutRoutineCommentInput()
-                    }
-                })
+                }
             }
 
-            CustomAttributesEditor(attributes: routineCustomAttributes, isEditable: true)
+            CustomAttributesEditor(attributes: routineCustomAttributes, isEditable: editMode?.wrappedValue.isEditing == true)
 
-            Section(header: Text("Exercises".uppercased())) {
+            Section(header: Text("Exercises")) {
                 ForEach(workoutRoutineExercises) { workoutRoutineExercise in
                     NavigationLink(destination: WorkoutRoutineExerciseView(workoutRoutineExercise: workoutRoutineExercise)) {
                         VStack(alignment: .leading) {
