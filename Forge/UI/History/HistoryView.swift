@@ -193,8 +193,6 @@ private struct WorkoutCell: View {
                             .foregroundColor(Color(.systemFill))
                     )
             }
-            
-            workout.muscleGroupImage(in: self.exerciseStore.exercises)
         }
     }
 }

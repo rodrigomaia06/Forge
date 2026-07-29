@@ -34,7 +34,10 @@ struct CustomAttributesEditor: View {
                 ForEach(sortedKeys, id: \.self) { key in
                     Button {
                         guard isEditable || valuesEditable else { return }
-                        editingField = AttributeField(originalKey: key, key: key, value: attributes[key] ?? "")
+                        // Defer past the current list update so the sheet doesn't present and then get
+                        // torn down in the same cycle (which required a second tap).
+                        let field = AttributeField(originalKey: key, key: key, value: attributes[key] ?? "")
+                        DispatchQueue.main.async { editingField = field }
                     } label: {
                         HStack {
                             Text(key).foregroundColor(.forgeSecondaryLabel)
@@ -51,7 +54,7 @@ struct CustomAttributesEditor: View {
 
                 if isEditable {
                     Button {
-                        editingField = AttributeField(originalKey: nil, key: "", value: "")
+                        DispatchQueue.main.async { editingField = AttributeField(originalKey: nil, key: "", value: "") }
                     } label: {
                         Label("Add attribute", systemImage: "plus")
                     }

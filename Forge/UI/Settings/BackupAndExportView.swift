@@ -17,7 +17,6 @@ struct BackupAndExportView: View {
     @EnvironmentObject var settingsStore: SettingsStore
     @EnvironmentObject var exerciseStore: ExerciseStore
 
-    @State private var showExportWorkoutDataSheet = false
     @State private var showImporter = false
     @State private var showJSONImporter = false
     @State private var pendingJSONImport: PendingJSONImport?
@@ -52,7 +51,10 @@ struct BackupAndExportView: View {
             }
 
             Section(header: Text("Export".uppercased())) {
-                Button("Workout Data") { showExportWorkoutDataSheet = true }
+                Menu("Workout Data") {
+                    Button("Export as JSON") { exportWorkoutData(asJSON: true) }
+                    Button("Export as text") { exportWorkoutData(asJSON: false) }
+                }
             }
 
             Section(
@@ -75,37 +77,13 @@ struct BackupAndExportView: View {
             case .failure(let error): message = Message(title: "Import failed", text: error.localizedDescription)
             }
         }
-        .confirmationDialog("Import this file?", isPresented: Binding(get: { pendingJSONImport != nil }, set: { if !$0 { pendingJSONImport = nil } }), titleVisibility: .visible, presenting: pendingJSONImport) { pending in
-            Button(pending.summary.workouts > 0 ? "Add to my data and History" : "Add to my data") {
+        .alert("Import this file?", isPresented: Binding(get: { pendingJSONImport != nil }, set: { if !$0 { pendingJSONImport = nil } }), presenting: pendingJSONImport) { pending in
+            Button(pending.summary.workouts > 0 ? "Add to data and History" : "Add to my data") {
                 confirmJSONImport(pending)
             }
+            Button("Cancel", role: .cancel) {}
         } message: { pending in
             Text(Self.importWarning(for: pending.summary))
-        }
-        .confirmationDialog("Workout data", isPresented: $showExportWorkoutDataSheet, titleVisibility: .visible) {
-            Button("JSON") {
-                guard let workouts = self.fetchWorkouts() else { return }
-
-                let encoder = JSONEncoder()
-                encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
-                encoder.dateEncodingStrategy = .iso8601
-                if let exercisesKey = CodingUserInfoKey.exercisesKey {
-                    encoder.userInfo[exercisesKey] = ExerciseStore.shared.exercises
-                }
-
-                guard let data = try? encoder.encode(workouts) else { return }
-                guard let url = try? self.tempFile(data: data, name: "workout_data.json") else { return }
-                self.shareFile(url: url)
-            }
-            Button("TXT") {
-                guard let workouts = self.fetchWorkouts() else { return }
-
-                let text = workouts.compactMap { $0.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit) }.joined(separator: "\n\n\n\n\n")
-
-                guard let data = text.data(using: .utf8) else { return }
-                guard let url = try? self.tempFile(data: data, name: "workout_data.txt") else { return }
-                self.shareFile(url: url)
-            }
         }
         .alert(item: $message) { message in
             Alert(title: Text(message.title), message: Text(message.text))
@@ -141,6 +119,28 @@ struct BackupAndExportView: View {
         } catch {
             os_log("Could not import database: %@", log: .backup, type: .error, error.localizedDescription)
             message = Message(title: "Import Failed", text: error.localizedDescription)
+        }
+    }
+
+    private func exportWorkoutData(asJSON: Bool) {
+        guard let workouts = fetchWorkouts() else { return }
+        do {
+            let url: URL
+            if asJSON {
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
+                encoder.dateEncodingStrategy = .iso8601
+                if let exercisesKey = CodingUserInfoKey.exercisesKey {
+                    encoder.userInfo[exercisesKey] = ExerciseStore.shared.exercises
+                }
+                url = try tempFile(data: try encoder.encode(workouts), name: "workout_data.json")
+            } else {
+                let text = workouts.compactMap { $0.logText(in: exerciseStore.exercises, weightUnit: settingsStore.weightUnit) }.joined(separator: "\n\n\n\n\n")
+                url = try tempFile(data: Data(text.utf8), name: "workout_data.txt")
+            }
+            shareFile(url: url)
+        } catch {
+            message = Message(title: "Export failed", text: error.localizedDescription)
         }
     }
 

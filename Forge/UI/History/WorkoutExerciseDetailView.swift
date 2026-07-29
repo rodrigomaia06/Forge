@@ -270,7 +270,7 @@ struct WorkoutExerciseDetailView : View {
                 // don't allow uncompleted sets if not in current workout
                 workoutSet.isCompleted = true
             }
-            self.prefillPlaceholders() // pre-fill the new set from the previous session
+            // New sets start empty; the previous session is shown as a reference, not pre-filled.
             self.managedObjectContext.saveOrCrash()
         }) {
             HStack {
@@ -458,7 +458,6 @@ struct WorkoutExerciseDetailView : View {
                 }
                 .presentationDetents([.medium])
             }
-            .onAppear { self.prefillPlaceholders() }
     }
 
     /// One card per exercise, embedded directly in the current-workout list (no push).
