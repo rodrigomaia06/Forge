@@ -560,48 +560,43 @@ private struct ActiveSetRow: View {
     @FocusState private var focus: Field?
     private enum Field { case weight, reps }
 
-    // Locale-aware formatters that map an empty field to nil, so an unset weight or rep count shows a
-    // blank field to type into rather than a "0" the user has to clear first.
+    // The fields edit raw text, so an unset value shows blank (not "0"), an existing value edits
+    // smoothly, and a decimal weight can be typed without the value snapping back mid-entry. Text is
+    // committed to the set on each change and re-read from the set when it changes elsewhere.
+    @State private var weightInput = ""
+    @State private var repsInput = ""
+
     private static let weightFormatter: NumberFormatter = {
         let f = NumberFormatter()
         f.numberStyle = .decimal
+        f.usesGroupingSeparator = false
         f.minimumFractionDigits = 0
         f.maximumFractionDigits = 3
         f.minimum = 0
         return f
     }()
-    private static let repsFormatter: NumberFormatter = {
-        let f = NumberFormatter()
-        f.numberStyle = .none
-        f.allowsFloats = false
-        f.minimum = 0
-        return f
-    }()
 
-    private var weightField: Binding<NSNumber?> {
-        Binding(
-            get: {
-                guard workoutSet.weight != nil else { return nil }
-                return NSNumber(value: WeightUnit.convert(weight: workoutSet.weightValue, from: .metric, to: weightUnit))
-            },
-            set: { newValue in
-                guard let newValue else { workoutSet.weight = nil; return }
-                workoutSet.weightValue = max(0, min(WeightUnit.convert(weight: newValue.doubleValue, from: weightUnit, to: .metric), WorkoutSet.MAX_WEIGHT))
-            }
-        )
+    private func syncInputsFromModel() {
+        weightInput = workoutSet.weight == nil ? "" : (Self.weightFormatter.string(from: NSNumber(value: WeightUnit.convert(weight: workoutSet.weightValue, from: .metric, to: weightUnit))) ?? "")
+        repsInput = workoutSet.repetitions == nil ? "" : "\(workoutSet.repetitionsValue)"
     }
 
-    private var repsField: Binding<NSNumber?> {
-        Binding(
-            get: {
-                guard workoutSet.repetitions != nil else { return nil }
-                return NSNumber(value: workoutSet.repetitionsValue)
-            },
-            set: { newValue in
-                guard let newValue else { workoutSet.repetitions = nil; return }
-                workoutSet.repetitionsValue = Int16(max(0, min(newValue.doubleValue, Double(WorkoutSet.MAX_REPETITIONS))))
-            }
-        )
+    private func commitWeight() {
+        let trimmed = weightInput.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty {
+            workoutSet.weight = nil
+        } else if let number = Self.weightFormatter.number(from: trimmed) {
+            workoutSet.weightValue = max(0, min(WeightUnit.convert(weight: number.doubleValue, from: weightUnit, to: .metric), WorkoutSet.MAX_WEIGHT))
+        }
+    }
+
+    private func commitReps() {
+        let trimmed = repsInput.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty {
+            workoutSet.repetitions = nil
+        } else if let value = Int(trimmed) {
+            workoutSet.repetitionsValue = Int16(max(0, min(value, Int(WorkoutSet.MAX_REPETITIONS))))
+        }
     }
 
     // The set number sits in a filled chip tinted by the set type (failure, drop set); a dot marks a
@@ -626,9 +621,9 @@ private struct ActiveSetRow: View {
         )
     }
 
-    private func setField(_ binding: Binding<NSNumber?>, field: Field, keyboard: UIKeyboardType, width: CGFloat, targetHint: String? = nil) -> some View {
+    private func setField(_ text: Binding<String>, field: Field, keyboard: UIKeyboardType, width: CGFloat, targetHint: String? = nil) -> some View {
         ZStack(alignment: .top) {
-            TextField("", value: binding, formatter: field == .reps ? Self.repsFormatter : Self.weightFormatter)
+            TextField("", text: text)
                 .keyboardType(keyboard)
                 .focused($focus, equals: field)
                 .multilineTextAlignment(.center)
@@ -679,11 +674,11 @@ private struct ActiveSetRow: View {
                 .frame(maxWidth: .infinity, alignment: .center)
 
             if isEditable {
-                setField(weightField, field: .weight, keyboard: .decimalPad, width: 68)
-                setField(repsField, field: .reps, keyboard: .numberPad, width: 60, targetHint: targetRepsString)
+                setField($weightInput, field: .weight, keyboard: .decimalPad, width: 68)
+                setField($repsInput, field: .reps, keyboard: .numberPad, width: 60, targetHint: targetRepsString)
             } else {
-                readValue(weightText, width: 68)
-                readValue("\(workoutSet.repetitionsValue)", width: 60)
+                readValue(workoutSet.weight == nil ? "—" : weightText, width: 68)
+                readValue(workoutSet.repetitions == nil ? "—" : "\(workoutSet.repetitionsValue)", width: 60)
             }
 
             if isCurrentWorkout {
@@ -699,6 +694,10 @@ private struct ActiveSetRow: View {
             }
         }
         .foregroundColor(workoutSet.isCompleted ? .forgeLabel : .forgeSecondaryLabel)
+        .onAppear { syncInputsFromModel() }
+        .onChange(of: isEditable) { _, editable in if editable { syncInputsFromModel() } }
+        .onChange(of: weightInput) { _, _ in commitWeight() }
+        .onChange(of: repsInput) { _, _ in commitReps() }
     }
 }
 

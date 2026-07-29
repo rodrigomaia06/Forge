@@ -27,8 +27,6 @@ struct ExerciseMuscleGroupsView : View {
                 Spacer()
                 Text("(\(exercises.count))")
                     .foregroundColor(.secondary)
-                Exercise.imageFor(muscleGroup: muscleGroup)
-                    .foregroundColor(Exercise.colorFor(muscleGroup: muscleGroup))
             }
         }
     }
