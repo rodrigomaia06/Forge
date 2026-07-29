@@ -724,9 +724,11 @@ private struct ActiveSetRow: View {
             // The chip opens the options sheet (tag, note, target, RPE) only when the set is editable.
             // In read-only history, tapping a set does nothing until Edit is tapped.
             if isEditable {
+                // Full row-height tap target so the chip is easy to hit mid-workout, not just the 28pt circle.
                 Button(action: onMore) { numberChip }
                     .buttonStyle(.plain)
-                    .frame(width: 36)
+                    .frame(width: 36, height: Self.fieldHeight)
+                    .contentShape(Rectangle())
                     .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title). Options" } ?? "Set \(index). Options")
             } else {
                 numberChip
@@ -753,7 +755,9 @@ private struct ActiveSetRow: View {
                     Image(systemName: workoutSet.isCompleted ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 23))
                         .foregroundColor(workoutSet.isCompleted ? .forgeSuccess : (isUpNext ? .forgeLabel : .forgeSecondaryLabel))
-                        .frame(width: 34, height: 34)
+                        // A 44pt tap target (Apple's minimum) around the 23pt glyph, so completing a set
+                        // is forgiving when tired or moving.
+                        .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

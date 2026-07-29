@@ -21,6 +21,15 @@ struct WarmupCalculatorView: View {
 
     @State private var workingWeightInput = ""
     @State private var workingRepsInput = ""
+    @FocusState private var focus: Field?
+    private enum Field { case weight, reps }
+
+    /// Sheet height grows with the number of warm-up rows so a long ramp is not clipped and a short one
+    /// is not surrounded by empty space. The drag handle still expands it to full height.
+    private var sheetHeight: CGFloat {
+        let rows = max(plan.count, 1)
+        return 320 + CGFloat(rows) * 52
+    }
 
     private var workingWeightKg: Double {
         let normalized = workingWeightInput.replacingOccurrences(of: ",", with: ".")
@@ -41,24 +50,31 @@ struct WarmupCalculatorView: View {
     var body: some View {
         Form {
             Section(header: Text("Working set")) {
+                // Tapping anywhere in the row focuses its field, so the whole row is the tap target.
                 HStack {
                     Text("Weight")
                     Spacer()
                     TextField("0", text: $workingWeightInput)
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
+                        .focused($focus, equals: .weight)
                         .frame(maxWidth: 90)
                     Text(weightUnit.unit.symbol)
                         .foregroundColor(.forgeSecondaryLabel)
                 }
+                .contentShape(Rectangle())
+                .onTapGesture { focus = .weight }
                 HStack {
                     Text("Reps")
                     Spacer()
                     TextField("0", text: $workingRepsInput)
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(.trailing)
+                        .focused($focus, equals: .reps)
                         .frame(maxWidth: 90)
                 }
+                .contentShape(Rectangle())
+                .onTapGesture { focus = .reps }
             }
 
             Section(header: Text("Warm-up sets")) {
@@ -86,7 +102,8 @@ struct WarmupCalculatorView: View {
             }
         }
         .keyboardDoneToolbar()
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.height(sheetHeight), .large])
+        .presentationDragIndicator(.visible)
         .navigationBarTitle("Warm-up sets", displayMode: .inline)
         .navigationBarItems(
             leading: Button("Done") { dismiss() },

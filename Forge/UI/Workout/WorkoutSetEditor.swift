@@ -305,6 +305,7 @@ struct SetMoreView: View {
     var showRPE: Bool = false
 
     @State private var activeAlert: AlertType?
+    @FocusState private var targetWeightFocused: Bool
 
     // Target weight in the user's unit; 0 clears the target. Stored as kilograms.
     private var targetWeightField: Binding<Double> {
@@ -440,9 +441,13 @@ struct SetMoreView: View {
                     TextField("0", value: targetWeightField, format: .number)
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
+                        .focused($targetWeightFocused)
                     Text(weightUnit.unit.symbol)
                         .foregroundColor(.secondary)
                 }
+                // Tapping anywhere in the row focuses the field, a larger target than the number alone.
+                .contentShape(Rectangle())
+                .onTapGesture { targetWeightFocused = true }
                 if showRPE {
                     Picker("RPE", selection: targetRpeField) {
                         Text("None").tag(Double?.none)
