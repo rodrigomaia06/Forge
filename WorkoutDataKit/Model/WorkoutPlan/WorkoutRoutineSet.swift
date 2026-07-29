@@ -14,7 +14,7 @@ extension WorkoutRoutineSet {
 
 
 public class WorkoutRoutineSet: NSManagedObject, Codable {
-    public static let supportedTags = [WorkoutSetTag.dropSet]
+    public static let supportedTags = [WorkoutSetTag.warmUp, .dropSet, .failure, .backOff]
     
     public class func create(context: NSManagedObjectContext) -> WorkoutRoutineSet {
         let workoutRoutineSet = WorkoutRoutineSet(context: context)

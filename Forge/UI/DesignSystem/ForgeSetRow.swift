@@ -17,13 +17,14 @@ struct ForgeSetRow: View {
     enum Status { case pending, upNext, done }
 
     enum SetType {
-        case normal, warmUp, dropSet, failure
+        case normal, warmUp, dropSet, failure, backOff
         var letter: String? {
             switch self {
             case .normal: return nil
             case .warmUp: return "W"
             case .dropSet: return "D"
             case .failure: return "F"
+            case .backOff: return "B"
             }
         }
         var color: Color {
@@ -32,6 +33,7 @@ struct ForgeSetRow: View {
             case .warmUp: return .forgeWarning
             case .dropSet: return .forgeAccent
             case .failure: return .forgeDestructive
+            case .backOff: return .forgeSuccess
             }
         }
     }

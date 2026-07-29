@@ -28,8 +28,12 @@ struct WorkoutRoutineSetEditor: View {
     }
     
     @State private var showMoreSheet = false
-    
+
     @State private var showHelpAlert = false
+
+    // A single set can target one rep count or a min–max range. Default is a single value; the range
+    // toggle reveals the second dragger. Kept in sync with the selected set's data below.
+    @State private var useRange = false
     
     @ObservedObject var workoutRoutineSet: WorkoutRoutineSet
     
@@ -132,9 +136,84 @@ struct WorkoutRoutineSetEditor: View {
         )
     }
     
+    // Single-value mode: one dragger that keeps min and max equal, so the set targets a fixed rep count.
+    private var editorRepetitionsSingle: Int16? {
+        self.overwriteRepetitionsMin ?? self.workoutRoutineSet.minRepetitionsValue
+    }
+    private var repetitionsSingle: Binding<Double?> {
+        Binding(
+            get: {
+                self.editorRepetitionsSingle.map { Double($0) }
+            },
+            set: { newValue in
+                let value = newValue.map { Int16(max(min($0, Double(WorkoutSet.MAX_REPETITIONS)), 0)) }
+                self.workoutRoutineSet.minRepetitionsValue = value
+                self.workoutRoutineSet.maxRepetitionsValue = value
+                self.overwriteRepetitionsMin = nil
+                self.overwriteRepetitionsMax = nil
+                self.refresher.refresh()
+            }
+        )
+    }
+
+    /// Sync the range toggle to the selected set: a set whose min and max differ is a range.
+    private func syncRangeMode() {
+        useRange = workoutRoutineSet.minRepetitionsValue != workoutRoutineSet.maxRepetitionsValue
+    }
+
+    private func setUseRange(_ newValue: Bool) {
+        useRange = newValue
+        if newValue {
+            // Entering range: seed the max from the current single value so both draggers show.
+            if workoutRoutineSet.maxRepetitionsValue == nil {
+                workoutRoutineSet.maxRepetitionsValue = workoutRoutineSet.minRepetitionsValue
+            }
+        } else {
+            // Single: collapse to the min value, the primary target.
+            workoutRoutineSet.maxRepetitionsValue = workoutRoutineSet.minRepetitionsValue
+        }
+        overwriteRepetitionsMin = nil
+        overwriteRepetitionsMax = nil
+        refresher.refresh()
+    }
+
     var showNext: Bool
     var onDone: () -> Void = {}
-    
+
+    private var repetitionsSingleDragger: some View {
+        Dragger(
+            value: repetitionsSingle,
+            unit: "reps",
+            minValue: 0,
+            maxValue: Double(WorkoutSet.MAX_REPETITIONS),
+            nilPosition: .belowMin,
+            showCursor: showKeyboard == .repetitionsMin,
+            onTextTapped: {
+                if self.showKeyboard == .none {
+                    withAnimation {
+                        self.showKeyboard = .repetitionsMin
+                    }
+                } else {
+                    self.showKeyboard = .repetitionsMin
+                }
+            }
+        )
+    }
+
+    private var rangeToggleButton: some View {
+        Button(action: {
+            withAnimation { self.setUseRange(!self.useRange) }
+        }) {
+            HStack(spacing: 4) {
+                Image(systemName: useRange ? "arrow.right.and.line.vertical.and.arrow.left" : "arrow.left.and.line.vertical.and.arrow.right")
+                Text(useRange ? "Single" : "Range")
+                    .fixedSize()
+            }
+            .padding(6)
+        }
+        .accessibilityLabel(useRange ? "Use a single rep target" : "Use a rep range")
+    }
+
     private var repetitionsMinDragger: some View {
         Dragger(
             value: draggerRepetitionsMin,
@@ -228,7 +307,7 @@ struct WorkoutRoutineSetEditor: View {
         GeometryReader { geometry in
             HStack(spacing: 0) {
                 NumericKeyboard(
-                    value: self.showKeyboard == .repetitionsMin ? self.keyboardRepetitionsMin : self.keyboardRepetitionsMax,
+                    value: self.showKeyboard == .repetitionsMin ? (self.useRange ? self.keyboardRepetitionsMin : self.repetitionsSingle) : self.keyboardRepetitionsMax,
                     alwaysShowDecimalSeparator: .constant(false),
                     minimumFractionDigits: .constant(0),
                     maximumFractionDigits: 0
@@ -250,16 +329,18 @@ struct WorkoutRoutineSetEditor: View {
                     
                     Button(action: {
                         NumericKeyboard.playButtonSound()
-                        if self.showKeyboard == .repetitionsMin {
+                        // In range mode the min field advances to max; in single mode there is only one
+                        // field, so it finishes like the max step does.
+                        if self.showKeyboard == .repetitionsMin && self.useRange {
                             self.showKeyboard = .repetitionsMax
-                        } else if self.showKeyboard == .repetitionsMax {
+                        } else {
                             self.overwriteRepetitionsMin = nil
                             self.overwriteRepetitionsMax = nil
                             self.onDone()
                             self.showKeyboard = .repetitionsMin
                         }
                     }) {
-                        Image(systemName: self.showKeyboard == .repetitionsMin ? "arrow.right" : self.showNext ? "arrow.right" : "checkmark")
+                        Image(systemName: (self.showKeyboard == .repetitionsMin && self.useRange) ? "arrow.right" : self.showNext ? "arrow.right" : "checkmark")
                             .padding()
                             .foregroundColor(.white)
                             .background(
@@ -277,19 +358,24 @@ struct WorkoutRoutineSetEditor: View {
     var body: some View {
         VStack { /// no spacing to the keyboard
             VStack(spacing: 24) {
-                HStack(spacing: 16) {
-                    /**
-                     NOTE: the draggers shouldn't be too low because
-                     1. the thumb would be in an uncomfortable position
-                     2. one easily triggers the reachability accessibilty on devices without a home button
-                     */
-                    repetitionsMinDragger
-                    Divider().frame(height: 44)
-                    repetitionsMaxDragger
+                /**
+                 NOTE: the draggers shouldn't be too low because
+                 1. the thumb would be in an uncomfortable position
+                 2. one easily triggers the reachability accessibilty on devices without a home button
+                 */
+                if useRange {
+                    HStack(spacing: 16) {
+                        repetitionsMinDragger
+                        Divider().frame(height: 44)
+                        repetitionsMaxDragger
+                    }
+                } else {
+                    repetitionsSingleDragger
                 }
-                
+
                 if showKeyboard == .none {
                     HStack(spacing: 16) {
+                        rangeToggleButton
                         tagButton
                         doneButton
                     }
@@ -315,7 +401,7 @@ struct WorkoutRoutineSetEditor: View {
                         }
                     }
                 } else {
-                    if width > 200 {
+                    if width > 200 && self.useRange {
                         withAnimation {
                             self.showKeyboard = .repetitionsMax
                         }
@@ -329,6 +415,8 @@ struct WorkoutRoutineSetEditor: View {
         )
         .sheet(isPresented: $showMoreSheet) { self.moreSheet }
         .alert(isPresented: $showHelpAlert) { Alert(title: Text("You can also drag ☰ up and down to adjust the values.")) }
+        .onAppear { syncRangeMode() }
+        .onChange(of: workoutRoutineSet.objectID) { _, _ in syncRangeMode() }
     }
 }
 

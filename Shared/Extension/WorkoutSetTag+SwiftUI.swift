@@ -13,12 +13,14 @@ import WorkoutDataKit
 extension WorkoutSetTag {
     var color: Color {
         switch self {
-//        case .warmUp:
-//            return .yellow
+        case .warmUp:
+            return .orange
         case .dropSet:
             return .purple
         case .failure:
             return .red
+        case .backOff:
+            return .blue
         }
     }
 }
