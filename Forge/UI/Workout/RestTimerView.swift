@@ -30,10 +30,10 @@ struct RestTimerView: View {
     private var progressCircle: some View {
         ZStack {
             Circle()
-                .stroke(Color(UIColor.systemFill), lineWidth: 8)
+                .stroke(Color.forgeSeparator, lineWidth: 8)
             Circle()
                 .trim(from: 0, to: remainingTimeInPercent)
-                .stroke(Color.accentColor, lineWidth: 8)
+                .stroke(Color.forgeAccent, lineWidth: 8)
                 // Animate only the progress change, not every layout pass (the old implicit
                 // .animation(.default) made opening and adjusting the timer janky).
                 .animation(.default, value: remainingTimeInPercent)
@@ -50,7 +50,7 @@ struct RestTimerView: View {
                 if let remainingTime = roundedRemainingTime {
                     Text(restTimerDurationFormatter.string(from: abs(remainingTime)) ?? "")
                         .font(Font.system(size: 48, weight: .light).monospacedDigit())
-                        .foregroundColor(remainingTime < 0 ? .red : nil)
+                        .foregroundColor(remainingTime < 0 ? .forgeDestructive : nil)
                 }
 
                 Text(restTimerDurationFormatter.string(from: restTimerStore.restTimerDuration ?? 0) ?? "")
@@ -84,7 +84,7 @@ struct RestTimerView: View {
                 Text("+10s")
             }
 
-            CircleButton(color: Color.red.opacity(0.9), action: {
+            CircleButton(color: Color.forgeDestructive.opacity(0.9), action: {
                 // Cancelling the timer is a discard, so a warning haptic rather than a light tap.
                 Haptics.warning()
                 self.restTimerStore.restTimerStart = nil

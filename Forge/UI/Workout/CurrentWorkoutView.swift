@@ -197,6 +197,15 @@ struct CurrentWorkoutView: View {
         }
     }
 
+    // "Finish" sits in the top-right next to Edit, the common workout-app layout, so it is reachable
+    // without scrolling to the end. The finish confirmation catches an accidental tap.
+    private var finishButton: some View {
+        Button("Finish") {
+            self.requestFinish()
+        }
+        .fontWeight(.semibold)
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -293,17 +302,6 @@ struct CurrentWorkoutView: View {
                             }
                         }
                     }
-                    Section {
-                        Button {
-                            self.requestFinish()
-                        } label: {
-                            Label("Finish workout", systemImage: "checkmark")
-                        }
-                        .buttonStyle(ForgeGlassButtonStyle())
-                        // Inset from the card edges so the rounded button reads as a button, not a bar.
-                        .listRowInsets(EdgeInsets(top: Theme.Spacing.s, leading: Theme.Spacing.m, bottom: Theme.Spacing.s, trailing: Theme.Spacing.m))
-                        .listRowBackground(Color.clear)
-                    }
                 }
                 .listStyleCompat_InsetGroupedListStyle()
                 .environment(\.editMode, $editMode)
@@ -311,7 +309,12 @@ struct CurrentWorkoutView: View {
             }
             .background(Color.forgeBackground.ignoresSafeArea())
             .navigationBarTitle(Text(""), displayMode: .inline)
-            .navigationBarItems(leading: cancelButton, trailing: reorderButton)
+            .navigationBarItems(leading: cancelButton, trailing:
+                HStack(spacing: NAVIGATION_BAR_SPACING) {
+                    reorderButton
+                    finishButton
+                }
+            )
         }
         .sheet(item: $activeSheet) { type in
             self.sheetView(type: type)
