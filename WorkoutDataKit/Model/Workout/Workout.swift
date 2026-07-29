@@ -288,10 +288,12 @@ extension Workout {
     /// TODO Subclasses should combine any error returned by super’s implementation with their own (see Managed Object Validation).
     /// https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/CoreData/ObjectValidation.html
     func validateConsistency() throws {
-        if start == nil {
+        // The current workout may have no start yet: it is stamped when the first set is completed, so
+        // the elapsed timer reflects training time. A finished workout must always have a start.
+        if !isCurrentWorkout, start == nil {
             throw error(code: 1, message: "The start date is not set.")
         }
-        
+
         if !isCurrentWorkout, end == nil {
             throw error(code: 2, message: "The end date is not set eventhough the workout is not the current workout.")
         }
