@@ -151,13 +151,11 @@ extension View {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 // A trailing "Done" button is the standard way to dismiss a number pad, which has no
-                // return key. It reads as a normal toolbar action rather than a floating icon. The
-                // vertical padding gives the accessory bar height so the button is not flush on the keys.
+                // return key. Kept plain so the system renders it at its normal size and position;
+                // padding it turned it into an oversized floating pill over the content.
                 Button("Done") {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                 }
-                .fontWeight(.semibold)
-                .padding(.vertical, Theme.Spacing.s)
                 .accessibilityLabel("Dismiss keyboard")
             }
         }

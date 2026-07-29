@@ -686,24 +686,24 @@ private struct ActiveSetRow: View {
 
     /// A near-square box so digits fill from the right edge. The whole box is a forgiving tap target:
     /// tapping anywhere in it focuses the field and opens the keyboard, not just the text itself.
-    private static let fieldHeight: CGFloat = 40
+    private static let fieldHeight: CGFloat = 44
+    private static let hintStripHeight: CGFloat = 13
 
     private func setField(_ text: Binding<String>, field: Field, keyboard: UIKeyboardType, width: CGFloat, targetHint: String? = nil) -> some View {
-        ZStack(alignment: .top) {
+        VStack(spacing: 0) {
+            // A fixed top strip holds the planned range (empty on the weight field, so both columns line
+            // up). The value and its blinking cursor live below it and never cover the range.
+            Text(targetHint ?? " ")
+                .font(.system(size: 10))
+                .foregroundColor(.forgeSecondaryLabel)
+                .frame(height: Self.hintStripHeight)
+                .allowsHitTesting(false)
             TextField("", text: text)
                 .keyboardType(keyboard)
                 .focused($focus, equals: field)
                 .multilineTextAlignment(.center)
                 .font(.forgeValue)
-                .frame(width: width, height: Self.fieldHeight)
-            // The planned range sits at the top so the entered value stays centered below it.
-            if let targetHint {
-                Text(targetHint)
-                    .font(.system(size: 10))
-                    .foregroundColor(.forgeSecondaryLabel)
-                    .allowsHitTesting(false)
-                    .padding(.top, 2)
-            }
+                .frame(width: width, height: Self.fieldHeight - Self.hintStripHeight)
         }
         .frame(width: width, height: Self.fieldHeight)
         .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
