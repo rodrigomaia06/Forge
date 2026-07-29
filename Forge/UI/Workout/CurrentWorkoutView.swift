@@ -297,7 +297,7 @@ struct CurrentWorkoutView: View {
                         Button("Finish workout") {
                             self.requestFinish()
                         }
-                        .buttonStyle(ForgePrimaryButtonStyle())
+                        .buttonStyle(ForgeGlassButtonStyle())
                         // Inset from the card edges so the rounded button reads as a button, not a bar.
                         .listRowInsets(EdgeInsets(top: Theme.Spacing.s, leading: Theme.Spacing.m, bottom: Theme.Spacing.s, trailing: Theme.Spacing.m))
                         .listRowBackground(Color.clear)

@@ -34,8 +34,13 @@ struct TimerBannerView: View {
     }()
     
     private var closeSheetButton: some View {
-        Button("Close") {
+        Button {
             self.activeSheet = nil
+        } label: {
+            Text("Close")
+                .padding(.horizontal, Theme.Spacing.m)
+                .padding(.vertical, Theme.Spacing.xs)
+                .forgeGlassCapsule()
         }
     }
     

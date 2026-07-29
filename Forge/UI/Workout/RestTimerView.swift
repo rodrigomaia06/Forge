@@ -215,7 +215,13 @@ private struct CircleButton<Label>: View where Label: View {
         Button(action: action) {
             label
                 .frame(width: buttonSize, height: buttonSize)
-                .background(Circle().foregroundColor(color ?? Color(UIColor.systemFill)))
+                // A colored button (Cancel) keeps its fill; the neutral ones use Liquid Glass so they read
+                // as native floating controls over the timer instead of flat system-grey circles.
+                .modifier(
+                    if: color != nil,
+                    then: { $0.background(Circle().fill(color ?? .clear)) },
+                    else: { $0.forgeGlassCircle() }
+                )
         }
         .padding(4)
     }

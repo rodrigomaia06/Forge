@@ -147,17 +147,9 @@ extension View {
     /// A single "Done" above the keyboard that dismisses whatever field is focused (numbers or text).
     /// Apply once per screen, not per field, or several Done buttons stack up.
     func keyboardDoneToolbar() -> some View {
-        toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                // A trailing "Done" button is the standard way to dismiss a number pad, which has no
-                // return key. Kept plain so the system renders it at its normal size and position;
-                // padding it turned it into an oversized floating pill over the content.
-                Button("Done") {
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                }
-                .accessibilityLabel("Dismiss keyboard")
-            }
-        }
+        // No keyboard toolbar button: the number pads are dismissed by scrolling the list (the lists use
+        // scrollDismissesKeyboard) or tapping away. Kept as a modifier so call sites stay put if a button
+        // is ever reintroduced.
+        self
     }
 }

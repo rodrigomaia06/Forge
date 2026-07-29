@@ -25,6 +25,21 @@ struct ForgePrimaryButtonStyle: ButtonStyle {
     }
 }
 
+/// Full-width Liquid Glass capsule for a prominent action (e.g. "Finish workout"). Uses the glass
+/// treatment on iOS 26 and a system material capsule below it.
+struct ForgeGlassButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.forgeHeadline)
+            .foregroundColor(.forgeLabel)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: Theme.Layout.minTapTarget)
+            .forgeGlassCapsule()
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .contentShape(Capsule())
+    }
+}
+
 extension View {
     /// The standard raised-surface card: a filled, rounded background used by tiles and rows.
     func forgeCard(radius: CGFloat = Theme.Radius.large) -> some View {
