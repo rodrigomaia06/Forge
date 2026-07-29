@@ -18,7 +18,11 @@ private struct AttributeField: Identifiable {
 
 struct CustomAttributesEditor: View {
     @Binding var attributes: [String: String]
+    /// Controls adding a new attribute and deleting. Gated behind edit mode on a finished workout.
     var isEditable: Bool
+    /// When true, the value of an already-present attribute can be edited without the edit gate. Used
+    /// on the live workout so routine-seeded fields (mood, location) can be filled in directly.
+    var valuesEditable: Bool = false
 
     @State private var editingField: AttributeField?
 
@@ -29,7 +33,7 @@ struct CustomAttributesEditor: View {
             Section(header: Text("Attributes"), footer: footer) {
                 ForEach(sortedKeys, id: \.self) { key in
                     Button {
-                        guard isEditable else { return }
+                        guard isEditable || valuesEditable else { return }
                         editingField = AttributeField(originalKey: key, key: key, value: attributes[key] ?? "")
                     } label: {
                         HStack {

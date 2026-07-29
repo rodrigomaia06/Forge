@@ -215,9 +215,10 @@ struct CurrentWorkoutView: View {
                             Text(comment).foregroundColor(.forgeSecondaryLabel)
                         }
                     }
-                    // Custom fields like location or mood, seeded from the routine. Shown when present;
-                    // editable in edit mode, matching name and comment.
-                    CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: editMode == .active)
+                    // Custom fields like location or mood, seeded from the routine. Shown when present.
+                    // Adding a new field needs edit mode, but the value of a field that is already there
+                    // can be filled in directly, so routine-seeded fields don't require Edit.
+                    CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: editMode == .active, valuesEditable: true)
                     // In edit mode the exercises collapse to a plain, reorderable list of names (drag to
                     // reorder, swipe/– to remove). Otherwise each exercise is a full card with its set
                     // table inline, so logging never leaves this screen.
@@ -245,6 +246,14 @@ struct CurrentWorkoutView: View {
                             }
                         }
                     } else {
+                        // A header row on the canvas (not a grouped section header, since each exercise
+                        // card is its own section and can't be nested under one) labels the third group.
+                        Text("Exercises".uppercased())
+                            .font(.forgeSectionLabel)
+                            .tracking(1)
+                            .foregroundColor(.forgeSecondaryLabel)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: Theme.Spacing.l, leading: Theme.Spacing.l, bottom: Theme.Spacing.xs, trailing: Theme.Spacing.l))
                         ForEach(workoutExercises) { workoutExercise in
                             WorkoutExerciseDetailView(workoutExercise: workoutExercise, embedded: true)
                         }
