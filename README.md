@@ -8,7 +8,16 @@ A focused, private strength-training tracker for iPhone, built in SwiftUI. Forge
 meant to feel like a well-made tool: quick to operate between sets, calm to look at,
 and careful with your data.
 
-<!-- Screenshots go here. -->
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="assets/screenshots/dashboard.png" width="200" alt="Dashboard"><br>Dashboard</td>
+    <td align="center"><img src="assets/screenshots/workout.png" width="200" alt="Live workout"><br>Live workout</td>
+    <td align="center"><img src="assets/screenshots/warmup.png" width="200" alt="Warm-up calculator"><br>Warm-up calculator</td>
+    <td align="center"><img src="assets/screenshots/history.png" width="200" alt="History"><br>History</td>
+  </tr>
+</table>
 
 ## What Forge is for
 
