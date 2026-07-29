@@ -65,6 +65,7 @@ struct RestTimerView: View {
         HStack {
             CircleButton(action: {
                 guard let duration = self.restTimerStore.restTimerDuration else { return }
+                Haptics.impact(.light)
                 let newDuration = duration - 10
                 if newDuration > 0 {
                     self.restTimerStore.restTimerDuration = newDuration
@@ -77,12 +78,15 @@ struct RestTimerView: View {
 
             CircleButton(action: {
                 guard let duration = self.restTimerStore.restTimerDuration else { return }
+                Haptics.impact(.light)
                 self.restTimerStore.restTimerDuration = duration + 10
             }) {
                 Text("+10s")
             }
 
             CircleButton(color: Color.red.opacity(0.9), action: {
+                // Cancelling the timer is a discard, so a warning haptic rather than a light tap.
+                Haptics.warning()
                 self.restTimerStore.restTimerStart = nil
                 self.restTimerStore.restTimerDuration = nil
             }) {
