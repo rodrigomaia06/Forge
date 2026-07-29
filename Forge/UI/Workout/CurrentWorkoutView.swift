@@ -25,6 +25,8 @@ struct CurrentWorkoutView: View {
     
     @State private var showingCancelActionSheet = false
     @State private var showingFinishConfirmation = false
+    /// Set when finishing a workout whose structure no longer matches its routine, to offer updating it.
+    @State private var routineUpdatePending: WorkoutRoutine?
     @State private var showingCannotFinish = false
     @State private var activeSheet: SheetType?
     
@@ -153,8 +155,25 @@ struct CurrentWorkoutView: View {
         return "This ends and saves your workout."
     }
 
-    private func finishWorkout() {
+    /// Confirmed finish. If the workout came from a routine and its exercises or sets no longer match,
+    /// ask whether to update the routine before finishing. Otherwise finish straight away.
+    private func confirmFinish() {
+        if let routine = workout.workoutRoutine, routine.differs(fromWorkout: workout) {
+            // Defer so the finish alert has dismissed before the update alert presents.
+            DispatchQueue.main.async { self.routineUpdatePending = routine }
+        } else {
+            finishWorkout(updateRoutine: false)
+        }
+    }
+
+    private func finishWorkout(updateRoutine: Bool) {
         workout.finishOrCrash()
+
+        // Sync after finishing, so the routine matches the cleaned-up structure (uncompleted sets gone).
+        if updateRoutine, let routine = workout.workoutRoutine {
+            routine.update(fromWorkout: workout)
+            managedObjectContext.saveOrCrash()
+        }
 
         // haptic feedback
         let feedbackGenerator = UINotificationFeedbackGenerator()
@@ -326,10 +345,16 @@ struct CurrentWorkoutView: View {
             Text("This cannot be undone.")
         }
         .alert("Finish workout?", isPresented: $showingFinishConfirmation) {
-            Button("Finish") { self.finishWorkout() }
+            Button("Finish") { self.confirmFinish() }
             Button("Cancel", role: .cancel) { }
         } message: {
             Text(finishConfirmationMessage)
+        }
+        .alert("Update routine?", isPresented: Binding(get: { routineUpdatePending != nil }, set: { if !$0 { routineUpdatePending = nil } })) {
+            Button("Update") { self.finishWorkout(updateRoutine: true) }
+            Button("Keep routine", role: .cancel) { self.finishWorkout(updateRoutine: false) }
+        } message: {
+            Text("This workout's exercises or sets changed. Update the routine to match, or keep it as it was?")
         }
         .alert("No completed sets", isPresented: $showingCannotFinish) {
             Button("OK", role: .cancel) { }

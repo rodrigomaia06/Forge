@@ -154,3 +154,48 @@ public class WorkoutRoutine: NSManagedObject, Codable {
            try container.encodeIfPresent(workoutRoutineExercises?.array.compactMap { $0 as? WorkoutRoutineExercise }, forKey: .exercises)
        }
 }
+
+// MARK: - Keeping a routine in step with a workout
+
+extension WorkoutRoutine {
+    /// True when the workout's exercises or sets no longer match this routine in count or order, so the
+    /// routine is out of date compared with what was actually done.
+    public func differs(fromWorkout workout: Workout) -> Bool {
+        let routineExercises = workoutRoutineExercises?.compactMap { $0 as? WorkoutRoutineExercise } ?? []
+        let workoutExercises = workout.workoutExercises?.compactMap { $0 as? WorkoutExercise } ?? []
+        guard routineExercises.count == workoutExercises.count else { return true }
+        for (routineExercise, workoutExercise) in zip(routineExercises, workoutExercises) {
+            if routineExercise.exerciseUuid != workoutExercise.exerciseUuid { return true }
+            let routineSetCount = routineExercise.workoutRoutineSets?.count ?? 0
+            let workoutSetCount = workoutExercise.workoutSets?.count ?? 0
+            if routineSetCount != workoutSetCount { return true }
+        }
+        return false
+    }
+
+    /// Rebuilds this routine's exercises and sets to match the workout, in order, so it reflects what was
+    /// actually done. Existing routine exercises (and their sets) are removed first. Ordered relationships
+    /// are built by setting each child's to-one inverse, which appends it in order; assigning an
+    /// NSOrderedSet would not maintain the inverse and would fail validation on save.
+    public func update(fromWorkout workout: Workout) {
+        guard let context = managedObjectContext else { return }
+        for routineExercise in (workoutRoutineExercises?.compactMap { $0 as? WorkoutRoutineExercise } ?? []) {
+            removeFromWorkoutRoutineExercises(routineExercise)
+            context.delete(routineExercise)
+        }
+        for workoutExercise in (workout.workoutExercises?.compactMap { $0 as? WorkoutExercise } ?? []) {
+            let routineExercise = WorkoutRoutineExercise.create(context: context)
+            routineExercise.exerciseUuid = workoutExercise.exerciseUuid
+            routineExercise.comment = workoutExercise.comment
+            routineExercise.workoutRoutine = self
+            for workoutSet in (workoutExercise.workoutSets?.compactMap { $0 as? WorkoutSet } ?? []) {
+                let routineSet = WorkoutRoutineSet.create(context: context)
+                // Keep the planned rep range, falling back to the reps actually done.
+                routineSet.minRepetitionsValue = workoutSet.minTargetRepetitionsValue ?? workoutSet.repetitions?.int16Value
+                routineSet.maxRepetitionsValue = workoutSet.maxTargetRepetitionsValue ?? workoutSet.repetitions?.int16Value
+                routineSet.tagValue = workoutSet.tagValue
+                routineSet.workoutRoutineExercise = routineExercise
+            }
+        }
+    }
+}
