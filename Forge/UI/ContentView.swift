@@ -16,6 +16,8 @@ struct ContentView : View {
     @EnvironmentObject private var sceneState: SceneState
     // Observed so changing the accent in Settings re-renders and re-tints the whole app.
     @ObservedObject private var settings = SettingsStore.shared
+    // Surfaces data errors from write paths that used to crash.
+    @ObservedObject private var errorPresenter = AppErrorPresenter.shared
 
     @State private var pendingImportURL: IdentifiableHolder<URL>?
     @State private var importResult: ImportResult?
@@ -65,6 +67,9 @@ struct ContentView : View {
         }
         .alert(item: $importResult) { result in
             Alert(title: Text(result.title), message: Text(result.message))
+        }
+        .alert(item: $errorPresenter.error) { error in
+            Alert(title: Text(error.title), message: Text(error.message), dismissButton: .default(Text("OK")))
         }
     }
 

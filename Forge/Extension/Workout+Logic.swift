@@ -114,47 +114,50 @@ extension Workout {
 
 import CoreData
 extension Workout {
+    /// Roll back so the store keeps its last valid state, then surface a plain-language message.
+    /// Replaces the old fatalError on these data paths. Callers log the technical error first.
+    private func recover(title: String, message: String) {
+        managedObjectContext?.rollback()
+        AppErrorPresenter.shared.present(title: title, message: message)
+    }
+
     func startOrCrash() {
         do {
             os_log("Starting workout", log: .workoutData)
             try start()
         } catch {
-            let errorDescription = NSManagedObjectContext.descriptionWithDetailedErrors(error: error as NSError)
-            os_log("Could not start workout: %@", log: .workoutData, type: .error, errorDescription)
-            fatalError("Could not start workout: \(errorDescription)")
+            os_log("Could not start workout: %@", log: .workoutData, type: .error, NSManagedObjectContext.descriptionWithDetailedErrors(error: error as NSError))
+            recover(title: "Couldn't start workout", message: "Something went wrong, so no workout was started. Please try again.")
         }
     }
-    
+
     func cancelOrCrash() {
         do {
             os_log("Cancelling workout", log: .workoutData)
             try cancel()
         } catch {
-            let errorDescription = NSManagedObjectContext.descriptionWithDetailedErrors(error: error as NSError)
-            os_log("Could not cancel workout: %@", log: .workoutData, type: .error, errorDescription)
-            fatalError("Could not cancel workout: \(errorDescription)")
+            os_log("Could not cancel workout: %@", log: .workoutData, type: .error, NSManagedObjectContext.descriptionWithDetailedErrors(error: error as NSError))
+            recover(title: "Couldn't discard workout", message: "Something went wrong, so your workout was kept. Please try again.")
         }
     }
-    
+
     func finishOrCrash() {
         do {
             os_log("Finishing workout", log: .workoutData)
             try finish()
         } catch {
-            let errorDescription = NSManagedObjectContext.descriptionWithDetailedErrors(error: error as NSError)
-            os_log("Could not finish workout: %@", log: .workoutData, type: .error, errorDescription)
-            fatalError("Could not finish workout: \(errorDescription)")
+            os_log("Could not finish workout: %@", log: .workoutData, type: .error, NSManagedObjectContext.descriptionWithDetailedErrors(error: error as NSError))
+            recover(title: "Couldn't finish workout", message: "Something went wrong, so your workout is still in progress and nothing was lost. Please try again.")
         }
     }
-    
+
     func deleteOrCrash() {
         do {
             os_log("Deleting workout", log: .workoutData)
             try delete()
         } catch {
-            let errorDescription = NSManagedObjectContext.descriptionWithDetailedErrors(error: error as NSError)
-            os_log("Could not delete workout: %@", log: .workoutData, type: .error, errorDescription)
-            fatalError("Could not delete workout: \(errorDescription)")
+            os_log("Could not delete workout: %@", log: .workoutData, type: .error, NSManagedObjectContext.descriptionWithDetailedErrors(error: error as NSError))
+            recover(title: "Couldn't delete workout", message: "Something went wrong, so the workout was kept. Please try again.")
         }
     }
 }

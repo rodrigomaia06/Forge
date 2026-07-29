@@ -18,7 +18,13 @@ extension NSManagedObjectContext {
             } catch {
                 let description = Self.descriptionWithDetailedErrors(error: error as NSError)
                 os_log("Could not save context: %@", log: .workoutData, type: .error, description)
-                fatalError("Could not save context: \(description)")
+                // Roll back to the last saved state so the store is never left partially written, then
+                // tell the user in plain language instead of crashing.
+                rollback()
+                AppErrorPresenter.shared.present(
+                    title: "Change not saved",
+                    message: "Something went wrong saving that change, so your previous data was kept. Please try again."
+                )
             }
         }
     }
