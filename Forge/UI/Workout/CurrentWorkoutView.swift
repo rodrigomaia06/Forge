@@ -319,6 +319,9 @@ struct CurrentWorkoutView: View {
                                 var exercises = self.workoutExercises
                                 exercises.move(fromOffsets: source, toOffset: destination)
                                 self.workout.workoutExercises = NSOrderedSet(array: exercises)
+                                // A move can pull an exercise out of a superset or split one; restore the
+                                // invariant so a stored group is always a contiguous run of two or more.
+                                self.workout.normalizeSupersets()
                                 self.managedObjectContext.saveOrCrash()
                             }
                             .onDelete { offsets in

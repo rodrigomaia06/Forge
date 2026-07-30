@@ -1,27 +1,25 @@
 //
-//  WorkoutSuperset.swift
+//  WorkoutRoutineSuperset.swift
 //  WorkoutDataKit
 //
-//  Supersets: two or more exercises performed together, alternating, resting only after the round.
-//  A group is expressed as a shared supersetUUID on the member exercises rather than a container entity,
-//  so it is a property of the exercises and historical records stay untouched. A group is the run of
-//  adjacent exercises in the workout that share a superset id; the app keeps members contiguous.
+//  The routine-side mirror of WorkoutSuperset: the same grouping expressed on a routine's exercises, so a
+//  plan can define a superset and it carries into the workouts started from it. Routines are templates, so
+//  there is no rest or completion behavior here, only the grouping, ordering, and A / B / C labels.
 //
 
 import CoreData
 
-// MARK: - A single exercise's view of its superset
+// MARK: - A single routine exercise's view of its superset
 
-extension WorkoutExercise {
-    /// True when this exercise belongs to a superset.
+extension WorkoutRoutineExercise {
+    /// True when this routine exercise belongs to a superset.
     public var isInSuperset: Bool { supersetUUID != nil }
 
-    /// The exercises performed together as this exercise's superset, in workout order, including self.
-    /// This is the run of adjacent exercises sharing the same superset id, matching how the group is
-    /// shown. Returns just self when the exercise is not in a superset.
-    public var supersetPartners: [WorkoutExercise] {
+    /// The routine exercises grouped with this one, in routine order, including self. This is the run of
+    /// adjacent exercises sharing the same superset id. Just self when it is not in a superset.
+    public var supersetPartners: [WorkoutRoutineExercise] {
         guard let uuid = supersetUUID,
-              let all = workout?.workoutExercises?.array as? [WorkoutExercise],
+              let all = workoutRoutine?.workoutRoutineExercises?.array as? [WorkoutRoutineExercise],
               let index = all.firstIndex(of: self) else { return [self] }
         var lower = index
         var upper = index
@@ -36,49 +34,35 @@ extension WorkoutExercise {
         return supersetPartners.firstIndex(of: self)
     }
 
-    /// The A / B / C label for this exercise's place in its superset, or nil when not in one. Clamped so a
-    /// very long superset does not run past Z.
+    /// The A / B / C label for this exercise's place in its superset, or nil when not in one.
     public var supersetLabel: String? {
         guard let index = supersetIndex else { return nil }
         return String(UnicodeScalar(UInt8(65 + min(index, 25))))
     }
 
-    /// True when this is the last exercise in its superset round.
+    /// True when this is the last exercise in its superset.
     public var isLastInSuperset: Bool {
         guard isInSuperset else { return false }
         return supersetPartners.last == self
     }
-
-    /// Whether completing a set on this exercise should start the rest timer. Inside a superset, rest
-    /// holds until the last exercise of the round, so only that exercise starts it.
-    public var startsRestTimerOnSetCompletion: Bool {
-        !isInSuperset || isLastInSuperset
-    }
-
-    /// Whether completing a set should reorder this exercise behind the last begun one. A superset keeps
-    /// its exercises together and in order, so grouped exercises are never reordered on completion.
-    public var reordersBehindLastBegunOnSetCompletion: Bool {
-        !isInSuperset
-    }
 }
 
-// MARK: - A workout's grouped layout and grouping operations
+// MARK: - A routine's grouped layout and grouping operations
 
-extension Workout {
-    /// One entry in the workout's exercise layout: a lone exercise, or a superset of two or more.
+extension WorkoutRoutine {
+    /// One entry in the routine's exercise layout: a lone exercise, or a superset of two or more.
     public enum ExerciseSlot: Identifiable {
-        case single(WorkoutExercise)
-        case superset(id: UUID, exercises: [WorkoutExercise])
+        case single(WorkoutRoutineExercise)
+        case superset(id: UUID, exercises: [WorkoutRoutineExercise])
 
         public var id: NSManagedObjectID {
             switch self {
             case .single(let exercise): return exercise.objectID
-            // A superset always has at least two members, so first is present.
             case .superset(_, let exercises): return exercises[0].objectID
             }
         }
 
-        public var exercises: [WorkoutExercise] {
+        public var exercises: [WorkoutRoutineExercise] {
             switch self {
             case .single(let exercise): return [exercise]
             case .superset(_, let exercises): return exercises
@@ -86,11 +70,9 @@ extension Workout {
         }
     }
 
-    /// The exercises grouped for display: consecutive exercises sharing a superset id become one superset
-    /// slot, everything else a single slot. A superset that has dropped to one member renders as a single
-    /// (it should be normalized away first, but this degrades gracefully).
+    /// The routine's exercises grouped for display, the same way a workout groups its exercises.
     public var exerciseSlots: [ExerciseSlot] {
-        let all = workoutExercises?.array as? [WorkoutExercise] ?? []
+        let all = workoutRoutineExercises?.array as? [WorkoutRoutineExercise] ?? []
         var slots: [ExerciseSlot] = []
         var index = 0
         while index < all.count {
@@ -112,11 +94,11 @@ extension Workout {
         return slots
     }
 
-    /// Groups the given exercises into one superset in the given order, placed contiguously where the
-    /// earliest of them currently sits. Returns the new superset id, or nil for fewer than two exercises.
+    /// Groups the given routine exercises into one superset in the given order, placed contiguously where
+    /// the earliest of them currently sits. Returns the new superset id, or nil for fewer than two.
     @discardableResult
-    public func makeSuperset(from exercises: [WorkoutExercise]) -> UUID? {
-        let members = exercises.filter { $0.workout == self }
+    public func makeSuperset(from exercises: [WorkoutRoutineExercise]) -> UUID? {
+        let members = exercises.filter { $0.workoutRoutine == self }
         guard members.count >= 2 else { return nil }
         let uuid = UUID()
         members.forEach { $0.supersetUUID = uuid }
@@ -126,17 +108,15 @@ extension Workout {
 
     /// Removes the superset grouping with the given id. The exercises stay where they are.
     public func ungroupSuperset(id: UUID) {
-        (workoutExercises?.array as? [WorkoutExercise] ?? [])
+        (workoutRoutineExercises?.array as? [WorkoutRoutineExercise] ?? [])
             .filter { $0.supersetUUID == id }
             .forEach { $0.supersetUUID = nil }
     }
 
     /// Restores the superset invariant after a reorder or delete: every stored superset id marks a
-    /// contiguous run of two or more exercises, and each run has its own id. A run left with a single
-    /// member is cleared; if a reorder split one group into two separated runs sharing an id, the second
-    /// run is given a fresh id so the two never masquerade as one group. Call after moving or removing.
+    /// contiguous run of two or more, each with its own id. Mirrors Workout.normalizeSupersets().
     public func normalizeSupersets() {
-        let all = workoutExercises?.array as? [WorkoutExercise] ?? []
+        let all = workoutRoutineExercises?.array as? [WorkoutRoutineExercise] ?? []
         var seenIDs = Set<UUID>()
         var index = 0
         while index < all.count {
@@ -157,16 +137,13 @@ extension Workout {
         }
     }
 
-    /// Places `members` contiguously at the position of the earliest member, keeping the given order among
-    /// them and the relative order of everything else. The members already have their workout inverse set,
-    /// so assigning the ordered set only reorders them (it does not add or remove membership).
-    private func reorderContiguously(_ members: [WorkoutExercise]) {
-        guard let all = workoutExercises?.array as? [WorkoutExercise] else { return }
+    private func reorderContiguously(_ members: [WorkoutRoutineExercise]) {
+        guard let all = workoutRoutineExercises?.array as? [WorkoutRoutineExercise] else { return }
         let memberIDs = Set(members.map { $0.objectID })
         guard let firstMemberIndex = all.firstIndex(where: { memberIDs.contains($0.objectID) }) else { return }
         let insertionIndex = all[0..<firstMemberIndex].filter { !memberIDs.contains($0.objectID) }.count
         var result = all.filter { !memberIDs.contains($0.objectID) }
         result.insert(contentsOf: members, at: insertionIndex)
-        workoutExercises = NSOrderedSet(array: result)
+        workoutRoutineExercises = NSOrderedSet(array: result)
     }
 }

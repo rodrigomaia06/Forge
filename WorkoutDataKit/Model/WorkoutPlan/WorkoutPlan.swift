@@ -33,6 +33,8 @@ public class WorkoutPlan: NSManagedObject, Codable {
                     let workoutRoutineCopy = WorkoutRoutine.create(context: context)
                     workoutRoutineCopy.title = workoutRoutine.title
                     workoutRoutineCopy.comment = workoutRoutine.comment
+                    // Fresh superset ids for the copied routine, preserving which exercises are grouped.
+                    var supersetIDMap: [UUID: UUID] = [:]
                     workoutRoutineCopy.workoutRoutineExercises = NSOrderedSet(array:
                         workoutRoutine.workoutRoutineExercises?
                             .compactMap { $0 as? WorkoutRoutineExercise }
@@ -40,6 +42,11 @@ public class WorkoutPlan: NSManagedObject, Codable {
                                 let workoutRoutineExerciseCopy = WorkoutRoutineExercise.create(context: context)
                                 workoutRoutineExerciseCopy.exerciseUuid = workoutRoutineExercise.exerciseUuid
                                 workoutRoutineExerciseCopy.comment = workoutRoutineExercise.comment
+                                if let group = workoutRoutineExercise.supersetUUID {
+                                    workoutRoutineExerciseCopy.supersetUUID = supersetIDMap[group] ?? {
+                                        let fresh = UUID(); supersetIDMap[group] = fresh; return fresh
+                                    }()
+                                }
                                 workoutRoutineExerciseCopy.workoutRoutineSets = NSOrderedSet(array:
                                     workoutRoutineExercise.workoutRoutineSets?
                                         .compactMap { $0 as? WorkoutRoutineSet }
