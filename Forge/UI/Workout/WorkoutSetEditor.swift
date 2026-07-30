@@ -305,8 +305,6 @@ struct SetMoreView: View {
     var showRPE: Bool = false
 
     @State private var activeAlert: AlertType?
-    @FocusState private var targetWeightFocused: Bool
-
     // Target weight in the user's unit; 0 clears the target. Stored as kilograms.
     private var targetWeightField: Binding<Double> {
         Binding(
@@ -314,6 +312,21 @@ struct SetMoreView: View {
             set: {
                 workoutSet.targetWeightValue = $0 > 0 ? WeightUnit.convert(weight: $0, from: weightUnit, to: .metric) : nil
                 workoutSet.managedObjectContext?.saveOrCrash()
+            }
+        )
+    }
+
+    /// String view of the target weight, so it can use the shared numeric field (caret pinned to the end).
+    private var targetWeightText: Binding<String> {
+        Binding(
+            get: {
+                let value = targetWeightField.wrappedValue
+                guard value > 0 else { return "" }
+                return weightUnit.numberFormatter.string(from: value as NSNumber) ?? String(value)
+            },
+            set: { newValue in
+                let normalized = newValue.replacingOccurrences(of: ",", with: ".")
+                targetWeightField.wrappedValue = Double(normalized) ?? 0
             }
         )
     }
@@ -434,16 +447,11 @@ struct SetMoreView: View {
                 HStack {
                     Text("Weight")
                     Spacer()
-                    TextField("0", value: targetWeightField, format: .number)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .focused($targetWeightFocused)
+                    RightAlignedNumberField(text: targetWeightText, placeholder: "0", keyboardType: .decimalPad, alignment: .right)
+                        .frame(width: 90, height: 28)
                     Text(weightUnit.unit.symbol)
                         .foregroundColor(.secondary)
                 }
-                // Tapping anywhere in the row focuses the field, a larger target than the number alone.
-                .contentShape(Rectangle())
-                .onTapGesture { targetWeightFocused = true }
                 if showRPE {
                     Picker("RPE", selection: targetRpeField) {
                         Text("None").tag(Double?.none)

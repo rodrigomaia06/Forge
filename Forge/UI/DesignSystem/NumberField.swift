@@ -22,6 +22,9 @@ struct RightAlignedNumberField: UIViewRepresentable {
     @Binding var text: String
     var placeholder: String = ""
     var keyboardType: UIKeyboardType = .decimalPad
+    /// Centered in the compact set boxes; trailing in labeled form rows. The caret is pinned to the end
+    /// either way, so the value is always edited from the right.
+    var alignment: NSTextAlignment = .center
 
     private static func valueFont() -> UIFont {
         // Matches `.forgeValue`: rounded, monospaced digits, at the body text size, scaled for Dynamic
@@ -37,8 +40,7 @@ struct RightAlignedNumberField: UIViewRepresentable {
         let field = PaddedTextField()
         field.delegate = context.coordinator
         field.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged(_:)), for: .editingChanged)
-        // Both the placeholder and the entered value are centered in the box.
-        field.textAlignment = .center
+        field.textAlignment = alignment
         field.font = Self.valueFont()
         field.adjustsFontForContentSizeCategory = true
         field.textColor = .label

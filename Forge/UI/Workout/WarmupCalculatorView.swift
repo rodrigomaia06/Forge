@@ -21,8 +21,6 @@ struct WarmupCalculatorView: View {
 
     @State private var workingWeightInput = ""
     @State private var workingRepsInput = ""
-    @FocusState private var focus: Field?
-    private enum Field { case weight, reps }
 
     /// Sheet height grows with the number of warm-up rows so a long ramp is not clipped and a short one
     /// is not surrounded by empty space. The drag handle still expands it to full height.
@@ -50,31 +48,20 @@ struct WarmupCalculatorView: View {
     var body: some View {
         Form {
             Section(header: Text("Working set")) {
-                // Tapping anywhere in the row focuses its field, so the whole row is the tap target.
                 HStack {
                     Text("Weight")
                     Spacer()
-                    TextField("0", text: $workingWeightInput)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .focused($focus, equals: .weight)
-                        .frame(maxWidth: 90)
+                    RightAlignedNumberField(text: $workingWeightInput, placeholder: "0", keyboardType: .decimalPad, alignment: .right)
+                        .frame(width: 90, height: 28)
                     Text(weightUnit.unit.symbol)
                         .foregroundColor(.forgeSecondaryLabel)
                 }
-                .contentShape(Rectangle())
-                .onTapGesture { focus = .weight }
                 HStack {
                     Text("Reps")
                     Spacer()
-                    TextField("0", text: $workingRepsInput)
-                        .keyboardType(.numberPad)
-                        .multilineTextAlignment(.trailing)
-                        .focused($focus, equals: .reps)
-                        .frame(maxWidth: 90)
+                    RightAlignedNumberField(text: $workingRepsInput, placeholder: "0", keyboardType: .numberPad, alignment: .right)
+                        .frame(width: 90, height: 28)
                 }
-                .contentShape(Rectangle())
-                .onTapGesture { focus = .reps }
             }
 
             Section(header: Text("Warm-up sets")) {
