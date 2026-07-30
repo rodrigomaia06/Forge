@@ -107,6 +107,83 @@ struct WorkoutRoutineView: View {
         }
     }
 
+    /// The exercises grouped for display: a run of consecutive single exercises, or one superset.
+    private enum RoutineSection: Identifiable {
+        case singles([WorkoutRoutineExercise])
+        case superset([WorkoutRoutineExercise])
+
+        var exercises: [WorkoutRoutineExercise] {
+            switch self {
+            case .singles(let e), .superset(let e): return e
+            }
+        }
+        var id: NSManagedObjectID { exercises[0].objectID }
+    }
+
+    private var routineSections: [RoutineSection] {
+        var result: [RoutineSection] = []
+        for slot in workoutRoutine.exerciseSlots {
+            switch slot {
+            case .single(let exercise):
+                if case .singles(var arr)? = result.last {
+                    arr.append(exercise)
+                    result[result.count - 1] = .singles(arr)
+                } else {
+                    result.append(.singles([exercise]))
+                }
+            case .superset(_, let members):
+                result.append(.superset(members))
+            }
+        }
+        return result
+    }
+
+    private func routineExerciseRow(_ exercise: WorkoutRoutineExercise, showBadge: Bool) -> some View {
+        NavigationLink(destination: WorkoutRoutineExerciseView(workoutRoutineExercise: exercise)) {
+            HStack(spacing: Theme.Spacing.s) {
+                if showBadge, let label = exercise.supersetLabel {
+                    Text(label)
+                        .font(.forgeCaption.weight(.bold))
+                        .foregroundColor(.forgeSecondaryLabel)
+                        .frame(width: 20, height: 20)
+                        .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.forgeSeparator))
+                        .accessibilityLabel("Superset \(label)")
+                }
+                VStack(alignment: .leading) {
+                    Text(exercise.exercise(in: self.exerciseStore.exercises)?.title ?? "Unknown Exercise")
+                    exercise.subtitle.map {
+                        Text($0).foregroundColor(.secondary).font(.caption)
+                    }
+                }
+            }
+        }
+    }
+
+    /// The flat edit-mode row: the name, prefixed with the A / B / C badge when grouped.
+    private func routineReorderRow(_ exercise: WorkoutRoutineExercise) -> some View {
+        HStack(spacing: Theme.Spacing.s) {
+            if let label = exercise.supersetLabel {
+                Text(label)
+                    .font(.forgeCaption.weight(.bold))
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .frame(width: 20, height: 20)
+                    .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.forgeSeparator))
+            }
+            Text(exercise.exercise(in: self.exerciseStore.exercises)?.title ?? "Unknown Exercise")
+        }
+    }
+
+    private func deleteExercises(at offsets: IndexSet, in exercises: [WorkoutRoutineExercise]) {
+        for i in offsets {
+            let exercise = exercises[i]
+            self.managedObjectContext.delete(exercise)
+            exercise.workoutRoutine?.removeFromWorkoutRoutineExercises(exercise)
+        }
+        // Clear any superset left with a single member after the removal.
+        self.workoutRoutine.normalizeSupersets()
+        self.managedObjectContext.saveOrCrash()
+    }
+
     private var exerciseSelectorSheet: some View {
         AddExercisesSheet(
             exercises: exerciseStore.shownExercises,
@@ -152,59 +229,40 @@ struct WorkoutRoutineView: View {
 
             CustomAttributesEditor(attributes: routineCustomAttributes, isEditable: editMode?.wrappedValue.isEditing == true)
 
-            Section(header: Text("Exercises")) {
-                ForEach(workoutRoutineExercises) { workoutRoutineExercise in
-                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                        // The superset header (link glyph, shared note, menu) sits on the first member, so
-                        // the group reads like the live workout's superset card. It lives inside the row, so
-                        // the list's move and delete keep working per exercise.
-                        if workoutRoutineExercise.supersetIndex == 0 {
-                            supersetGroupHeader(workoutRoutineExercise)
-                        }
-                        NavigationLink(destination: WorkoutRoutineExerciseView(workoutRoutineExercise: workoutRoutineExercise)) {
-                            HStack(spacing: Theme.Spacing.s) {
-                                if let label = workoutRoutineExercise.supersetLabel {
-                                    Text(label)
-                                        .font(.forgeCaption.weight(.bold))
-                                        .foregroundColor(.forgeSecondaryLabel)
-                                        .frame(width: 20, height: 20)
-                                        .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.forgeSeparator))
-                                        .accessibilityLabel("Superset \(label)")
-                                }
-                                VStack(alignment: .leading) {
-                                    Text(workoutRoutineExercise.exercise(in: self.exerciseStore.exercises)?.title ?? "Unknown Exercise")
-                                    workoutRoutineExercise.subtitle.map {
-                                        Text($0)
-                                            .foregroundColor(.secondary)
-                                            .font(.caption)
-                                    }
-                                }
-                            }
+            if editMode?.wrappedValue.isEditing == true {
+                // Edit: one flat, reorderable list of names; the badge shows the grouping.
+                Section(header: Text("Exercises")) {
+                    ForEach(workoutRoutineExercises) { exercise in
+                        routineReorderRow(exercise)
+                    }
+                    .onDelete { offsets in deleteExercises(at: offsets, in: workoutRoutineExercises) }
+                    .onMove { source, destination in
+                        var exercises = self.workoutRoutineExercises
+                        exercises.move(fromOffsets: source, toOffset: destination)
+                        self.workoutRoutine.workoutRoutineExercises = NSOrderedSet(array: exercises)
+                        // A move can split a superset; restore the contiguous-group invariant.
+                        self.workoutRoutine.normalizeSupersets()
+                        self.managedObjectContext.saveOrCrash()
+                    }
+                }
+            } else {
+                // Non-edit: each superset is its own card so its start and end are clear; a run of single
+                // exercises shares a card.
+                ForEach(Array(routineSections.enumerated()), id: \.element.id) { index, section in
+                    Section(header: index == 0 ? Text("Exercises") : nil) {
+                        switch section {
+                        case .singles(let exercises):
+                            ForEach(exercises) { routineExerciseRow($0, showBadge: false) }
+                                .onDelete { offsets in deleteExercises(at: offsets, in: exercises) }
+                        case .superset(let members):
+                            supersetGroupHeader(members[0])
+                            ForEach(members) { routineExerciseRow($0, showBadge: true) }
                         }
                     }
                 }
-                .onDelete { offsets in
-                    let workoutRoutineExercises = self.workoutRoutineExercises
-                    for i in offsets {
-                        let workoutRoutineExercise = workoutRoutineExercises[i]
-                        self.managedObjectContext.delete(workoutRoutineExercise)
-                        workoutRoutineExercise.workoutRoutine?.removeFromWorkoutRoutineExercises(workoutRoutineExercise)
-                    }
-                    // Clear any superset left with a single member after the removal.
-                    self.workoutRoutine.normalizeSupersets()
-                    self.managedObjectContext.saveOrCrash()
-                }
-                .onMove { source, destination in
-                    var workoutRoutineExercises = self.workoutRoutineExercises
-                    workoutRoutineExercises.move(fromOffsets: source, toOffset: destination)
-                    self.workoutRoutine.workoutRoutineExercises = NSOrderedSet(array: workoutRoutineExercises)
-                    // A move can split a superset; restore the contiguous-group invariant.
-                    self.workoutRoutine.normalizeSupersets()
-                    self.managedObjectContext.saveOrCrash()
-                }
-                // Reordering only in edit mode, so a stray long-press can't change the routine's order.
-                .moveDisabled(editMode?.wrappedValue.isEditing != true)
+            }
 
+            Section {
                 Button(action: {
                     self.showExerciseSelector = true
                 }) {
