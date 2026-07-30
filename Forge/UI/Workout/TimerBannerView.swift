@@ -78,11 +78,15 @@ struct TimerBannerView: View {
 
     var body: some View {
         HStack {
-            // The stopwatch opens the start/end editor only in edit mode; otherwise it is a plain display.
+            // The stopwatch opens the start/end editor only in edit mode. It reads normally otherwise;
+            // in edit mode it gets a glass highlight to show it is now tappable.
             if isEditing {
-                Button(action: { self.activeSheet = .editTime }) { stopwatchLabel }
+                Button(action: { self.activeSheet = .editTime }) {
+                    stopwatchLabel.forgeGlassCapsule()
+                }
+                .buttonStyle(.plain)
             } else {
-                stopwatchLabel.foregroundColor(.forgeSecondaryLabel)
+                stopwatchLabel
             }
 
             Spacer()
