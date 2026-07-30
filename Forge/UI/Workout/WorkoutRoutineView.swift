@@ -219,6 +219,7 @@ struct WorkoutRoutineView: View {
                         }
                     }
             }
+            .presentationDetents([.medium])
         }
     }
 }

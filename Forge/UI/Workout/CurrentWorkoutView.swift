@@ -482,6 +482,7 @@ private struct SupersetCard: View {
                             }
                         }
                 }
+                .presentationDetents([.medium])
             }
         }
     }
