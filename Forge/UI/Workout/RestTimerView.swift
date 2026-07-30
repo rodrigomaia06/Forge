@@ -60,11 +60,17 @@ struct RestTimerView: View {
                     .padding(.horizontal, Theme.Spacing.xl)
             }
 
-            Stepper(
-                "Rest \(restTimerDurationFormatter.string(from: restTimerStore.restTimerDuration ?? 0) ?? "")",
-                onIncrement: { adjust(by: 10) },
-                onDecrement: { adjust(by: -10) }
-            )
+            // Adjust only the current running countdown, not the saved rest time.
+            HStack(spacing: Theme.Spacing.m) {
+                Button { adjust(by: -10) } label: {
+                    Text("\u{2212}10s").frame(maxWidth: .infinity).frame(minHeight: 44).forgeGlassCapsule()
+                }
+                Button { adjust(by: 10) } label: {
+                    Text("+10s").frame(maxWidth: .infinity).frame(minHeight: 44).forgeGlassCapsule()
+                }
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(.forgeLabel)
             .padding(.horizontal, Theme.Spacing.xl)
 
             Button("Skip rest", role: .destructive) {
