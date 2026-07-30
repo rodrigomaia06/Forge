@@ -184,6 +184,15 @@ final class KeyboardDismissInstaller: NSObject, UIGestureRecognizerDelegate {
         }
         return true
     }
+
+    // Recognize alongside every other gesture. SwiftUI Buttons use their own recognizers; without this the
+    // window tap can claim the first tap while the keyboard is up (dismissing it) and starve the button, so
+    // it takes a second tap to act. Recognizing simultaneously lets the keyboard dismiss and the button fire
+    // on the same tap. Safe because the recognizer never cancels touches and dismiss() is a no-op when
+    // nothing is focused.
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        true
+    }
 }
 
 extension View {
