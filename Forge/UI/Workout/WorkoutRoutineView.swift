@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import CoreData
 import WorkoutDataKit
 
 struct WorkoutRoutineView: View {
