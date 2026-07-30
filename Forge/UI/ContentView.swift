@@ -39,21 +39,48 @@ struct ContentView : View {
         Binding(get: { sceneState.selectedTab }, set: { sceneState.selectedTab = $0 })
     }
 
+    private static let tabs: [(tab: SceneState.Tab, icon: String, label: String)] = [
+        (.feed, "house.fill", "Home"),
+        (.history, "clock.fill", "History"),
+        (.workout, "dumbbell.fill", "Workout"),
+        (.settings, "gearshape.fill", "Settings"),
+    ]
+
+    /// Custom bottom bar, since the page tab style hides the system one. Tapping still switches tabs.
+    private var tabBar: some View {
+        HStack(spacing: 0) {
+            ForEach(Self.tabs, id: \.tab) { item in
+                Button {
+                    Haptics.selection()
+                    withAnimation(.easeInOut(duration: 0.2)) { sceneState.selectedTab = item.tab }
+                } label: {
+                    Image(systemName: item.icon)
+                        .font(.system(size: 22))
+                        .foregroundColor(sceneState.selectedTab == item.tab ? .forgeAccent : .forgeSecondaryLabel)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
+                        .accessibilityLabel(item.label)
+                        .accessibilityAddTraits(sceneState.selectedTab == item.tab ? [.isSelected] : [])
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.top, 6)
+        .background(.bar)
+    }
+
     var body: some View {
         TabView(selection: selectedTab) {
-            FeedView()
-                .tag(SceneState.Tab.feed)
-                .tabItem { Image(systemName: "house.fill").accessibilityLabel("Home") }
-            HistoryView()
-                .tag(SceneState.Tab.history)
-                .tabItem { Image(systemName: "clock.fill").accessibilityLabel("History") }
-            WorkoutTab()
-                .tag(SceneState.Tab.workout)
-                .tabItem { Image(systemName: "dumbbell.fill").accessibilityLabel("Workout") }
-            SettingsView()
-                .tag(SceneState.Tab.settings)
-                .tabItem { Image(systemName: "gearshape.fill").accessibilityLabel("Settings") }
+            FeedView().tag(SceneState.Tab.feed)
+            HistoryView().tag(SceneState.Tab.history)
+            WorkoutTab().tag(SceneState.Tab.workout)
+            SettingsView().tag(SceneState.Tab.settings)
         }
+        // Swipe left/right to move between tabs (the Instagram pattern), with a custom bar since the page
+        // style hides the system one. UIKit's paging arbitrates against a list row's swipe-to-delete better
+        // than a raw gesture would.
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .safeAreaInset(edge: .bottom) { tabBar }
         .environmentObject(SettingsStore.shared)
         .environmentObject(RestTimerStore.shared)
         .environmentObject(ExerciseStore.shared)
