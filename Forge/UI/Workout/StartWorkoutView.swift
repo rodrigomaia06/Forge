@@ -99,6 +99,9 @@ struct StartWorkoutView: View {
                             WorkoutPlanRoutines(workoutPlan: workoutPlan, allPlans: Array(workoutPlans), onStart: { start(routine: $0) }, onEdit: { routineToEdit = $0 }, onShare: { shareRoutine($0) })
                                 .deleteDisabled(true)
                         }
+                        // The routine wells carry their own edges, so the list separators between them are
+                        // redundant and read as non-native.
+                        .listRowSeparator(.hidden)
                     }
                     .onDelete { offsets in
                         if self.needsConfirmBeforeDelete(offsets: offsets) {
@@ -231,6 +234,7 @@ private struct WorkoutPlanRoutines: View {
         ForEach(workoutRoutines) { workoutRoutine in
             RoutineMenuRow(routine: workoutRoutine, allPlans: allPlans, nested: true, onStart: onStart, onEdit: onEdit, onShare: onShare)
                 .listRowInsets(EdgeInsets(top: 3, leading: Theme.Spacing.m, bottom: 3, trailing: Theme.Spacing.m))
+                .listRowSeparator(.hidden)
         }
     }
 }

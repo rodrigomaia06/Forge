@@ -227,7 +227,9 @@ private struct WorkoutCell: View {
     }
 
     var body: some View {
-        HStack(alignment: .top) {
+        // Center the duration and counts against the left column (which may grow with a comment), so
+        // they sit centered like the row's chevron rather than pinned to the top.
+        HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(workout.displayTitle(in: self.exerciseStore.exercises, showPlan: settingsStore.showPlanInWorkoutTitle))
                     .font(.body)
