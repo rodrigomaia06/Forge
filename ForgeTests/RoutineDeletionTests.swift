@@ -34,6 +34,9 @@ final class RoutineDeletionTests: XCTestCase {
         routine.title = routineTitle
         routine.workoutPlan = plan
         let workout = routine.createWorkout(context: context)
+        // A finished (non-current) workout must have a start and end to pass validation on save.
+        workout.start = Date(timeIntervalSince1970: 1_000)
+        workout.end = Date(timeIntervalSince1970: 2_000)
         try! context.save()
         return (plan, routine, workout)
     }
