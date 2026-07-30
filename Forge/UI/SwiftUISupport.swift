@@ -141,6 +141,12 @@ extension View {
             self.background(.ultraThinMaterial, in: Capsule())
         }
     }
+
+    /// A slightly stronger hairline on a glass capsule button, so its edge reads clearly on the dark
+    /// canvas rather than blending in.
+    func glassOutline() -> some View {
+        overlay(Capsule().strokeBorder(Color.forgeLabel.opacity(0.18), lineWidth: 1))
+    }
 }
 
 /// Ends editing when the user taps outside a text field. A single recognizer on the key window with

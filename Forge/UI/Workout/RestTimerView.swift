@@ -63,10 +63,10 @@ struct RestTimerView: View {
             // Adjust only the current running countdown, not the saved rest time.
             HStack(spacing: Theme.Spacing.m) {
                 Button { adjust(by: -10) } label: {
-                    Text("\u{2212}10s").frame(maxWidth: .infinity).frame(minHeight: 44).forgeGlassCapsule()
+                    Text("\u{2212}10s").frame(maxWidth: .infinity).frame(minHeight: 44).forgeGlassCapsule().glassOutline()
                 }
                 Button { adjust(by: 10) } label: {
-                    Text("+10s").frame(maxWidth: .infinity).frame(minHeight: 44).forgeGlassCapsule()
+                    Text("+10s").frame(maxWidth: .infinity).frame(minHeight: 44).forgeGlassCapsule().glassOutline()
                 }
             }
             .buttonStyle(.plain)
@@ -106,6 +106,7 @@ struct RestTimerView: View {
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: 50)
                     .forgeGlassCapsule()
+                    .glassOutline()
             }
             .buttonStyle(.plain)
             .padding(.horizontal)
