@@ -70,6 +70,43 @@ struct WorkoutRoutineView: View {
         workoutRoutine.workoutRoutineExercises?.array as? [WorkoutRoutineExercise] ?? []
     }
     
+    /// The superset group header, matching the live workout: a link glyph, the shared note, and a menu
+    /// with Add/Change note and Ungroup. Shown on the first member of a group.
+    private func supersetGroupHeader(_ anchor: WorkoutRoutineExercise) -> some View {
+        HStack(alignment: .center, spacing: Theme.Spacing.s) {
+            Image(systemName: "link")
+                .font(.body)
+                .frame(height: 24)
+                .foregroundColor(.forgeSecondaryLabel)
+                .accessibilityLabel("Superset")
+            if let note = anchor.supersetNote {
+                Text(note)
+                    .font(.forgeCaption.italic())
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .lineLimit(2)
+            }
+            Spacer()
+            Menu {
+                Button { noteEditorExercise = anchor } label: {
+                    Label(anchor.supersetNote == nil ? "Add note" : "Change note", systemImage: "square.and.pencil")
+                }
+                Button(role: .destructive) {
+                    if let uuid = anchor.supersetUUID {
+                        self.workoutRoutine.ungroupSuperset(id: uuid)
+                        self.managedObjectContext.saveOrCrash()
+                    }
+                } label: {
+                    Label("Ungroup", systemImage: "link")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .frame(width: 34, height: 24)
+                    .contentShape(Rectangle())
+            }
+        }
+    }
+
     private var exerciseSelectorSheet: some View {
         AddExercisesSheet(
             exercises: exerciseStore.shownExercises,
@@ -117,48 +154,32 @@ struct WorkoutRoutineView: View {
 
             Section(header: Text("Exercises")) {
                 ForEach(workoutRoutineExercises) { workoutRoutineExercise in
-                    NavigationLink(destination: WorkoutRoutineExerciseView(workoutRoutineExercise: workoutRoutineExercise)) {
-                        HStack(spacing: Theme.Spacing.s) {
-                            if let label = workoutRoutineExercise.supersetLabel {
-                                Text(label)
-                                    .font(.forgeCaption.weight(.bold))
-                                    .foregroundColor(.forgeSecondaryLabel)
-                                    .frame(width: 20, height: 20)
-                                    .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.forgeSeparator))
-                                    .accessibilityLabel("Superset \(label)")
-                            }
-                            VStack(alignment: .leading) {
-                                Text(workoutRoutineExercise.exercise(in: self.exerciseStore.exercises)?.title ?? "Unknown Exercise")
-                                workoutRoutineExercise.subtitle.map {
-                                    Text($0)
-                                        .foregroundColor(.secondary)
-                                        .font(.caption)
-                                }
-                                // Show the group's shared note once, under the first member.
-                                if workoutRoutineExercise.supersetIndex == 0, let note = workoutRoutineExercise.supersetNote {
-                                    Text(note)
-                                        .font(.forgeCaption.italic())
-                                        .foregroundColor(.forgeSecondaryLabel)
-                                        .lineLimit(2)
-                                }
-                            }
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                        // The superset header (link glyph, shared note, menu) sits on the first member, so
+                        // the group reads like the live workout's superset card. It lives inside the row, so
+                        // the list's move and delete keep working per exercise.
+                        if workoutRoutineExercise.supersetIndex == 0 {
+                            supersetGroupHeader(workoutRoutineExercise)
                         }
-                    }
-                    // Note and Ungroup live on the row, not in a per-exercise menu. Swipe from the leading
-                    // edge; the exercises stay in the routine.
-                    .swipeActions(edge: .leading) {
-                        if let uuid = workoutRoutineExercise.supersetUUID {
-                            Button { noteEditorExercise = workoutRoutineExercise } label: {
-                                Label(workoutRoutineExercise.supersetNote == nil ? "Add note" : "Change note", systemImage: "square.and.pencil")
+                        NavigationLink(destination: WorkoutRoutineExerciseView(workoutRoutineExercise: workoutRoutineExercise)) {
+                            HStack(spacing: Theme.Spacing.s) {
+                                if let label = workoutRoutineExercise.supersetLabel {
+                                    Text(label)
+                                        .font(.forgeCaption.weight(.bold))
+                                        .foregroundColor(.forgeSecondaryLabel)
+                                        .frame(width: 20, height: 20)
+                                        .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.forgeSeparator))
+                                        .accessibilityLabel("Superset \(label)")
+                                }
+                                VStack(alignment: .leading) {
+                                    Text(workoutRoutineExercise.exercise(in: self.exerciseStore.exercises)?.title ?? "Unknown Exercise")
+                                    workoutRoutineExercise.subtitle.map {
+                                        Text($0)
+                                            .foregroundColor(.secondary)
+                                            .font(.caption)
+                                    }
+                                }
                             }
-                            .tint(.forgeAccent)
-                            Button {
-                                self.workoutRoutine.ungroupSuperset(id: uuid)
-                                self.managedObjectContext.saveOrCrash()
-                            } label: {
-                                Label("Ungroup", systemImage: "link")
-                            }
-                            .tint(.forgeSecondaryLabel)
                         }
                     }
                 }
