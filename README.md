@@ -59,7 +59,8 @@ advertising SDKs, and sends nothing off the device unless you deliberately expor
 Forge is not on the App Store. You sideload the `.ipa` and sign it with your own free
 Apple ID. This costs nothing, but a free Apple ID signature lasts seven days, so the tool
 re-signs the app for you. You need an iPhone, a free Apple ID, and a computer. Get the
-`.ipa` from the Releases page or a CI build artifact.
+`.ipa` from the [Releases page](https://github.com/rodrigomaia06/Forge/releases) or a CI
+build artifact.
 
 First, on the iPhone, turn on Developer Mode: Settings, Privacy & Security, Developer Mode.
 iOS 16 and later require it for sideloaded apps.
