@@ -57,9 +57,12 @@ advertising SDKs, and sends nothing off the device unless you deliberately expor
 ## Installing
 
 Forge is not on the App Store. You sideload the `.ipa` and sign it with your own free
-Apple ID. This costs nothing, but a free Apple ID signature lasts seven days, so the
-tool re-signs the app for you. You need an iPhone, a free Apple ID, and a computer for
-the first setup. Get the `.ipa` from the Releases page or a CI build artifact.
+Apple ID. This costs nothing, but a free Apple ID signature lasts seven days, so the tool
+re-signs the app for you. You need an iPhone, a free Apple ID, and a computer. Get the
+`.ipa` from the Releases page or a CI build artifact.
+
+First, on the iPhone, turn on Developer Mode: Settings, Privacy & Security, Developer Mode.
+iOS 16 and later require it for sideloaded apps.
 
 ### macOS or Windows
 
@@ -68,24 +71,19 @@ Use [AltStore](https://altstore.io):
 1. Install AltServer on the computer and AltStore on the iPhone, following the AltStore guide.
 2. Connect the iPhone, open AltStore, and add the Forge `.ipa` (My Apps, then the plus
    button). Sign in with your Apple ID when asked.
-3. On the iPhone, trust the signer under Settings, General, VPN & Device Management, your
-   Apple ID, Trust.
+3. Trust the signer on the iPhone under Settings, General, VPN & Device Management.
 4. Keep AltServer running on the same Wi-Fi so it can refresh the signature every seven days.
 
-[Sideloadly](https://sideloadly.io) is an alternative that works the same way on macOS and Windows.
+[Sideloadly](https://sideloadly.io) works the same way on macOS and Windows.
 
 ### Linux
 
-AltServer has no official Linux build. Use [SideStore](https://sidestore.io), which renews
-the app on the device itself after setup:
+Use [iLoader](https://iloader.app), which runs the same on Windows, macOS, and Linux:
 
-1. Follow the SideStore setup: create a pairing file and install the SideStore app on the
-   iPhone (the first install uses your computer).
-2. In SideStore, sign in with your Apple ID and install the Forge `.ipa`.
-3. SideStore renews the signature on the device over its own connection, so no computer is
-   needed afterwards.
-
-SideStore also runs from macOS and Windows if you prefer on-device refreshing.
+1. Install iLoader and connect the iPhone. On Linux, install `usbmuxd` first if it is not
+   already present.
+2. Open iLoader and sign in with your Apple ID.
+3. Import the Forge `.ipa` and install it to the phone. iLoader signs it with your Apple ID.
 
 ### Notes
 
@@ -103,16 +101,8 @@ as AI-assisted work that is human-reviewed, not unchecked generation.
 
 ## Building
 
-The Xcode project is generated with XcodeGen from `project.yml` (the `.xcodeproj` is not
-checked in). You need a recent Xcode and iOS 16 or later.
-
-- Install XcodeGen (for example, `brew install xcodegen`).
-- Run `xcodegen generate` in the repository root to create `Forge.xcodeproj`.
-- Open the project, select the `Forge` target, and set a unique bundle identifier under
-  Signing & Capabilities.
-- Select your development team, then build the `Forge` scheme.
-
-CI builds the app on a macOS runner on every push.
+Building needs a Mac with Xcode. Without one, fork the repository and let its CI build the
+app for you on a macOS runner. Both are covered in [docs/BUILDING.md](docs/BUILDING.md).
 
 ## License and attribution
 
