@@ -39,11 +39,18 @@ public class WorkoutRoutine: NSManagedObject, Codable {
         // Build the ordered relationships by setting each child's to-one inverse (which appends it in
         // order). Assigning an NSOrderedSet does not maintain the required inverse, so the copy would
         // fail validation on save.
+        var supersetIDMap: [UUID: UUID] = [:]
         for exercise in (workoutRoutineExercises?.compactMap { $0 as? WorkoutRoutineExercise } ?? []) {
             let exerciseCopy = WorkoutRoutineExercise.create(context: context)
             exerciseCopy.exerciseUuid = exercise.exerciseUuid
             exerciseCopy.comment = exercise.comment
+            exerciseCopy.supersetComment = exercise.supersetComment
             exerciseCopy.workoutRoutine = copy
+            if let group = exercise.supersetUUID {
+                exerciseCopy.supersetUUID = supersetIDMap[group] ?? {
+                    let fresh = UUID(); supersetIDMap[group] = fresh; return fresh
+                }()
+            }
             for set in (exercise.workoutRoutineSets?.compactMap { $0 as? WorkoutRoutineSet } ?? []) {
                 let setCopy = WorkoutRoutineSet.create(context: context)
                 setCopy.minRepetitions = set.minRepetitions
@@ -105,13 +112,22 @@ public class WorkoutRoutine: NSManagedObject, Codable {
         // NOTE: don't set title here, it should be inferred automatically by the relation ship
         
         if let workoutRoutineExercises = workoutRoutineExercises?.compactMap({ $0 as? WorkoutRoutineExercise }) {
+            // Carry any superset grouping into the workout, giving each group a fresh id so this workout's
+            // grouping is independent of the routine and of other workouts started from it.
+            var supersetIDMap: [UUID: UUID] = [:]
             // copy the exercises
             for workoutRoutineExercise in workoutRoutineExercises {
                 let workoutExercise = WorkoutExercise.create(context: context)
                 workout.addToWorkoutExercises(workoutExercise)
                 workoutExercise.exerciseUuid = workoutRoutineExercise.exerciseUuid
                 workoutExercise.comment = workoutRoutineExercise.comment
-                
+                workoutExercise.supersetComment = workoutRoutineExercise.supersetComment
+                if let routineGroup = workoutRoutineExercise.supersetUUID {
+                    workoutExercise.supersetUUID = supersetIDMap[routineGroup] ?? {
+                        let fresh = UUID(); supersetIDMap[routineGroup] = fresh; return fresh
+                    }()
+                }
+
                 if let workoutRoutineSets = workoutRoutineExercise.workoutRoutineSets?.compactMap({ $0 as? WorkoutRoutineSet }) {
                     // copy the sets
                     for workoutRoutineSet in workoutRoutineSets {
@@ -180,6 +196,11 @@ extension WorkoutRoutine {
             let workoutSetCount = workoutExercise.workoutSets?.count ?? 0
             if routineSetCount != workoutSetCount { return true }
         }
+        // The superset grouping is part of the routine's shape. Compare which adjacent exercises are
+        // grouped (ids differ between routine and workout, so compare the boundaries, not the ids).
+        let routineGrouping = zip(routineExercises, routineExercises.dropFirst()).map { $0.supersetUUID != nil && $0.supersetUUID == $1.supersetUUID }
+        let workoutGrouping = zip(workoutExercises, workoutExercises.dropFirst()).map { $0.supersetUUID != nil && $0.supersetUUID == $1.supersetUUID }
+        if routineGrouping != workoutGrouping { return true }
         return false
     }
 
@@ -193,11 +214,19 @@ extension WorkoutRoutine {
             removeFromWorkoutRoutineExercises(routineExercise)
             context.delete(routineExercise)
         }
+        var supersetIDMap: [UUID: UUID] = [:]
         for workoutExercise in (workout.workoutExercises?.compactMap { $0 as? WorkoutExercise } ?? []) {
             let routineExercise = WorkoutRoutineExercise.create(context: context)
             routineExercise.exerciseUuid = workoutExercise.exerciseUuid
             routineExercise.comment = workoutExercise.comment
+            routineExercise.supersetComment = workoutExercise.supersetComment
             routineExercise.workoutRoutine = self
+            // Carry the workout's superset grouping onto the routine, with fresh ids for the routine.
+            if let group = workoutExercise.supersetUUID {
+                routineExercise.supersetUUID = supersetIDMap[group] ?? {
+                    let fresh = UUID(); supersetIDMap[group] = fresh; return fresh
+                }()
+            }
             for workoutSet in (workoutExercise.workoutSets?.compactMap { $0 as? WorkoutSet } ?? []) {
                 let routineSet = WorkoutRoutineSet.create(context: context)
                 // Keep the planned rep range, falling back to the reps actually done.

@@ -154,6 +154,78 @@ final class WorkoutDataExchangeTests: XCTestCase {
         XCTAssertTrue(sets[0].isCompleted)
     }
 
+    func testWorkoutSupersetRoundTrip() throws {
+        let context = container.viewContext
+
+        let workout = Workout.create(context: context)
+        workout.title = "Push day"
+        workout.start = Date(timeIntervalSince1970: 1_700_000_000)
+        workout.end = Date(timeIntervalSince1970: 1_700_003_600)
+        var exercises: [WorkoutExercise] = []
+        for _ in 0..<3 {
+            let exercise = WorkoutExercise.create(context: context)
+            exercise.exerciseUuid = UUID()
+            exercise.workout = workout
+            let set = WorkoutSet.create(context: context)
+            set.weightValue = 50
+            set.repetitionsValue = 5
+            set.isCompleted = true
+            set.workoutExercise = exercise
+            exercises.append(exercise)
+        }
+        // Group the first two into a superset, with a shared note.
+        workout.makeSuperset(from: [exercises[0], exercises[1]])
+        exercises[0].setSupersetNote("drop 10% each round")
+        try context.save()
+
+        let data = try WorkoutDataExchange.export(workouts: [workout])
+        let other = setUpInMemoryNSPersistentContainer().viewContext
+        _ = try WorkoutDataExchange.import(data, into: other, includeWorkouts: true)
+
+        let imported = try fetch(Workout.self, "Workout", in: other)[0]
+        let importedExercises = imported.workoutExercises?.array as? [WorkoutExercise] ?? []
+        XCTAssertEqual(importedExercises.count, 3)
+        XCTAssertNotNil(importedExercises[0].supersetUUID)
+        XCTAssertEqual(importedExercises[0].supersetUUID, importedExercises[1].supersetUUID)
+        XCTAssertNil(importedExercises[2].supersetUUID)
+        // The group id is minted fresh on import, not carried from the source.
+        XCTAssertNotEqual(importedExercises[0].supersetUUID, exercises[0].supersetUUID)
+        // The shared note survives, on each member of the group.
+        XCTAssertEqual(importedExercises[0].supersetComment, "drop 10% each round")
+        XCTAssertEqual(importedExercises[1].supersetComment, "drop 10% each round")
+    }
+
+    func testRoutineSupersetRoundTrip() throws {
+        let context = container.viewContext
+
+        let plan = WorkoutPlan.create(context: context)
+        plan.title = "Upper lower"
+        let routine = WorkoutRoutine.create(context: context)
+        routine.title = "Upper"
+        routine.workoutPlan = plan
+        var exercises: [WorkoutRoutineExercise] = []
+        for _ in 0..<3 {
+            let exercise = WorkoutRoutineExercise.create(context: context)
+            exercise.exerciseUuid = UUID()
+            exercise.workoutRoutine = routine
+            exercises.append(exercise)
+        }
+        routine.makeSuperset(from: [exercises[1], exercises[2]])
+        try context.save()
+
+        let data = try WorkoutDataExchange.export(plans: [plan])
+        let other = setUpInMemoryNSPersistentContainer().viewContext
+        _ = try WorkoutDataExchange.import(data, into: other, includeWorkouts: true)
+
+        let importedPlan = try fetch(WorkoutPlan.self, "WorkoutPlan", in: other)[0]
+        let importedRoutine = (importedPlan.workoutRoutines?.array as? [WorkoutRoutine] ?? [])[0]
+        let re = importedRoutine.workoutRoutineExercises?.array as? [WorkoutRoutineExercise] ?? []
+        XCTAssertEqual(re.count, 3)
+        XCTAssertNil(re[0].supersetUUID)
+        XCTAssertNotNil(re[1].supersetUUID)
+        XCTAssertEqual(re[1].supersetUUID, re[2].supersetUUID)
+    }
+
     func testRejectsNewerFormatVersion() throws {
         let json = "{\"formatVersion\": 9999, \"plans\": [], \"workouts\": []}".data(using: .utf8)!
         XCTAssertThrowsError(try WorkoutDataExchange.import(json, into: container.viewContext))

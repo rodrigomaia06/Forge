@@ -85,9 +85,11 @@ public class WorkoutExercise: NSManagedObject, Codable {
         case exerciseUuid
         case exerciseName
         case comment
+        case supersetUUID
+        case supersetComment
         case sets
     }
-    
+
     required convenience public init(from decoder: Decoder) throws {
         guard let contextKey = CodingUserInfoKey.managedObjectContextKey,
             let context = decoder.userInfo[contextKey] as? NSManagedObjectContext,
@@ -96,19 +98,24 @@ public class WorkoutExercise: NSManagedObject, Codable {
             throw CodingUserInfoKey.DecodingError.managedObjectContextMissing
         }
         self.init(entity: entity, insertInto: context)
-        
+
         let container = try decoder.container(keyedBy: CodingKeys.self)
         uuid = try container.decodeIfPresent(UUID.self, forKey: .uuid) ?? UUID() // make sure we always have an UUID
         exerciseUuid = try container.decodeIfPresent(UUID.self, forKey: .exerciseUuid)
         comment = try container.decodeIfPresent(String.self, forKey: .comment)
+        // Older exports have no superset id; those exercises decode as ungrouped.
+        supersetUUID = try container.decodeIfPresent(UUID.self, forKey: .supersetUUID)
+        supersetComment = try container.decodeIfPresent(String.self, forKey: .supersetComment)
         workoutSets = NSOrderedSet(array: try container.decodeIfPresent([WorkoutSet].self, forKey: .sets) ?? [])
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(uuid ?? UUID(), forKey: .uuid)
         try container.encodeIfPresent(exerciseUuid, forKey: .exerciseUuid)
         try container.encodeIfPresent(comment, forKey: .comment)
+        try container.encodeIfPresent(supersetUUID, forKey: .supersetUUID)
+        try container.encodeIfPresent(supersetComment, forKey: .supersetComment)
         try container.encodeIfPresent(workoutSets?.array.compactMap { $0 as? WorkoutSet }, forKey: .sets)
         
         if let exercisesKey = CodingUserInfoKey.exercisesKey,

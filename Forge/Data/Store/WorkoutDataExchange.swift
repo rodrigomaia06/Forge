@@ -77,6 +77,11 @@ enum WorkoutDataExchange {
     struct RoutineExerciseDTO: Codable {
         var exerciseUuid: UUID
         var comment: String?
+        // Which superset this exercise belongs to, numbered per file (nil when not in one). Exercises
+        // sharing a number are one group; import mints a fresh id for each number.
+        var supersetGroup: Int?
+        // The group's shared note (repeated on each member, as it is stored).
+        var supersetComment: String?
         var sets: [RoutineSetDTO]
     }
 
@@ -104,6 +109,10 @@ enum WorkoutDataExchange {
     struct WorkoutExerciseDTO: Codable {
         var exerciseUuid: UUID
         var comment: String?
+        // Which superset this exercise belongs to, numbered per file (nil when not in one).
+        var supersetGroup: Int?
+        // The group's shared note (repeated on each member, as it is stored).
+        var supersetComment: String?
         var sets: [WorkoutSetDTO]
     }
 
@@ -165,14 +174,18 @@ enum WorkoutDataExchange {
     }
 
     private static func routineDTO(from routine: WorkoutRoutine) -> RoutineDTO {
-        RoutineDTO(
+        let exercises = orderedRoutineExercises(routine)
+        let groupNumbers = supersetGroupNumbers(exercises.map { $0.supersetUUID })
+        return RoutineDTO(
             title: routine.title,
             comment: routine.comment,
             attributes: routine.customAttributes.isEmpty ? nil : routine.customAttributes,
-            exercises: orderedRoutineExercises(routine).map { exercise in
+            exercises: exercises.map { exercise in
                 RoutineExerciseDTO(
                     exerciseUuid: exercise.exerciseUuid ?? UUID(),
                     comment: exercise.comment,
+                    supersetGroup: exercise.supersetUUID.flatMap { groupNumbers[$0] },
+                    supersetComment: exercise.supersetComment,
                     sets: orderedRoutineSets(exercise).map { set in
                         RoutineSetDTO(minReps: set.minRepetitionsValue, maxReps: set.maxRepetitionsValue, tag: set.tagValue?.rawValue, comment: set.comment)
                     }
@@ -181,17 +194,32 @@ enum WorkoutDataExchange {
         )
     }
 
+    /// Numbers the superset groups in an ordered list of exercises, per file: the first group seen is 0,
+    /// the next 1, and so on. Nil ids map to nothing. Used so grouping survives export without carrying
+    /// raw ids that import would otherwise have to reconcile with the existing store.
+    private static func supersetGroupNumbers(_ ids: [UUID?]) -> [UUID: Int] {
+        var numbers: [UUID: Int] = [:]
+        for case let id? in ids where numbers[id] == nil {
+            numbers[id] = numbers.count
+        }
+        return numbers
+    }
+
     private static func dto(from workout: Workout) -> WorkoutDTO {
-        WorkoutDTO(
+        let exercises = orderedWorkoutExercises(workout)
+        let groupNumbers = supersetGroupNumbers(exercises.map { $0.supersetUUID })
+        return WorkoutDTO(
             title: workout.title,
             comment: workout.comment,
             start: workout.start,
             end: workout.end,
             attributes: workout.customAttributes.isEmpty ? nil : workout.customAttributes,
-            exercises: orderedWorkoutExercises(workout).map { exercise in
+            exercises: exercises.map { exercise in
                 WorkoutExerciseDTO(
                     exerciseUuid: exercise.exerciseUuid ?? UUID(),
                     comment: exercise.comment,
+                    supersetGroup: exercise.supersetUUID.flatMap { groupNumbers[$0] },
+                    supersetComment: exercise.supersetComment,
                     sets: orderedWorkoutSets(exercise).map { set in
                         WorkoutSetDTO(
                             weight: set.weight?.doubleValue,
@@ -278,11 +306,16 @@ enum WorkoutDataExchange {
         routine.comment = dto.comment
         if let attributes = dto.attributes { routine.customAttributes = attributes }
         routine.workoutPlan = plan
+        var groupIDs: [Int: UUID] = [:]
         for exerciseDTO in dto.exercises {
             let exercise = WorkoutRoutineExercise.create(context: context)
             exercise.exerciseUuid = exerciseDTO.exerciseUuid
             exercise.comment = exerciseDTO.comment
+            exercise.supersetComment = exerciseDTO.supersetComment
             exercise.workoutRoutine = routine
+            if let group = exerciseDTO.supersetGroup {
+                exercise.supersetUUID = groupIDs[group] ?? { let id = UUID(); groupIDs[group] = id; return id }()
+            }
             for setDTO in exerciseDTO.sets {
                 let set = WorkoutRoutineSet.create(context: context)
                 set.minRepetitionsValue = setDTO.minReps
@@ -292,6 +325,8 @@ enum WorkoutDataExchange {
                 set.workoutRoutineExercise = exercise
             }
         }
+        // Drop any grouping a malformed file left inconsistent (a group with a single member).
+        routine.normalizeSupersets()
         return routine
     }
 
@@ -306,11 +341,16 @@ enum WorkoutDataExchange {
         workout.end = dto.end ?? dto.start
         workout.isCurrentWorkout = false
         if let attributes = dto.attributes { workout.customAttributes = attributes }
+        var groupIDs: [Int: UUID] = [:]
         for exerciseDTO in dto.exercises {
             let exercise = WorkoutExercise.create(context: context)
             exercise.exerciseUuid = exerciseDTO.exerciseUuid
             exercise.comment = exerciseDTO.comment
+            exercise.supersetComment = exerciseDTO.supersetComment
             exercise.workout = workout
+            if let group = exerciseDTO.supersetGroup {
+                exercise.supersetUUID = groupIDs[group] ?? { let id = UUID(); groupIDs[group] = id; return id }()
+            }
             for setDTO in exerciseDTO.sets {
                 let set = WorkoutSet.create(context: context)
                 if let weight = setDTO.weight { set.weightValue = weight }
@@ -324,6 +364,8 @@ enum WorkoutDataExchange {
                 set.workoutExercise = exercise
             }
         }
+        // Drop any grouping a malformed file left inconsistent (a group with a single member).
+        workout.normalizeSupersets()
         return workout
     }
 

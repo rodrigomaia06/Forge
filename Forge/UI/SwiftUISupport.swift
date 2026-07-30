@@ -149,6 +149,45 @@ extension View {
     }
 }
 
+/// Shows a brief "Editable in Edit mode" hint when a read-only row is tapped, so it is clear the value is
+/// changed through Edit rather than by tapping it. Apply to rows shown only outside edit mode (a title or
+/// comment being browsed, recorded times), matching the stopwatch's hint on the live workout.
+private struct EditModeHint: ViewModifier {
+    @State private var showHint = false
+
+    func body(content: Content) -> some View {
+        content
+            .contentShape(Rectangle())
+            .overlay(alignment: .trailing) {
+                if showHint {
+                    Text("Editable in Edit mode")
+                        .font(.caption2)
+                        .foregroundColor(.forgeSecondaryLabel)
+                        .padding(.horizontal, Theme.Spacing.s)
+                        .padding(.vertical, Theme.Spacing.xxs)
+                        .background(Capsule().fill(.ultraThinMaterial))
+                        .transition(.opacity)
+                        .allowsHitTesting(false)
+                }
+            }
+            .onTapGesture {
+                guard !showHint else { return }
+                Haptics.impact(.light)
+                withAnimation { showHint = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    withAnimation { showHint = false }
+                }
+            }
+    }
+}
+
+extension View {
+    /// Tapping the row briefly points the user to Edit. Use on rows that only become editable in edit mode.
+    func editModeHint() -> some View {
+        modifier(EditModeHint())
+    }
+}
+
 /// Ends editing when the user taps outside a text field. A single recognizer on the key window with
 /// cancelsTouchesInView = false, so buttons, rows, and fields still get their taps; the delegate skips
 /// taps on a text field so tapping one focuses it instead of dismissing the keyboard.

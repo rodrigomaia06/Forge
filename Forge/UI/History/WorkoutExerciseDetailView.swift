@@ -47,11 +47,23 @@ struct WorkoutExerciseDetailView : View {
     /// Header for the embedded card's section. Set only on the first exercise so the group gets a
     /// single "Exercises" header in the same grouped style as the Characteristics and Attributes ones.
     private let sectionHeader: String?
+    /// Set when this exercise is one member of a superset. It then renders its rows without its own card
+    /// (the superset card wraps all members in one section) and shows an A / B / C badge before its name.
+    private let supersetMember: SupersetMember?
 
-    init(workoutExercise: WorkoutExercise, embedded: Bool = false, sectionHeader: String? = nil) {
+    /// One exercise's place in a superset: the A / B / C label and where it sits in the round. `isFirst`
+    /// drives the extra spacing that separates one member's block from the previous one.
+    struct SupersetMember {
+        let label: String
+        let isFirst: Bool
+        let isLast: Bool
+    }
+
+    init(workoutExercise: WorkoutExercise, embedded: Bool = false, sectionHeader: String? = nil, supersetMember: SupersetMember? = nil) {
         self.workoutExercise = workoutExercise
         self.embedded = embedded
         self.sectionHeader = sectionHeader
+        self.supersetMember = supersetMember
         _workoutExerciseHistory = FetchRequest(fetchRequest: workoutExercise.historyFetchRequest)
     }
 
@@ -97,10 +109,18 @@ struct WorkoutExerciseDetailView : View {
         set.isCompleted = true
         let workout = set.workoutExercise?.workout
         workout?.start = workout?.start ?? Date()
-        moveWorkoutExerciseBehindLastBegun()
+        // A superset keeps its exercises together and in order, so a grouped exercise is not reordered on
+        // completion; a lone exercise still moves behind the last begun one.
+        if workoutExercise.reordersBehindLastBegunOnSetCompletion {
+            moveWorkoutExerciseBehindLastBegun()
+        }
         Haptics.success()
-        restTimerStore.restTimerDuration = restTimerDuration
-        restTimerStore.restTimerStart = Date() // start the rest timer
+        // Inside a superset the rest timer holds until the last exercise of the round; other exercises
+        // start it on completion as before.
+        if workoutExercise.startsRestTimerOnSetCompletion {
+            restTimerStore.restTimerDuration = restTimerDuration
+            restTimerStore.restTimerStart = Date() // start the rest timer
+        }
         managedObjectContext.saveOrCrash()
     }
     
@@ -375,6 +395,8 @@ struct WorkoutExerciseDetailView : View {
         let workout = workoutExercise.workout
         managedObjectContext.delete(workoutExercise)
         workout?.removeFromWorkoutExercises(workoutExercise)
+        // If this left a superset with a single member, clear that stale grouping.
+        workout?.normalizeSupersets()
         managedObjectContext.saveOrCrash()
     }
 
@@ -427,6 +449,14 @@ struct WorkoutExerciseDetailView : View {
     /// The exercise name (with its note as a small line right under it) and the options menu.
     private var exerciseHeaderRow: some View {
         HStack(alignment: .firstTextBaseline) {
+            if let member = supersetMember {
+                Text(member.label)
+                    .font(.forgeCaption.weight(.bold))
+                    .foregroundColor(.forgeLabel)
+                    .frame(width: 22, height: 22)
+                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.forgeSeparator))
+                    .accessibilityLabel("Superset position \(member.label)")
+            }
             VStack(alignment: .leading, spacing: 2) {
                 Text(exerciseTitle)
                     .font(.forgeHeadline)
@@ -449,6 +479,8 @@ struct WorkoutExerciseDetailView : View {
                     .contentShape(Rectangle())
             }
         }
+        // Separate a following superset member from the one above it, so A and B read as distinct blocks.
+        .padding(.top, (supersetMember.map { !$0.isFirst } ?? false) ? Theme.Spacing.l : 0)
     }
 
     @ViewBuilder private var exerciseMenuItems: some View {
@@ -537,13 +569,19 @@ struct WorkoutExerciseDetailView : View {
             }
     }
 
+    /// The rows of an embedded exercise: name header, column headers, set table, and add-set. Shared by
+    /// the standalone card and by a superset member (which the superset card wraps into one section).
+    @ViewBuilder private var embeddedContent: some View {
+        attachingSheets(to: exerciseHeaderRow)
+        setsHeader
+        currentWorkoutSets
+        if setsEditable { addSetButton }
+    }
+
     /// One card per exercise, embedded directly in the current-workout list (no push).
     private var embeddedBody: some View {
         Section {
-            attachingSheets(to: exerciseHeaderRow)
-            setsHeader
-            currentWorkoutSets
-            if setsEditable { addSetButton }
+            embeddedContent
         } header: {
             if let sectionHeader { Text(sectionHeader) }
         }
@@ -588,7 +626,13 @@ struct WorkoutExerciseDetailView : View {
 
     var body: some View {
         if embedded {
-            embeddedBody
+            if supersetMember != nil {
+                // The superset card provides the section and the shared header, so a member contributes
+                // only its rows.
+                embeddedContent
+            } else {
+                embeddedBody
+            }
         } else {
             standaloneBody
         }

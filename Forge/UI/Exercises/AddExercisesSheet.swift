@@ -14,6 +14,10 @@ struct AddExercisesSheet: View {
     @Environment(\.presentationMode) var presentationMode
 
     let onAdd: (Set<Exercise>) -> Void
+    /// When provided, the sheet offers "Add as superset" once two or more exercises are selected, and
+    /// hands them back in the order they appear in the list. Nil at call sites where a superset does not
+    /// apply (editing a routine or a past workout), so those keep only the plain Add.
+    let onAddSuperset: (([Exercise]) -> Void)?
 
     private let allExercises: [Exercise]
     private let recentExercises: [Exercise]
@@ -23,10 +27,22 @@ struct AddExercisesSheet: View {
     @State private var equipment: String? = nil
     @State private var bodyPart: String? = nil
 
-    init(exercises: [Exercise], recentExercises: [Exercise], onAdd: @escaping (Set<Exercise>) -> Void) {
+    init(exercises: [Exercise], recentExercises: [Exercise], onAdd: @escaping (Set<Exercise>) -> Void, onAddSuperset: (([Exercise]) -> Void)? = nil) {
         self.allExercises = exercises
         self.recentExercises = recentExercises
         self.onAdd = onAdd
+        self.onAddSuperset = onAddSuperset
+    }
+
+    /// The current selection in the order the exercises appear in the list (Recent counts once), so a
+    /// superset is created in a sensible, stable order that the user can still change later in Edit.
+    private var orderedSelection: [Exercise] {
+        var seen = Set<Exercise>()
+        var ordered: [Exercise] = []
+        for exercise in exerciseGroups.flatMap({ $0.exercises }) where exerciseSelectorSelection.contains(exercise) {
+            if seen.insert(exercise).inserted { ordered.append(exercise) }
+        }
+        return ordered
     }
 
     // Equipment filters, shown as a submenu. The token is matched against each exercise's equipment.
@@ -104,7 +120,38 @@ struct AddExercisesSheet: View {
                         .disabled(self.exerciseSelectorSelection.isEmpty)
                     }
                 }
+                .safeAreaInset(edge: .bottom) {
+                    // Offered only where a superset applies, and only once there are two exercises to group.
+                    // Plain Add above still adds the same selection as separate exercises.
+                    if onAddSuperset != nil, exerciseSelectorSelection.count >= 2 {
+                        supersetBar
+                    }
+                }
         }
+    }
+
+    private var supersetBar: some View {
+        HStack {
+            Text("\(exerciseSelectorSelection.count) selected")
+                .font(.forgeCaption)
+                .foregroundColor(.forgeSecondaryLabel)
+            Spacer()
+            Button {
+                onAddSuperset?(orderedSelection)
+                resetAndDismiss()
+            } label: {
+                Label("Add as superset", systemImage: "link")
+                    .font(.forgeHeadline)
+                    .foregroundColor(.forgeBackground)
+                    .padding(.horizontal, Theme.Spacing.l)
+                    .frame(minHeight: 44)
+                    .background(Capsule().fill(Color.forgeAccent))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, Theme.Spacing.l)
+        .padding(.vertical, Theme.Spacing.s)
+        .background(.bar)
     }
 
     private var filterMenu: some View {
