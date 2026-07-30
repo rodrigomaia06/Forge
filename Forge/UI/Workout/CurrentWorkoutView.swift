@@ -42,18 +42,28 @@ struct CurrentWorkoutView: View {
             return AddExercisesSheet(
                 exercises: exerciseStore.shownExercises,
                 recentExercises: AddExercisesSheet.loadRecentExercises(context: managedObjectContext, exercises: exerciseStore.shownExercises),
-                onAdd: { selection in
-                    for exercise in selection {
-                        let workoutExercise = WorkoutExercise.create(context: self.managedObjectContext)
-                        self.workout.addToWorkoutExercises(workoutExercise)
-                        workoutExercise.exerciseUuid = exercise.uuid
-                        precondition(self.workout.isCurrentWorkout == true)
-                        workoutExercise.addToWorkoutSets(self.createDefaultWorkoutSets(workoutExercise: workoutExercise))
-                    }
-                    self.managedObjectContext.saveOrCrash()
-                }
+                onAdd: { selection in self.addExercises(Array(selection), asSuperset: false) },
+                onAddSuperset: { ordered in self.addExercises(ordered, asSuperset: true) }
             ).typeErased
         }
+    }
+
+    /// Adds the exercises to the workout, each with default sets. When `asSuperset` is true and there are
+    /// at least two, they are grouped into one superset in the given order.
+    private func addExercises(_ exercises: [Exercise], asSuperset: Bool) {
+        precondition(self.workout.isCurrentWorkout == true)
+        var added: [WorkoutExercise] = []
+        for exercise in exercises {
+            let workoutExercise = WorkoutExercise.create(context: self.managedObjectContext)
+            self.workout.addToWorkoutExercises(workoutExercise)
+            workoutExercise.exerciseUuid = exercise.uuid
+            workoutExercise.addToWorkoutSets(self.createDefaultWorkoutSets(workoutExercise: workoutExercise))
+            added.append(workoutExercise)
+        }
+        if asSuperset {
+            self.workout.makeSuperset(from: added)
+        }
+        self.managedObjectContext.saveOrCrash()
     }
     
     private func createDefaultWorkoutSets(workoutExercise: WorkoutExercise) -> NSOrderedSet {
@@ -298,14 +308,22 @@ struct CurrentWorkoutView: View {
                                     self.managedObjectContext.delete(exercises[i])
                                     exercises[i].workout?.removeFromWorkoutExercises(exercises[i])
                                 }
+                                // Clear any superset left with a single member after the removal.
+                                self.workout.normalizeSupersets()
                                 self.managedObjectContext.saveOrCrash()
                             }
                         }
                     } else {
                         // The first card carries the "Exercises" section header, so it renders in the
-                        // same grouped style as the Characteristics and Attributes headers.
-                        ForEach(Array(workoutExercises.enumerated()), id: \.element.objectID) { index, workoutExercise in
-                            WorkoutExerciseDetailView(workoutExercise: workoutExercise, embedded: true, sectionHeader: index == 0 ? "Exercises" : nil)
+                        // same grouped style as the Characteristics and Attributes headers. A superset
+                        // renders as one card holding its members; everything else is a single card.
+                        ForEach(Array(workout.exerciseSlots.enumerated()), id: \.element.id) { index, slot in
+                            switch slot {
+                            case .single(let workoutExercise):
+                                WorkoutExerciseDetailView(workoutExercise: workoutExercise, embedded: true, sectionHeader: index == 0 ? "Exercises" : nil)
+                            case .superset(_, let exercises):
+                                SupersetCard(exercises: exercises, sectionHeader: index == 0 ? "Exercises" : nil)
+                            }
                         }
                     }
 
@@ -362,6 +380,47 @@ struct CurrentWorkoutView: View {
         } message: {
             Text("Complete at least one set before finishing this workout.")
         }
+    }
+}
+
+/// One card holding the members of a superset. It owns the section and the shared header (the superset
+/// label and the rest note); each member renders its own rows and an A / B / C badge.
+private struct SupersetCard: View {
+    let exercises: [WorkoutExercise]
+    let sectionHeader: String?
+
+    var body: some View {
+        Section {
+            supersetBar
+            ForEach(Array(exercises.enumerated()), id: \.element.objectID) { index, exercise in
+                WorkoutExerciseDetailView(
+                    workoutExercise: exercise,
+                    embedded: true,
+                    supersetMember: .init(label: Self.letter(index), isLast: index == exercises.count - 1)
+                )
+            }
+        } header: {
+            if let sectionHeader { Text(sectionHeader) }
+        }
+    }
+
+    private var supersetBar: some View {
+        HStack(spacing: Theme.Spacing.s) {
+            Label("Superset", systemImage: "link")
+                .font(.forgeCaption.weight(.semibold))
+                .foregroundColor(.forgeLabel)
+            Spacer()
+            // The one behavior change a superset makes: rest waits until the last exercise of the round.
+            Label("rest after last set", systemImage: "timer")
+                .font(.forgeCaption)
+                .foregroundColor(.forgeSecondaryLabel)
+        }
+        .listRowInsets(EdgeInsets(top: Theme.Spacing.s, leading: Theme.Spacing.m, bottom: Theme.Spacing.xs, trailing: Theme.Spacing.m))
+    }
+
+    /// A, B, C, ... for the member position (clamped so a very long superset does not run past Z).
+    private static func letter(_ index: Int) -> String {
+        String(UnicodeScalar(UInt8(65 + min(index, 25))))
     }
 }
 
