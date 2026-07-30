@@ -17,7 +17,9 @@ struct WorkoutDetailView : View {
     @EnvironmentObject var sceneState: SceneState
     @ObservedObject var workout: Workout
 
-    @Environment(\.editMode) var editMode
+    // Owned here (not the ambient editMode) so the Edit/Done control can be a plain text button. The
+    // system EditButton rendered a "Done" checkmark overlapping the "Edit" label inside the nav glass.
+    @State private var editMode: EditMode = .inactive
     @State private var showingExerciseSelectorSheet = false
 
     @State private var activityItems: [Any]?
@@ -125,7 +127,7 @@ struct WorkoutDetailView : View {
             
             // Title and comment are editable only in edit mode, so browsing a finished workout cannot
             // change what was recorded. Read mode shows the comment when there is one.
-            if editMode?.wrappedValue.isEditing == true {
+            if editMode.isEditing {
                 Section {
                     ClearableTextField(titleKey: "Title", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
                     ClearableTextField(titleKey: "Comment", text: workoutComment, onCommit: { self.adjustAndSaveWorkoutCommentInput() })
@@ -139,7 +141,7 @@ struct WorkoutDetailView : View {
                 Section {
                     // The start and end are editable only in edit mode, so a stray tap while browsing
                     // a finished workout cannot change its recorded times.
-                    if editMode?.wrappedValue.isEditing == true {
+                    if editMode.isEditing {
                         DatePicker(selection: $workout.safeStart, in: ...min(workout.safeEnd, Date())) {
                             Text("Start")
                         }
@@ -153,7 +155,7 @@ struct WorkoutDetailView : View {
                     }
                 }
 
-                CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: editMode?.wrappedValue.isEditing == true)
+                CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: editMode.isEditing)
 
             Section {
                 ForEach(workoutExercises) { workoutExercise in
@@ -177,7 +179,7 @@ struct WorkoutDetailView : View {
                     self.managedObjectContext.saveOrCrash()
                 }
                 
-                if editMode?.wrappedValue.isEditing == true {
+                if editMode.isEditing {
                     Button(action: {
                         self.showingExerciseSelectorSheet = true
                     }) {
@@ -190,11 +192,12 @@ struct WorkoutDetailView : View {
             }
         }
         .listStyleCompat_InsetGroupedListStyle()
+        .environment(\.editMode, $editMode)
         .keyboardDoneToolbar()
         // Commit the title and comment when Edit is turned off, so tapping Done saves even if the field
         // never lost focus (the text field's own onCommit does not fire when it is removed).
-        .onChange(of: editMode?.wrappedValue.isEditing) { isEditing in
-            if isEditing == false {
+        .onChange(of: editMode.isEditing) { isEditing in
+            if !isEditing {
                 adjustAndSaveWorkoutTitleInput()
                 adjustAndSaveWorkoutCommentInput()
                 // A clear success cue that the edits to this past workout were saved.
@@ -232,7 +235,12 @@ struct WorkoutDetailView : View {
                     Image(systemName: "ellipsis")
                         .imageScale(.large)
                 }
-                EditButton()
+                // A plain text button, not the system EditButton, whose "Done" checkmark overlapped the
+                // "Edit" label inside the nav glass group.
+                Button(editMode.isEditing ? "Done" : "Edit") {
+                    Haptics.selection()
+                    withAnimation { editMode = editMode.isEditing ? .inactive : .active }
+                }
             }
         )
         .sheet(isPresented: $showingExerciseSelectorSheet) {
