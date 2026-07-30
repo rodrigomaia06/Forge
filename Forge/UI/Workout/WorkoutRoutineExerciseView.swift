@@ -153,19 +153,18 @@ struct WorkoutRoutineExerciseView: View {
             }
         }
         .navigationBarTitle(Text(workoutRoutineExercise.exercise(in: exerciseStore.exercises)?.title ?? ""), displayMode: .inline)
-        .navigationBarItems(trailing:
-            HStack(spacing: NAVIGATION_BAR_SPACING) {
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 iOS13_3.map { // otherwise crashes when going back on iOS 13.2.2
                     workoutRoutineExercise.exercise(in: exerciseStore.exercises).map {
                         NavigationLink(destination: ExerciseDetailView(exercise: $0)) {
                                 Image(systemName: "info.circle")
-                                    .padding([.leading, .top, .bottom])
                         }
                     }
                 }
                 EditButton()
             }
-        )
+        }
         .onDisappear {
             self.managedObjectContext.saveOrCrash()
         }

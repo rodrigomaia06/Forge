@@ -238,8 +238,8 @@ struct ExerciseDetailView : View {
             self.sheetView(type: type)
         }
         .navigationBarTitle(Text(exercise.title), displayMode: .inline)
-        .navigationBarItems(trailing:
-            HStack(spacing: NAVIGATION_BAR_SPACING) {
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 Menu {
                     optionsMenu
                 } label: {
@@ -252,7 +252,7 @@ struct ExerciseDetailView : View {
                     }
                 }
             }
-        )
+        }
     }
 }
 

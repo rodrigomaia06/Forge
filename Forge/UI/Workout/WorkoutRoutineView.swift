@@ -131,6 +131,8 @@ struct WorkoutRoutineView: View {
                     self.workoutRoutine.workoutRoutineExercises = NSOrderedSet(array: workoutRoutineExercises)
                     self.managedObjectContext.saveOrCrash()
                 }
+                // Reordering only in edit mode, so a stray long-press can't change the routine's order.
+                .moveDisabled(editMode?.wrappedValue.isEditing != true)
 
                 Button(action: {
                     self.showExerciseSelector = true

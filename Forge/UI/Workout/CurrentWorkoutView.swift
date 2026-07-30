@@ -326,12 +326,13 @@ struct CurrentWorkoutView: View {
             }
             .background(Color.forgeBackground.ignoresSafeArea())
             .navigationBarTitle(Text(""), displayMode: .inline)
-            .navigationBarItems(leading: cancelButton, trailing:
-                HStack(spacing: NAVIGATION_BAR_SPACING) {
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { cancelButton }
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     reorderButton
                     finishButton
                 }
-            )
+            }
         }
         .sheet(item: $activeSheet) { type in
             self.sheetView(type: type)

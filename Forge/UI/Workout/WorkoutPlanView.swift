@@ -13,7 +13,8 @@ import os.log
 struct WorkoutPlanView: View {
     @EnvironmentObject var exerciseStore: ExerciseStore
     @Environment(\.managedObjectContext) var managedObjectContext
-    
+    @Environment(\.editMode) private var editMode
+
     @ObservedObject var workoutPlan: WorkoutPlan
 
     @State private var offsetsToDelete: IndexSet?
@@ -88,6 +89,8 @@ struct WorkoutPlanView: View {
                     self.workoutPlan.workoutRoutines = NSOrderedSet(array: workoutRoutines)
                     self.managedObjectContext.saveOrCrash()
                 }
+                // Reordering only in edit mode, so a stray long-press can't reorder the plan's routines.
+                .moveDisabled(editMode?.wrappedValue.isEditing != true)
                 
                 Button(action: {
                     self.createWorkoutRoutine()
@@ -102,8 +105,10 @@ struct WorkoutPlanView: View {
         .listStyleCompat_InsetGroupedListStyle()
         .keyboardDoneToolbar()
         .navigationBarTitle(Text(workoutPlan.displayTitle), displayMode: .inline)
-        .navigationBarItems(trailing:
-            HStack(spacing: NAVIGATION_BAR_SPACING) {
+        // A ToolbarItemGroup spaces the buttons the native way, so Share and Edit are not cramped like
+        // the deprecated navigationBarItems(HStack:) placed them.
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 Menu {
                     Button { shareAsJSON() } label: { Label("Share as file", systemImage: "doc.badge.arrow.up") }
                 } label: {
@@ -112,7 +117,7 @@ struct WorkoutPlanView: View {
                 .accessibilityLabel("Share plan")
                 EditButton()
             }
-        )
+        }
         .overlay(ActivitySheet(activityItems: $activityItems))
         .alert("Delete workout routine?", isPresented: Binding(get: { offsetsToDelete != nil }, set: { if !$0 { offsetsToDelete = nil } })) {
             Button("Delete", role: .destructive) {

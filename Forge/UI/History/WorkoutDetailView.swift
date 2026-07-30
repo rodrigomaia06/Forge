@@ -208,8 +208,10 @@ struct WorkoutDetailView : View {
             }
         }
         .navigationBarTitle(Text(workout.displayTitle(in: exerciseStore.exercises, showPlan: settingsStore.showPlanInWorkoutTitle)), displayMode: .inline)
-        .navigationBarItems(trailing:
-            HStack(spacing: NAVIGATION_BAR_SPACING) {
+        // A ToolbarItemGroup spaces the menu and Edit natively, instead of the cramped
+        // navigationBarItems(HStack:).
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 // A Menu attached to the button, rather than an action sheet, so the options appear
                 // reliably right under the control.
                 Menu {
@@ -245,7 +247,7 @@ struct WorkoutDetailView : View {
                     withAnimation { editMode = editMode.isEditing ? .inactive : .active }
                 }
             }
-        )
+        }
         .sheet(isPresented: $showingExerciseSelectorSheet) {
             AddExercisesSheet(
                 exercises: self.exerciseStore.shownExercises,

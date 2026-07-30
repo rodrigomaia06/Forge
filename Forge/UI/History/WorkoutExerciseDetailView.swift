@@ -568,8 +568,8 @@ struct WorkoutExerciseDetailView : View {
             }
         )
         .navigationBarTitle(Text(exerciseTitle), displayMode: .inline)
-        .navigationBarItems(trailing:
-            HStack(spacing: NAVIGATION_BAR_SPACING) {
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 Menu {
                     exerciseMenuItems
                 } label: {
@@ -581,7 +581,7 @@ struct WorkoutExerciseDetailView : View {
                     withAnimation { historyEditMode = historyEditMode == .active ? .inactive : .active }
                 }
             }
-        )
+        }
         .onDisappear {
             self.managedObjectContext.saveOrCrash()
         }
