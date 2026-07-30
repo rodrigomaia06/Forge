@@ -62,10 +62,16 @@ struct AddExercisesSheet: View {
         if let equipment { exercises = exercises.filter { $0.equipment.contains { $0.contains(equipment) } } }
         if let bodyPart { exercises = exercises.filter { $0.muscleGroup == bodyPart } }
         if !search.isEmpty { exercises = ExerciseStore.filter(exercises: exercises, using: search) }
-        var groups = ExerciseStore.splitIntoMuscleGroups(exercises: exercises)
+        // Selected exercises live only in the Selected section, so they are not duplicated in the lists
+        // below when picked from Recent or a muscle group.
+        let unselected = exercises.filter { !exerciseSelectorSelection.contains($0) }
+        var groups = ExerciseStore.splitIntoMuscleGroups(exercises: unselected)
         // Recent is only meaningful with no search or filters applied.
-        if search.isEmpty, !filtersActive, !recentExercises.isEmpty {
-            groups = [ExerciseGroup(title: "Recent", exercises: recentExercises)] + groups
+        if search.isEmpty, !filtersActive {
+            let recent = recentExercises.filter { !exerciseSelectorSelection.contains($0) }
+            if !recent.isEmpty {
+                groups = [ExerciseGroup(title: "Recent", exercises: recent)] + groups
+            }
         }
         // Selected first, so what you have picked stays visible at the top, even while searching.
         if !exerciseSelectorSelection.isEmpty {
