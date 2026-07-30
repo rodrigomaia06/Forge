@@ -178,6 +178,9 @@ struct WorkoutDetailView : View {
                     self.workout.workoutExercises = NSOrderedSet(array: workoutExercises)
                     self.managedObjectContext.saveOrCrash()
                 }
+                // Reordering only in edit mode, so a stray long-press drag can't change a past workout's
+                // exercise order by accident.
+                .moveDisabled(!editMode.isEditing)
                 
                 if editMode.isEditing {
                     Button(action: {
