@@ -412,16 +412,18 @@ private struct SupersetCard: View {
     let exercises: [WorkoutExercise]
     let sectionHeader: String?
 
-    @State private var showingUngroupConfirmation = false
-
     var body: some View {
         Section {
-            supersetBar
+            supersetHeader
             ForEach(Array(exercises.enumerated()), id: \.element.objectID) { index, exercise in
                 WorkoutExerciseDetailView(
                     workoutExercise: exercise,
                     embedded: true,
-                    supersetMember: .init(label: exercise.supersetLabel ?? "", isLast: index == exercises.count - 1)
+                    supersetMember: .init(
+                        label: exercise.supersetLabel ?? "",
+                        isFirst: index == 0,
+                        isLast: index == exercises.count - 1
+                    )
                 )
             }
         } header: {
@@ -429,31 +431,24 @@ private struct SupersetCard: View {
         }
     }
 
-    private var supersetBar: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-            HStack {
-                Label("Superset", systemImage: "link")
-                    .font(.forgeCaption.weight(.semibold))
-                    .foregroundColor(.forgeLabel)
-                Spacer()
-                // Ungrouping lives on the group, not in an exercise's menu, so the menu stays about a
-                // single exercise.
-                Button("Ungroup") { showingUngroupConfirmation = true }
-                    .font(.forgeCaption)
-                    .foregroundColor(.forgeSecondaryLabel)
+    /// A quiet, centered label that marks the group and, on tap, offers to ungroup. Grouping actions live
+    /// on the group rather than in an exercise's menu.
+    private var supersetHeader: some View {
+        Menu {
+            Button(role: .destructive) { ungroup() } label: {
+                Label("Ungroup", systemImage: "link")
             }
-            // The one behavior change a superset makes: rest waits until the last exercise of the round.
-            Label("rest after last set", systemImage: "timer")
-                .font(.forgeCaption)
-                .foregroundColor(.forgeSecondaryLabel)
+        } label: {
+            HStack(spacing: Theme.Spacing.xs) {
+                Image(systemName: "link").font(.caption2)
+                Text("Superset").font(.forgeCaption.weight(.semibold))
+                Image(systemName: "chevron.down").font(.caption2)
+            }
+            .foregroundColor(.forgeSecondaryLabel)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .contentShape(Rectangle())
         }
-        .listRowInsets(EdgeInsets(top: Theme.Spacing.s, leading: Theme.Spacing.m, bottom: Theme.Spacing.xs, trailing: Theme.Spacing.m))
-        .alert("Ungroup superset?", isPresented: $showingUngroupConfirmation) {
-            Button("Ungroup") { ungroup() }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("The exercises stay in the workout, no longer grouped.")
-        }
+        .listRowInsets(EdgeInsets(top: Theme.Spacing.m, leading: Theme.Spacing.m, bottom: Theme.Spacing.s, trailing: Theme.Spacing.m))
     }
 
     private func ungroup() {

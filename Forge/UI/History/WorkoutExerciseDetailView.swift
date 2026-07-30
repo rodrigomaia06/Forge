@@ -51,9 +51,11 @@ struct WorkoutExerciseDetailView : View {
     /// (the superset card wraps all members in one section) and shows an A / B / C badge before its name.
     private let supersetMember: SupersetMember?
 
-    /// One exercise's place in a superset: the A / B / C label and whether it is the last of the round.
+    /// One exercise's place in a superset: the A / B / C label and where it sits in the round. `isFirst`
+    /// drives the extra spacing that separates one member's block from the previous one.
     struct SupersetMember {
         let label: String
+        let isFirst: Bool
         let isLast: Bool
     }
 
@@ -477,6 +479,8 @@ struct WorkoutExerciseDetailView : View {
                     .contentShape(Rectangle())
             }
         }
+        // Separate a following superset member from the one above it, so A and B read as distinct blocks.
+        .padding(.top, (supersetMember.map { !$0.isFirst } ?? false) ? Theme.Spacing.l : 0)
     }
 
     @ViewBuilder private var exerciseMenuItems: some View {
