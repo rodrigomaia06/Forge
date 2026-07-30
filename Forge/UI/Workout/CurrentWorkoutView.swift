@@ -444,15 +444,14 @@ private struct SupersetCard: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
             HStack {
                 Text("Superset")
-                    // Match the system grouped-list section header ("Exercises") so it reads as the same
-                    // kind of label, not a smaller bolder one.
-                    .font(.footnote)
+                    // A bold uppercase label so the group reads clearly as its own heading.
+                    .font(.footnote.bold())
                     .textCase(.uppercase)
                     .foregroundColor(.secondary)
                 Spacer()
                 Menu {
                     Button { showingNoteEditor = true } label: {
-                        Label(note == nil ? "Add note" : "Edit note", systemImage: "square.and.pencil")
+                        Label(note == nil ? "Add note" : "Change note", systemImage: "square.and.pencil")
                     }
                     Button(role: .destructive) { ungroup() } label: {
                         Label("Ungroup", systemImage: "link")

@@ -485,7 +485,7 @@ struct WorkoutExerciseDetailView : View {
 
     @ViewBuilder private var exerciseMenuItems: some View {
         Button { showExerciseNote = true } label: {
-            Label(hasExerciseNote ? "Edit note" : "Add note", systemImage: "square.and.pencil")
+            Label(hasExerciseNote ? "Change note" : "Add note", systemImage: "square.and.pencil")
         }
         Button { showHistory = true } label: {
             Label("Previous sessions", systemImage: "clock.arrow.circlepath")

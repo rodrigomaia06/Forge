@@ -8,10 +8,10 @@ name: CI
 # so it still runs on iOS 17+. The .xcodeproj is generated from project.yml each run.
 
 on:
+  # Run on every branch push, so each run is named after its commit rather than a pull request. A push
+  # run still reports its status on any open PR for the same commit, so PR checks keep working.
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches: ['**']
   workflow_dispatch:
 
 concurrency:
