@@ -104,8 +104,10 @@ struct WorkoutRoutineView: View {
                     ClearableTextField(titleKey: "Comment", text: workoutRoutineComment, onCommit: { self.adjustAndSaveWorkoutRoutineCommentInput() })
                 } else {
                     LabeledContent("Title") { Text(workoutRoutine.title ?? "Untitled").foregroundColor(.secondary) }
+                        .editModeHint()
                     if let comment = workoutRoutine.comment, !comment.isEmpty {
                         LabeledContent("Comment") { Text(comment).foregroundColor(.secondary) }
+                            .editModeHint()
                     }
                 }
             }

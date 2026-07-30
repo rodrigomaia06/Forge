@@ -297,6 +297,7 @@ struct CurrentWorkoutView: View {
                             }
                             if !readComment.isEmpty {
                                 Text(readComment).foregroundColor(.forgeSecondaryLabel)
+                                    .editModeHint()
                             }
                         }
                     }
@@ -431,22 +432,27 @@ private struct SupersetCard: View {
         }
     }
 
-    /// A quiet, centered label that marks the group and, on tap, offers to ungroup. Grouping actions live
-    /// on the group rather than in an exercise's menu.
+    /// A quiet leading label that marks the group, styled like the "Exercises" section header so it reads
+    /// as part of the same system. Ungrouping lives in the trailing menu, on the group rather than in an
+    /// exercise's menu.
     private var supersetHeader: some View {
-        Menu {
-            Button(role: .destructive) { ungroup() } label: {
-                Label("Ungroup", systemImage: "link")
+        HStack {
+            Text("Superset")
+                .font(.forgeSectionLabel)
+                .textCase(.uppercase)
+                .tracking(0.6)
+                .foregroundColor(.forgeSecondaryLabel)
+            Spacer()
+            Menu {
+                Button(role: .destructive) { ungroup() } label: {
+                    Label("Ungroup", systemImage: "link")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .frame(width: 34, height: 24)
+                    .contentShape(Rectangle())
             }
-        } label: {
-            HStack(spacing: Theme.Spacing.xs) {
-                Image(systemName: "link").font(.caption2)
-                Text("Superset").font(.forgeCaption.weight(.semibold))
-                Image(systemName: "chevron.down").font(.caption2)
-            }
-            .foregroundColor(.forgeSecondaryLabel)
-            .frame(maxWidth: .infinity, alignment: .center)
-            .contentShape(Rectangle())
         }
         .listRowInsets(EdgeInsets(top: Theme.Spacing.m, leading: Theme.Spacing.m, bottom: Theme.Spacing.s, trailing: Theme.Spacing.m))
     }

@@ -135,6 +135,7 @@ struct WorkoutDetailView : View {
             } else if let comment = workout.comment, !comment.isEmpty {
                 Section {
                     Text(comment)
+                        .editModeHint()
                 }
             }
                 
@@ -151,7 +152,9 @@ struct WorkoutDetailView : View {
                         }
                     } else {
                         LabeledContent("Start") { Text(workout.safeStart.formatted(date: .abbreviated, time: .shortened)) }
+                            .editModeHint()
                         LabeledContent("End") { Text(workout.safeEnd.formatted(date: .abbreviated, time: .shortened)) }
+                            .editModeHint()
                     }
                 }
 
