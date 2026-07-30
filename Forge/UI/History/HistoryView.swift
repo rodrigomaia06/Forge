@@ -22,6 +22,8 @@ struct HistoryView : View {
         let request: NSFetchRequest<Workout> = Workout.fetchRequest()
         request.predicate = NSPredicate(format: "\(#keyPath(Workout.isCurrentWorkout)) != %@", NSNumber(booleanLiteral: true))
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Workout.start, ascending: false)]
+        // Fault rows in lazily rather than materializing the whole history at once.
+        request.fetchBatchSize = 20
         return request
     }
     

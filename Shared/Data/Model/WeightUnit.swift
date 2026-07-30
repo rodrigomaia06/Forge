@@ -43,20 +43,27 @@ extension WeightUnit {
         }
     }
     
-    var numberFormatter: NumberFormatter {
-        let numberFormatter = NumberFormatter()
-        numberFormatter.allowsFloats = true
-        numberFormatter.minimumFractionDigits = minimumFractionDigits
-        numberFormatter.maximumFractionDigits = maximumFractionDigits
-        return numberFormatter
-    }
-    
-    var formatter: MeasurementFormatter {
+    // The number and measurement formatters are the same for both units (the unit is supplied by the
+    // Measurement being formatted), so share one instance instead of allocating a new MeasurementFormatter
+    // on every access. Building a MeasurementFormatter is expensive and this is read once per set row.
+    private static let sharedNumberFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.allowsFloats = true
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 3
+        return formatter
+    }()
+
+    private static let sharedMeasurementFormatter: MeasurementFormatter = {
         let formatter = MeasurementFormatter()
         formatter.unitOptions = .providedUnit
-        formatter.numberFormatter = numberFormatter
+        formatter.numberFormatter = sharedNumberFormatter
         return formatter
-    }
+    }()
+
+    var numberFormatter: NumberFormatter { Self.sharedNumberFormatter }
+
+    var formatter: MeasurementFormatter { Self.sharedMeasurementFormatter }
 }
 
 extension WeightUnit {

@@ -40,10 +40,8 @@ struct WorkoutSetCell: View {
         guard let target = workoutSet.targetWeightValue, target > 0 else { return nil }
         let unit = settingsStore.weightUnit
         let value = WeightUnit.convert(weight: target, from: .metric, to: unit)
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = unit.maximumFractionDigits
-        let number = formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
+        // Reuse the shared formatter instead of allocating one per render.
+        let number = unit.numberFormatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
         return "\(number) \(unit.unit.symbol)"
     }
 

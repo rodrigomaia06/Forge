@@ -41,8 +41,23 @@ struct FeedView: View {
         let request: NSFetchRequest<Workout> = Workout.fetchRequest()
         request.predicate = NSPredicate(format: "\(#keyPath(Workout.isCurrentWorkout)) != %@", NSNumber(value: true))
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Workout.start, ascending: false)]
+        request.fetchBatchSize = 20
         _workouts = FetchRequest(fetchRequest: request)
     }
+
+    // Shared date formatters, so the dashboard does not allocate a new DateFormatter on every render.
+    private static let monthYearFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "MMMM yyyy"; return f
+    }()
+    private static let fullDayFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateStyle = .full; f.timeStyle = .none; return f
+    }()
+    private static let monthDayFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "MMMM d"; return f
+    }()
+    private static let shortMonthDayFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "MMM d"; return f
+    }()
 
     var body: some View {
         NavigationStack {
@@ -186,13 +201,11 @@ struct FeedView: View {
     }
 
     private func monthTitle(_ ref: MonthRef) -> String {
-        let f = DateFormatter(); f.dateFormat = "MMMM yyyy"
-        return f.string(from: firstOf(year: ref.year, month: ref.month))
+        return Self.monthYearFormatter.string(from: firstOf(year: ref.year, month: ref.month))
     }
 
     private var monthString: String {
-        let f = DateFormatter(); f.dateFormat = "MMMM yyyy"
-        return f.string(from: Date()).uppercased()
+        return Self.monthYearFormatter.string(from: Date()).uppercased()
     }
 
     private var yearString: String { String(cal.component(.year, from: Date())) }
@@ -250,8 +263,7 @@ struct FeedView: View {
     }
 
     private func dayAccessibilityLabel(_ date: Date, active: Bool) -> String {
-        let f = DateFormatter(); f.dateStyle = .full; f.timeStyle = .none
-        let day = f.string(from: date)
+        let day = Self.fullDayFormatter.string(from: date)
         return active ? "\(day), workout logged" : "\(day), no workout"
     }
 
@@ -377,12 +389,10 @@ struct FeedView: View {
     private var recentTitle: String {
         switch filter {
         case .day(let d):
-            let f = DateFormatter(); f.dateFormat = "MMMM d"
-            return f.string(from: d).uppercased()
+            return Self.monthDayFormatter.string(from: d).uppercased()
         case .month(let year, let month):
-            let f = DateFormatter(); f.dateFormat = "MMMM yyyy"
             let comps = DateComponents(year: year, month: month, day: 1)
-            return (cal.date(from: comps).map { f.string(from: $0) } ?? "").uppercased()
+            return (cal.date(from: comps).map { Self.monthYearFormatter.string(from: $0) } ?? "").uppercased()
         case nil:
             return "RECENT"
         }
@@ -426,8 +436,7 @@ struct FeedView: View {
 
     private func dateLabel(_ date: Date?) -> String {
         guard let date = date else { return "" }
-        let f = DateFormatter(); f.dateFormat = "MMM d"
-        return f.string(from: date).uppercased()
+        return Self.shortMonthDayFormatter.string(from: date).uppercased()
     }
 
 }
