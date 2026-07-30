@@ -54,6 +54,46 @@ or a subscription.
 Forge stores workouts locally. It requires no account, includes no analytics or
 advertising SDKs, and sends nothing off the device unless you deliberately export it.
 
+## Installing
+
+Forge is not on the App Store. You sideload the `.ipa` and sign it with your own free
+Apple ID. This costs nothing, but a free Apple ID signature lasts seven days, so the
+tool re-signs the app for you. You need an iPhone, a free Apple ID, and a computer for
+the first setup. Get the `.ipa` from the Releases page or a CI build artifact.
+
+### macOS or Windows
+
+Use [AltStore](https://altstore.io):
+
+1. Install AltServer on the computer and AltStore on the iPhone, following the AltStore guide.
+2. Connect the iPhone, open AltStore, and add the Forge `.ipa` (My Apps, then the plus
+   button). Sign in with your Apple ID when asked.
+3. On the iPhone, trust the signer under Settings, General, VPN & Device Management, your
+   Apple ID, Trust.
+4. Keep AltServer running on the same Wi-Fi so it can refresh the signature every seven days.
+
+[Sideloadly](https://sideloadly.io) is an alternative that works the same way on macOS and Windows.
+
+### Linux
+
+AltServer has no official Linux build. Use [SideStore](https://sidestore.io), which renews
+the app on the device itself after setup:
+
+1. Follow the SideStore setup: create a pairing file and install the SideStore app on the
+   iPhone (the first install uses your computer).
+2. In SideStore, sign in with your Apple ID and install the Forge `.ipa`.
+3. SideStore renews the signature on the device over its own connection, so no computer is
+   needed afterwards.
+
+SideStore also runs from macOS and Windows if you prefer on-device refreshing.
+
+### Notes
+
+- A free Apple ID allows three sideloaded apps at once and re-signs every seven days. If a
+  refresh is missed the app stops opening until it is signed again. Your data is kept.
+- The paid Apple Developer Program (99 USD per year) is only needed for TestFlight or the
+  App Store, not for sideloading.
+
 ## Use of AI
 
 Forge is developed with heavy use of an AI coding assistant (Claude Code). The assistant
