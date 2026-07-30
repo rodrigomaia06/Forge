@@ -345,7 +345,7 @@ struct CurrentWorkoutView: View {
                             case .single(let workoutExercise):
                                 WorkoutExerciseDetailView(workoutExercise: workoutExercise, embedded: true, sectionHeader: index == 0 ? "Exercises" : nil)
                             case .superset(_, let exercises):
-                                SupersetCard(exercises: exercises, sectionHeader: index == 0 ? "Exercises" : nil)
+                                SupersetCard(anchor: exercises[0], exercises: exercises, sectionHeader: index == 0 ? "Exercises" : nil)
                             }
                         }
                     }
@@ -410,13 +410,16 @@ struct CurrentWorkoutView: View {
 /// label and the rest note); each member renders its own rows and an A / B / C badge.
 private struct SupersetCard: View {
     @Environment(\.managedObjectContext) private var managedObjectContext
+    // Observed so the header's note and menu label react when the shared note changes (the note lives on
+    // the managed object, and an unobserved array of the same references would not trigger a re-render).
+    @ObservedObject var anchor: WorkoutExercise
     let exercises: [WorkoutExercise]
     let sectionHeader: String?
 
     @State private var showingNoteEditor = false
 
-    /// The group's shared note, read from any member (they are kept equal).
-    private var note: String? { exercises.first?.supersetNote }
+    /// The group's shared note, read from the observed anchor (all members are kept equal).
+    private var note: String? { anchor.supersetNote }
 
     var body: some View {
         Section {
@@ -441,53 +444,53 @@ private struct SupersetCard: View {
     /// as part of the same system. Ungrouping lives in the trailing menu, on the group rather than in an
     /// exercise's menu.
     private var supersetHeader: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-            HStack {
-                Text("Superset")
-                    // A bold uppercase label so the group reads clearly as its own heading.
-                    .font(.footnote.bold())
-                    .textCase(.uppercase)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Menu {
-                    Button { showingNoteEditor = true } label: {
-                        Label(note == nil ? "Add note" : "Change note", systemImage: "square.and.pencil")
-                    }
-                    Button(role: .destructive) { ungroup() } label: {
-                        Label("Ungroup", systemImage: "link")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .foregroundColor(.forgeSecondaryLabel)
-                        .frame(width: 34, height: 24)
-                        .contentShape(Rectangle())
-                }
-            }
+        // A link glyph marks the group (a letter chip would read like another A/B/C member badge); the
+        // note sits beside it.
+        HStack(alignment: .center, spacing: Theme.Spacing.s) {
+            Image(systemName: "link")
+                .font(.body)
+                // Fixed height (matching the menu button) so a larger glyph does not grow the row.
+                .frame(height: 24)
+                .foregroundColor(.forgeSecondaryLabel)
+                .accessibilityLabel("Superset")
             if let note {
                 Text(note)
                     .font(.forgeCaption.italic())
                     .foregroundColor(.forgeSecondaryLabel)
-                    .lineLimit(3)
+                    .lineLimit(2)
+            }
+            Spacer()
+            Menu {
+                Button { showingNoteEditor = true } label: {
+                    Label(note == nil ? "Add note" : "Change note", systemImage: "square.and.pencil")
+                }
+                Button(role: .destructive) { ungroup() } label: {
+                    Label("Ungroup", systemImage: "link")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .frame(width: 34, height: 24)
+                    .contentShape(Rectangle())
             }
         }
         .listRowInsets(EdgeInsets(top: Theme.Spacing.m, leading: Theme.Spacing.m, bottom: Theme.Spacing.s, trailing: Theme.Spacing.m))
         .sheet(isPresented: $showingNoteEditor) {
-            if let anchor = exercises.first {
-                NavigationStack {
-                    SupersetNoteEditor(anchor: anchor)
-                        .navigationBarTitle("Superset note", displayMode: .inline)
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") { showingNoteEditor = false }.fontWeight(.semibold)
-                            }
+            NavigationStack {
+                SupersetNoteEditor(anchor: anchor)
+                    .navigationBarTitle("Superset note", displayMode: .inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showingNoteEditor = false }.fontWeight(.semibold)
                         }
-                }
+                    }
             }
+            .presentationDetents([.medium])
         }
     }
 
     private func ungroup() {
-        guard let workout = exercises.first?.workout, let uuid = exercises.first?.supersetUUID else { return }
+        guard let workout = anchor.workout, let uuid = anchor.supersetUUID else { return }
         Haptics.selection()
         workout.ungroupSuperset(id: uuid)
         managedObjectContext.saveOrCrash()
