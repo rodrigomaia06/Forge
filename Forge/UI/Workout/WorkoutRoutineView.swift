@@ -73,16 +73,25 @@ struct WorkoutRoutineView: View {
         AddExercisesSheet(
             exercises: exerciseStore.shownExercises,
             recentExercises: AddExercisesSheet.loadRecentExercises(context: managedObjectContext, exercises: exerciseStore.shownExercises),
-            onAdd: { selection in
-                for exercise in selection {
-                    let workoutRoutineExercise = WorkoutRoutineExercise.create(context: self.managedObjectContext)
-                    workoutRoutineExercise.workoutRoutine = self.workoutRoutine
-                    workoutRoutineExercise.exerciseUuid = exercise.uuid
-                    // TODO: add default sets?
-                }
-                self.managedObjectContext.saveOrCrash()
-            }
+            onAdd: { selection in self.addExercises(Array(selection), asSuperset: false) },
+            onAddSuperset: { ordered in self.addExercises(ordered, asSuperset: true) }
         )
+    }
+
+    /// Adds the exercises to the routine. When `asSuperset` is true and there are at least two, they are
+    /// grouped into one superset in the given order.
+    private func addExercises(_ exercises: [Exercise], asSuperset: Bool) {
+        var added: [WorkoutRoutineExercise] = []
+        for exercise in exercises {
+            let workoutRoutineExercise = WorkoutRoutineExercise.create(context: self.managedObjectContext)
+            workoutRoutineExercise.workoutRoutine = self.workoutRoutine
+            workoutRoutineExercise.exerciseUuid = exercise.uuid
+            added.append(workoutRoutineExercise)
+        }
+        if asSuperset {
+            self.workoutRoutine.makeSuperset(from: added)
+        }
+        self.managedObjectContext.saveOrCrash()
     }
     
     var body: some View {
@@ -106,13 +115,36 @@ struct WorkoutRoutineView: View {
             Section(header: Text("Exercises")) {
                 ForEach(workoutRoutineExercises) { workoutRoutineExercise in
                     NavigationLink(destination: WorkoutRoutineExerciseView(workoutRoutineExercise: workoutRoutineExercise)) {
-                        VStack(alignment: .leading) {
-                            Text(workoutRoutineExercise.exercise(in: self.exerciseStore.exercises)?.title ?? "Unknown Exercise")
-                            workoutRoutineExercise.subtitle.map {
-                                Text($0)
-                                    .foregroundColor(.secondary)
-                                    .font(.caption)
+                        HStack(spacing: Theme.Spacing.s) {
+                            if let label = workoutRoutineExercise.supersetLabel {
+                                Text(label)
+                                    .font(.forgeCaption.weight(.bold))
+                                    .foregroundColor(.forgeSecondaryLabel)
+                                    .frame(width: 20, height: 20)
+                                    .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.forgeSeparator))
+                                    .accessibilityLabel("Superset \(label)")
                             }
+                            VStack(alignment: .leading) {
+                                Text(workoutRoutineExercise.exercise(in: self.exerciseStore.exercises)?.title ?? "Unknown Exercise")
+                                workoutRoutineExercise.subtitle.map {
+                                    Text($0)
+                                        .foregroundColor(.secondary)
+                                        .font(.caption)
+                                }
+                            }
+                        }
+                    }
+                    // Ungroup lives on the row, not in a per-exercise menu. Swipe from the leading edge to
+                    // break the group; the exercises stay in the routine.
+                    .swipeActions(edge: .leading) {
+                        if let uuid = workoutRoutineExercise.supersetUUID {
+                            Button {
+                                self.workoutRoutine.ungroupSuperset(id: uuid)
+                                self.managedObjectContext.saveOrCrash()
+                            } label: {
+                                Label("Ungroup", systemImage: "link")
+                            }
+                            .tint(.forgeSecondaryLabel)
                         }
                     }
                 }
@@ -123,12 +155,16 @@ struct WorkoutRoutineView: View {
                         self.managedObjectContext.delete(workoutRoutineExercise)
                         workoutRoutineExercise.workoutRoutine?.removeFromWorkoutRoutineExercises(workoutRoutineExercise)
                     }
+                    // Clear any superset left with a single member after the removal.
+                    self.workoutRoutine.normalizeSupersets()
                     self.managedObjectContext.saveOrCrash()
                 }
                 .onMove { source, destination in
                     var workoutRoutineExercises = self.workoutRoutineExercises
                     workoutRoutineExercises.move(fromOffsets: source, toOffset: destination)
                     self.workoutRoutine.workoutRoutineExercises = NSOrderedSet(array: workoutRoutineExercises)
+                    // A move can split a superset; restore the contiguous-group invariant.
+                    self.workoutRoutine.normalizeSupersets()
                     self.managedObjectContext.saveOrCrash()
                 }
                 // Reordering only in edit mode, so a stray long-press can't change the routine's order.
