@@ -441,33 +441,32 @@ private struct SupersetCard: View {
     /// as part of the same system. Ungrouping lives in the trailing menu, on the group rather than in an
     /// exercise's menu.
     private var supersetHeader: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-            HStack {
+        // Menu stays vertically centered across the label and note; note sits tight under the label.
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text("Superset")
-                    // A bold uppercase label so the group reads clearly as its own heading.
                     .font(.footnote.bold())
-                    .textCase(.uppercase)
                     .foregroundColor(.secondary)
-                Spacer()
-                Menu {
-                    Button { showingNoteEditor = true } label: {
-                        Label(note == nil ? "Add note" : "Change note", systemImage: "square.and.pencil")
-                    }
-                    Button(role: .destructive) { ungroup() } label: {
-                        Label("Ungroup", systemImage: "link")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
+                if let note {
+                    Text(note)
+                        .font(.forgeCaption.italic())
                         .foregroundColor(.forgeSecondaryLabel)
-                        .frame(width: 34, height: 24)
-                        .contentShape(Rectangle())
+                        .lineLimit(3)
                 }
             }
-            if let note {
-                Text(note)
-                    .font(.forgeCaption.italic())
+            Spacer()
+            Menu {
+                Button { showingNoteEditor = true } label: {
+                    Label(note == nil ? "Add note" : "Change note", systemImage: "square.and.pencil")
+                }
+                Button(role: .destructive) { ungroup() } label: {
+                    Label("Ungroup", systemImage: "link")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
                     .foregroundColor(.forgeSecondaryLabel)
-                    .lineLimit(3)
+                    .frame(width: 34, height: 24)
+                    .contentShape(Rectangle())
             }
         }
         .listRowInsets(EdgeInsets(top: Theme.Spacing.m, leading: Theme.Spacing.m, bottom: Theme.Spacing.s, trailing: Theme.Spacing.m))
