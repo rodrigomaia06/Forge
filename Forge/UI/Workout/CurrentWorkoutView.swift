@@ -413,6 +413,11 @@ private struct SupersetCard: View {
     let exercises: [WorkoutExercise]
     let sectionHeader: String?
 
+    @State private var showingNoteEditor = false
+
+    /// The group's shared note, read from any member (they are kept equal).
+    private var note: String? { exercises.first?.supersetNote }
+
     var body: some View {
         Section {
             supersetHeader
@@ -436,25 +441,50 @@ private struct SupersetCard: View {
     /// as part of the same system. Ungrouping lives in the trailing menu, on the group rather than in an
     /// exercise's menu.
     private var supersetHeader: some View {
-        HStack {
-            Text("Superset")
-                .font(.forgeSectionLabel)
-                .textCase(.uppercase)
-                .tracking(0.6)
-                .foregroundColor(.forgeSecondaryLabel)
-            Spacer()
-            Menu {
-                Button(role: .destructive) { ungroup() } label: {
-                    Label("Ungroup", systemImage: "link")
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+            HStack {
+                Text("Superset")
+                    // Match the system grouped-list section header ("Exercises") so it reads as the same
+                    // kind of label, not a smaller bolder one.
+                    .font(.footnote)
+                    .textCase(.uppercase)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Menu {
+                    Button { showingNoteEditor = true } label: {
+                        Label(note == nil ? "Add note" : "Edit note", systemImage: "square.and.pencil")
+                    }
+                    Button(role: .destructive) { ungroup() } label: {
+                        Label("Ungroup", systemImage: "link")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .foregroundColor(.forgeSecondaryLabel)
+                        .frame(width: 34, height: 24)
+                        .contentShape(Rectangle())
                 }
-            } label: {
-                Image(systemName: "ellipsis")
+            }
+            if let note {
+                Text(note)
+                    .font(.forgeCaption.italic())
                     .foregroundColor(.forgeSecondaryLabel)
-                    .frame(width: 34, height: 24)
-                    .contentShape(Rectangle())
+                    .lineLimit(3)
             }
         }
         .listRowInsets(EdgeInsets(top: Theme.Spacing.m, leading: Theme.Spacing.m, bottom: Theme.Spacing.s, trailing: Theme.Spacing.m))
+        .sheet(isPresented: $showingNoteEditor) {
+            if let anchor = exercises.first {
+                NavigationStack {
+                    SupersetNoteEditor(anchor: anchor)
+                        .navigationBarTitle("Superset note", displayMode: .inline)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { showingNoteEditor = false }.fontWeight(.semibold)
+                            }
+                        }
+                }
+            }
+        }
     }
 
     private func ungroup() {
@@ -462,6 +492,27 @@ private struct SupersetCard: View {
         Haptics.selection()
         workout.ungroupSuperset(id: uuid)
         managedObjectContext.saveOrCrash()
+    }
+}
+
+/// Edits the note shared by a whole superset. Editing an anchor member writes the note to every member of
+/// the group, so it survives reordering within the group.
+private struct SupersetNoteEditor: View {
+    @ObservedObject var anchor: WorkoutExercise
+    @State private var draft = ""
+
+    var body: some View {
+        Form {
+            Section(footer: Text("A note for the whole superset.")) {
+                TextField("Note", text: $draft, axis: .vertical)
+                    .lineLimit(3...8)
+            }
+        }
+        .onAppear { draft = anchor.supersetNote ?? "" }
+        .onDisappear {
+            anchor.setSupersetNote(draft)
+            anchor.managedObjectContext?.saveOrCrash()
+        }
     }
 }
 

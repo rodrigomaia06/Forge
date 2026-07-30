@@ -67,6 +67,7 @@ public class WorkoutRoutineExercise: NSManagedObject, Codable {
         case exerciseName
         case comment
         case supersetUUID
+        case supersetComment
         case sets
     }
 
@@ -85,6 +86,7 @@ public class WorkoutRoutineExercise: NSManagedObject, Codable {
         comment = try container.decodeIfPresent(String.self, forKey: .comment)
         // Older exports have no superset id; those exercises decode as ungrouped.
         supersetUUID = try container.decodeIfPresent(UUID.self, forKey: .supersetUUID)
+        supersetComment = try container.decodeIfPresent(String.self, forKey: .supersetComment)
         workoutRoutineSets = NSOrderedSet(array: try container.decodeIfPresent([WorkoutRoutineSet].self, forKey: .sets) ?? [])
     }
 
@@ -94,6 +96,7 @@ public class WorkoutRoutineExercise: NSManagedObject, Codable {
         try container.encodeIfPresent(exerciseUuid, forKey: .exerciseUuid)
         try container.encodeIfPresent(comment, forKey: .comment)
         try container.encodeIfPresent(supersetUUID, forKey: .supersetUUID)
+        try container.encodeIfPresent(supersetComment, forKey: .supersetComment)
         try container.encodeIfPresent(workoutRoutineSets?.array.compactMap { $0 as? WorkoutRoutineSet }, forKey: .sets)
         
         if let exercisesKey = CodingUserInfoKey.exercisesKey,

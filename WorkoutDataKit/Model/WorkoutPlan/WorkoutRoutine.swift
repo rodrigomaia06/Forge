@@ -34,6 +34,7 @@ public class WorkoutRoutine: NSManagedObject, Codable {
             let exerciseCopy = WorkoutRoutineExercise.create(context: context)
             exerciseCopy.exerciseUuid = exercise.exerciseUuid
             exerciseCopy.comment = exercise.comment
+            exerciseCopy.supersetComment = exercise.supersetComment
             exerciseCopy.workoutRoutine = copy
             if let group = exercise.supersetUUID {
                 exerciseCopy.supersetUUID = supersetIDMap[group] ?? {
@@ -110,6 +111,7 @@ public class WorkoutRoutine: NSManagedObject, Codable {
                 workout.addToWorkoutExercises(workoutExercise)
                 workoutExercise.exerciseUuid = workoutRoutineExercise.exerciseUuid
                 workoutExercise.comment = workoutRoutineExercise.comment
+                workoutExercise.supersetComment = workoutRoutineExercise.supersetComment
                 if let routineGroup = workoutRoutineExercise.supersetUUID {
                     workoutExercise.supersetUUID = supersetIDMap[routineGroup] ?? {
                         let fresh = UUID(); supersetIDMap[routineGroup] = fresh; return fresh
@@ -207,6 +209,7 @@ extension WorkoutRoutine {
             let routineExercise = WorkoutRoutineExercise.create(context: context)
             routineExercise.exerciseUuid = workoutExercise.exerciseUuid
             routineExercise.comment = workoutExercise.comment
+            routineExercise.supersetComment = workoutExercise.supersetComment
             routineExercise.workoutRoutine = self
             // Carry the workout's superset grouping onto the routine, with fresh ids for the routine.
             if let group = workoutExercise.supersetUUID {

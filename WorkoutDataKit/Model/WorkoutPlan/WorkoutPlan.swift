@@ -42,6 +42,7 @@ public class WorkoutPlan: NSManagedObject, Codable {
                                 let workoutRoutineExerciseCopy = WorkoutRoutineExercise.create(context: context)
                                 workoutRoutineExerciseCopy.exerciseUuid = workoutRoutineExercise.exerciseUuid
                                 workoutRoutineExerciseCopy.comment = workoutRoutineExercise.comment
+                                workoutRoutineExerciseCopy.supersetComment = workoutRoutineExercise.supersetComment
                                 if let group = workoutRoutineExercise.supersetUUID {
                                     workoutRoutineExerciseCopy.supersetUUID = supersetIDMap[group] ?? {
                                         let fresh = UUID(); supersetIDMap[group] = fresh; return fresh

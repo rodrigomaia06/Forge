@@ -173,8 +173,9 @@ final class WorkoutDataExchangeTests: XCTestCase {
             set.workoutExercise = exercise
             exercises.append(exercise)
         }
-        // Group the first two into a superset.
+        // Group the first two into a superset, with a shared note.
         workout.makeSuperset(from: [exercises[0], exercises[1]])
+        exercises[0].setSupersetNote("drop 10% each round")
         try context.save()
 
         let data = try WorkoutDataExchange.export(workouts: [workout])
@@ -189,6 +190,9 @@ final class WorkoutDataExchangeTests: XCTestCase {
         XCTAssertNil(importedExercises[2].supersetUUID)
         // The group id is minted fresh on import, not carried from the source.
         XCTAssertNotEqual(importedExercises[0].supersetUUID, exercises[0].supersetUUID)
+        // The shared note survives, on each member of the group.
+        XCTAssertEqual(importedExercises[0].supersetComment, "drop 10% each round")
+        XCTAssertEqual(importedExercises[1].supersetComment, "drop 10% each round")
     }
 
     func testRoutineSupersetRoundTrip() throws {

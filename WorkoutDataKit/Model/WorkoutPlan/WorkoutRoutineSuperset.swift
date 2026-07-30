@@ -45,6 +45,20 @@ extension WorkoutRoutineExercise {
         guard isInSuperset else { return false }
         return supersetPartners.last == self
     }
+
+    /// The note shared by the whole superset, stored on each member and kept equal. Nil when there is none
+    /// or the exercise is not in a superset.
+    public var supersetNote: String? {
+        guard isInSuperset, let note = supersetComment, !note.isEmpty else { return nil }
+        return note
+    }
+
+    /// Sets the superset's shared note on every member of the group. An empty note clears it.
+    public func setSupersetNote(_ note: String?) {
+        let trimmed = note?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let value = (trimmed?.isEmpty ?? true) ? nil : trimmed
+        for partner in supersetPartners { partner.supersetComment = value }
+    }
 }
 
 // MARK: - A routine's grouped layout and grouping operations
@@ -106,11 +120,12 @@ extension WorkoutRoutine {
         return uuid
     }
 
-    /// Removes the superset grouping with the given id. The exercises stay where they are.
+    /// Removes the superset grouping with the given id. The exercises stay where they are; the shared note
+    /// is cleared with the group.
     public func ungroupSuperset(id: UUID) {
         (workoutRoutineExercises?.array as? [WorkoutRoutineExercise] ?? [])
             .filter { $0.supersetUUID == id }
-            .forEach { $0.supersetUUID = nil }
+            .forEach { $0.supersetUUID = nil; $0.supersetComment = nil }
     }
 
     /// Restores the superset invariant after a reorder or delete: every stored superset id marks a
@@ -125,7 +140,7 @@ extension WorkoutRoutine {
             while end + 1 < all.count, all[end + 1].supersetUUID == uuid { end += 1 }
             let run = all[index...end]
             if run.count < 2 {
-                run.forEach { $0.supersetUUID = nil }
+                run.forEach { $0.supersetUUID = nil; $0.supersetComment = nil }
             } else if seenIDs.contains(uuid) {
                 let fresh = UUID()
                 run.forEach { $0.supersetUUID = fresh }

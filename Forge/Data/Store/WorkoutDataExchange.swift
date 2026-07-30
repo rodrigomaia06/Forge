@@ -80,6 +80,8 @@ enum WorkoutDataExchange {
         // Which superset this exercise belongs to, numbered per file (nil when not in one). Exercises
         // sharing a number are one group; import mints a fresh id for each number.
         var supersetGroup: Int?
+        // The group's shared note (repeated on each member, as it is stored).
+        var supersetComment: String?
         var sets: [RoutineSetDTO]
     }
 
@@ -109,6 +111,8 @@ enum WorkoutDataExchange {
         var comment: String?
         // Which superset this exercise belongs to, numbered per file (nil when not in one).
         var supersetGroup: Int?
+        // The group's shared note (repeated on each member, as it is stored).
+        var supersetComment: String?
         var sets: [WorkoutSetDTO]
     }
 
@@ -181,6 +185,7 @@ enum WorkoutDataExchange {
                     exerciseUuid: exercise.exerciseUuid ?? UUID(),
                     comment: exercise.comment,
                     supersetGroup: exercise.supersetUUID.flatMap { groupNumbers[$0] },
+                    supersetComment: exercise.supersetComment,
                     sets: orderedRoutineSets(exercise).map { set in
                         RoutineSetDTO(minReps: set.minRepetitionsValue, maxReps: set.maxRepetitionsValue, tag: set.tagValue?.rawValue, comment: set.comment)
                     }
@@ -214,6 +219,7 @@ enum WorkoutDataExchange {
                     exerciseUuid: exercise.exerciseUuid ?? UUID(),
                     comment: exercise.comment,
                     supersetGroup: exercise.supersetUUID.flatMap { groupNumbers[$0] },
+                    supersetComment: exercise.supersetComment,
                     sets: orderedWorkoutSets(exercise).map { set in
                         WorkoutSetDTO(
                             weight: set.weight?.doubleValue,
@@ -305,6 +311,7 @@ enum WorkoutDataExchange {
             let exercise = WorkoutRoutineExercise.create(context: context)
             exercise.exerciseUuid = exerciseDTO.exerciseUuid
             exercise.comment = exerciseDTO.comment
+            exercise.supersetComment = exerciseDTO.supersetComment
             exercise.workoutRoutine = routine
             if let group = exerciseDTO.supersetGroup {
                 exercise.supersetUUID = groupIDs[group] ?? { let id = UUID(); groupIDs[group] = id; return id }()
@@ -339,6 +346,7 @@ enum WorkoutDataExchange {
             let exercise = WorkoutExercise.create(context: context)
             exercise.exerciseUuid = exerciseDTO.exerciseUuid
             exercise.comment = exerciseDTO.comment
+            exercise.supersetComment = exerciseDTO.supersetComment
             exercise.workout = workout
             if let group = exerciseDTO.supersetGroup {
                 exercise.supersetUUID = groupIDs[group] ?? { let id = UUID(); groupIDs[group] = id; return id }()

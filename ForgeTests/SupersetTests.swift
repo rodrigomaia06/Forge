@@ -121,6 +121,36 @@ final class SupersetTests: XCTestCase {
         XCTAssertEqual(e[1].supersetUUID, group)
     }
 
+    func testSupersetNoteSharedAcrossMembersAndClearedOnUngroup() {
+        let (workout, e) = makeWorkout(exercises: 3) // A B C
+        let uuid = workout.makeSuperset(from: [e[0], e[1]])!
+        e[0].setSupersetNote("drop 10% each round")
+
+        // Stored on every member of the group, and on none outside it.
+        XCTAssertEqual(e[0].supersetComment, "drop 10% each round")
+        XCTAssertEqual(e[1].supersetComment, "drop 10% each round")
+        XCTAssertNil(e[2].supersetComment)
+        // Readable from any member.
+        XCTAssertEqual(e[0].supersetNote, "drop 10% each round")
+        XCTAssertEqual(e[1].supersetNote, "drop 10% each round")
+
+        // Ungrouping clears the shared note with the group.
+        workout.ungroupSuperset(id: uuid)
+        XCTAssertNil(e[0].supersetComment)
+        XCTAssertNil(e[1].supersetComment)
+        XCTAssertNil(e[0].supersetNote)
+    }
+
+    func testSupersetNoteTrimsAndClearsOnEmpty() {
+        let (workout, e) = makeWorkout(exercises: 2)
+        workout.makeSuperset(from: [e[0], e[1]])
+        e[0].setSupersetNote("  spaced  ")
+        XCTAssertEqual(e[0].supersetComment, "spaced")
+        e[0].setSupersetNote("   ")
+        XCTAssertNil(e[0].supersetComment)
+        XCTAssertNil(e[1].supersetComment)
+    }
+
     func testAppendedExercisesFormGroupInOrder() {
         // Mirrors add-time: two exercises added together and grouped keep their order as A, B.
         let (workout, e) = makeWorkout(exercises: 2)
