@@ -18,6 +18,19 @@ public class WorkoutPlan: NSManagedObject, Codable {
         workoutPlan.uuid = UUID()
         return workoutPlan
     }
+
+    /// Deleting a plan cascades to its routines. Snapshot the plan-and-routine name onto any borrowing
+    /// workout here first, while the plan is still connected, so the full name is captured before the
+    /// cascade nulls each routine's link. (The routine's own prepareForDeletion then finds nothing left
+    /// to do for those workouts.)
+    public override func prepareForDeletion() {
+        super.prepareForDeletion()
+        for case let routine as WorkoutRoutine in (workoutRoutines ?? []) {
+            for case let workout as Workout in (routine.workouts ?? []) {
+                workout.snapshotRoutineTitleIfNeeded()
+            }
+        }
+    }
     
     public var displayTitle: String {
         title ?? "Workout Plan"

@@ -68,6 +68,15 @@ public class Workout: NSManagedObject, Codable {
         }
         return nil
     }
+
+    /// Fixes the name this workout currently borrows from its routine and plan onto its own title, but
+    /// only when it has no name of its own. Called before the routine or plan is deleted, so History keeps
+    /// showing the same name instead of falling back to a generated one. A workout with its own title, or
+    /// one not showing a plan-and-routine name, is left untouched.
+    public func snapshotRoutineTitleIfNeeded() {
+        guard (title ?? "").isEmpty, let borrowed = workoutPlanAndRoutineTitle() else { return }
+        title = borrowed
+    }
     
     public func generatedTitle(in exercises: [Exercise]) -> String? {
         let muscleGroups = self.muscleGroups(in: exercises)

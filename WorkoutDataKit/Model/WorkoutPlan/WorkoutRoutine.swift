@@ -19,6 +19,16 @@ public class WorkoutRoutine: NSManagedObject, Codable {
         return workoutRoutine
     }
 
+    /// Before this routine is deleted, keep any finished workout that borrowed its name from this routine
+    /// readable by fixing that name onto the workout. The relationships are still intact here, so the plan
+    /// and routine names are available. A workout with its own name is left as it is.
+    public override func prepareForDeletion() {
+        super.prepareForDeletion()
+        for case let workout as Workout in (workouts ?? []) {
+            workout.snapshotRoutineTitleIfNeeded()
+        }
+    }
+
     /// A deep copy of this routine (title, comment, custom fields, exercises and their sets), not yet
     /// attached to a plan. The caller adds it to a plan's ordered routines.
     public func duplicate(context: NSManagedObjectContext) -> WorkoutRoutine {
