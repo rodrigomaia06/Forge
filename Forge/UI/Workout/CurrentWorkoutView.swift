@@ -345,7 +345,7 @@ struct CurrentWorkoutView: View {
                             case .single(let workoutExercise):
                                 WorkoutExerciseDetailView(workoutExercise: workoutExercise, embedded: true, sectionHeader: index == 0 ? "Exercises" : nil)
                             case .superset(_, let exercises):
-                                SupersetCard(exercises: exercises, sectionHeader: index == 0 ? "Exercises" : nil)
+                                SupersetCard(anchor: exercises[0], exercises: exercises, sectionHeader: index == 0 ? "Exercises" : nil)
                             }
                         }
                     }
@@ -410,13 +410,16 @@ struct CurrentWorkoutView: View {
 /// label and the rest note); each member renders its own rows and an A / B / C badge.
 private struct SupersetCard: View {
     @Environment(\.managedObjectContext) private var managedObjectContext
+    // Observed so the header's note and menu label react when the shared note changes (the note lives on
+    // the managed object, and an unobserved array of the same references would not trigger a re-render).
+    @ObservedObject var anchor: WorkoutExercise
     let exercises: [WorkoutExercise]
     let sectionHeader: String?
 
     @State private var showingNoteEditor = false
 
-    /// The group's shared note, read from any member (they are kept equal).
-    private var note: String? { exercises.first?.supersetNote }
+    /// The group's shared note, read from the observed anchor (all members are kept equal).
+    private var note: String? { anchor.supersetNote }
 
     var body: some View {
         Section {
@@ -472,23 +475,21 @@ private struct SupersetCard: View {
         }
         .listRowInsets(EdgeInsets(top: Theme.Spacing.m, leading: Theme.Spacing.m, bottom: Theme.Spacing.s, trailing: Theme.Spacing.m))
         .sheet(isPresented: $showingNoteEditor) {
-            if let anchor = exercises.first {
-                NavigationStack {
-                    SupersetNoteEditor(anchor: anchor)
-                        .navigationBarTitle("Superset note", displayMode: .inline)
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") { showingNoteEditor = false }.fontWeight(.semibold)
-                            }
+            NavigationStack {
+                SupersetNoteEditor(anchor: anchor)
+                    .navigationBarTitle("Superset note", displayMode: .inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showingNoteEditor = false }.fontWeight(.semibold)
                         }
-                }
-                .presentationDetents([.medium])
+                    }
             }
+            .presentationDetents([.medium])
         }
     }
 
     private func ungroup() {
-        guard let workout = exercises.first?.workout, let uuid = exercises.first?.supersetUUID else { return }
+        guard let workout = anchor.workout, let uuid = anchor.supersetUUID else { return }
         Haptics.selection()
         workout.ungroupSuperset(id: uuid)
         managedObjectContext.saveOrCrash()
