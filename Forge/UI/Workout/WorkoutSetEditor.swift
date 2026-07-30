@@ -447,7 +447,7 @@ struct SetMoreView: View {
                 HStack {
                     Text("Weight")
                     Spacer()
-                    RightAlignedNumberField(text: targetWeightText, placeholder: "0", keyboardType: .decimalPad, alignment: .right)
+                    RightAlignedNumberField(text: targetWeightText, placeholder: "0", keyboardType: .decimalPad, alignment: .right, smallPlaceholder: false)
                         .frame(width: 90, height: 28)
                     Text(weightUnit.unit.symbol)
                         .foregroundColor(.secondary)

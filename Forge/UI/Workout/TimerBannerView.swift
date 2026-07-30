@@ -14,6 +14,10 @@ struct TimerBannerView: View {
     
     @ObservedObject var workout: Workout
 
+    /// The workout's start and end are editable (by tapping the stopwatch) only in edit mode, so a stray
+    /// tap can't change the recorded times while logging.
+    var isEditing: Bool = false
+
     @ObservedObject private var refresher = Refresher()
     
     @State private var activeSheet: SheetType?
@@ -63,17 +67,22 @@ struct TimerBannerView: View {
         .presentationDetents([.medium, .large])
     }
     
+    private var stopwatchLabel: some View {
+        HStack {
+            Image(systemName: "clock")
+            Text(workoutTimerDurationFormatter.string(from: workout.safeDuration) ?? "")
+                .font(Font.body.monospacedDigit())
+        }
+        .padding()
+    }
+
     var body: some View {
         HStack {
-            Button(action: {
-                self.activeSheet = .editTime
-            }) {
-                HStack {
-                    Image(systemName: "clock")
-                    Text(workoutTimerDurationFormatter.string(from: workout.safeDuration) ?? "")
-                        .font(Font.body.monospacedDigit())
-                }
-                .padding()
+            // The stopwatch opens the start/end editor only in edit mode; otherwise it is a plain display.
+            if isEditing {
+                Button(action: { self.activeSheet = .editTime }) { stopwatchLabel }
+            } else {
+                stopwatchLabel.foregroundColor(.forgeSecondaryLabel)
             }
 
             Spacer()
@@ -89,7 +98,7 @@ struct TimerBannerView: View {
                             .font(Font.body.monospacedDigit())
                     }
                 }
-                .foregroundColor(remainingTime ?? 0 < 0 ? .red : nil)
+                .foregroundColor(remainingTime ?? 0 < 0 ? .forgeDestructive : nil)
                 .padding()
             }
         }

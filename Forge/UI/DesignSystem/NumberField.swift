@@ -25,6 +25,9 @@ struct RightAlignedNumberField: UIViewRepresentable {
     /// Centered in the compact set boxes; trailing in labeled form rows. The caret is pinned to the end
     /// either way, so the value is always edited from the right.
     var alignment: NSTextAlignment = .center
+    /// The compact set boxes use a small placeholder (the rep-range hint); form rows use the full value
+    /// size so a "0" placeholder isn't tiny.
+    var smallPlaceholder: Bool = true
 
     private static func valueFont() -> UIFont {
         // Matches `.forgeValue`: rounded, monospaced digits, at the body text size, scaled for Dynamic
@@ -58,7 +61,7 @@ struct RightAlignedNumberField: UIViewRepresentable {
         field.attributedPlaceholder = NSAttributedString(
             string: placeholder,
             attributes: [
-                .font: UIFont.preferredFont(forTextStyle: .footnote),
+                .font: smallPlaceholder ? UIFont.preferredFont(forTextStyle: .footnote) : Self.valueFont(),
                 .foregroundColor: UIColor.secondaryLabel,
             ]
         )

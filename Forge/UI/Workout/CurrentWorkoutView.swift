@@ -242,7 +242,7 @@ struct CurrentWorkoutView: View {
 
                 // The timer row sits directly under the title as one header group; a single rule separates
                 // it from the list below, so there is no boxed-in colored band.
-                TimerBannerView(workout: workout)
+                TimerBannerView(workout: workout, isEditing: editMode == .active)
                 Divider()
                 List {
                     // Characteristics. Edit mode always exposes the name and comment. Otherwise a blank

@@ -51,7 +51,7 @@ struct WarmupCalculatorView: View {
                 HStack {
                     Text("Weight")
                     Spacer()
-                    RightAlignedNumberField(text: $workingWeightInput, placeholder: "0", keyboardType: .decimalPad, alignment: .right)
+                    RightAlignedNumberField(text: $workingWeightInput, placeholder: "0", keyboardType: .decimalPad, alignment: .right, smallPlaceholder: false)
                         .frame(width: 90, height: 28)
                     Text(weightUnit.unit.symbol)
                         .foregroundColor(.forgeSecondaryLabel)
@@ -59,7 +59,7 @@ struct WarmupCalculatorView: View {
                 HStack {
                     Text("Reps")
                     Spacer()
-                    RightAlignedNumberField(text: $workingRepsInput, placeholder: "0", keyboardType: .numberPad, alignment: .right)
+                    RightAlignedNumberField(text: $workingRepsInput, placeholder: "0", keyboardType: .numberPad, alignment: .right, smallPlaceholder: false)
                         .frame(width: 90, height: 28)
                 }
             }

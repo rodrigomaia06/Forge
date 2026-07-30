@@ -99,7 +99,6 @@ struct WorkoutExerciseDetailView : View {
         workout?.start = workout?.start ?? Date()
         moveWorkoutExerciseBehindLastBegun()
         Haptics.success()
-        AudioServicesPlaySystemSound(1103) // Tink sound
         restTimerStore.restTimerDuration = restTimerDuration
         restTimerStore.restTimerStart = Date() // start the rest timer
         managedObjectContext.saveOrCrash()
