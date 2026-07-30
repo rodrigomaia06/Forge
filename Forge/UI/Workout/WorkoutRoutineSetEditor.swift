@@ -478,11 +478,7 @@ private struct MoreView: View {
             }
             
             Section(header: Text("Comment".uppercased())) {
-                TextField("Comment", text: workoutRoutineSetComment, onEditingChanged: { isEditingTextField in
-                    if !isEditingTextField {
-                        self.adjustAndSaveWorkoutRoutineSetCommentInput()
-                    }
-                })
+                ClearableTextField(titleKey: "Comment", text: workoutRoutineSetComment, onCommit: { self.adjustAndSaveWorkoutRoutineSetCommentInput() })
             }
         }
         .listStyleCompat_InsetGroupedListStyle()

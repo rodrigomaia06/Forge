@@ -100,6 +100,7 @@ struct AddExercisesSheet: View {
                             self.onAdd(self.exerciseSelectorSelection)
                             self.resetAndDismiss()
                         }
+                        .fontWeight(.semibold)
                         .disabled(self.exerciseSelectorSelection.isEmpty)
                     }
                 }

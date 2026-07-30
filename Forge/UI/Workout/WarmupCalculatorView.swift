@@ -111,6 +111,7 @@ struct WarmupCalculatorView: View {
                 onAdd(plan)
                 dismiss()
             }
+            .fontWeight(.semibold)
             .disabled(plan.isEmpty)
         )
         .onAppear {

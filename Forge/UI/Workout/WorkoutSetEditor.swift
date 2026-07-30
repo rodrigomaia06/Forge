@@ -427,11 +427,7 @@ struct SetMoreView: View {
             }
             
             Section(header: Text("Comment".uppercased())) {
-                TextField("Comment", text: workoutSetComment, onEditingChanged: { isEditingTextField in
-                    if !isEditingTextField {
-                        self.adjustAndSaveWorkoutSetCommentInput()
-                    }
-                })
+                ClearableTextField(titleKey: "Comment", text: workoutSetComment, onCommit: { self.adjustAndSaveWorkoutSetCommentInput() })
             }
 
             Section(header: Text("Next-time target".uppercased()), footer: Text("A target for the next time you do this exercise. It pre-fills that set (marked as planned); it doesn't change this set. Leave the weight at 0 for no target.")) {

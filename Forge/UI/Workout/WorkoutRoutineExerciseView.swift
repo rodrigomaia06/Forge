@@ -137,11 +137,7 @@ struct WorkoutRoutineExerciseView: View {
         VStack(spacing: 0) {
             List {
                 Section {
-                    TextField("Comment", text: workoutRoutineExerciseComment, onEditingChanged: { isEditingTextField in
-                        if !isEditingTextField {
-                            self.adjustAndSaveWorkoutRoutineExerciseCommentInput()
-                        }
-                    })
+                    ClearableTextField(titleKey: "Comment", text: workoutRoutineExerciseComment, onCommit: { self.adjustAndSaveWorkoutRoutineExerciseCommentInput() })
                     
                     workoutRoutineSets
                     addSetButton

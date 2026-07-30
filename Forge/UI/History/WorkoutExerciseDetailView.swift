@@ -487,7 +487,7 @@ struct WorkoutExerciseDetailView : View {
                             .environmentObject(self.settingsStore)
                             .toolbar {
                                 ToolbarItem(placement: .cancellationAction) {
-                                    Button("Done") { showExerciseInfo = false }
+                                    Button("Done") { showExerciseInfo = false }.fontWeight(.semibold)
                                 }
                             }
                     }
@@ -512,7 +512,7 @@ struct WorkoutExerciseDetailView : View {
                                 moreSheetSet = nil
                                 deleteSet(set)
                             },
-                            trailing: Button("Done") { moreSheetSet = nil }
+                            trailing: Button("Done") { moreSheetSet = nil }.fontWeight(.semibold)
                         )
                 }
                 // Open tall so the whole editor, including the next-time target weight, is visible.
@@ -525,14 +525,14 @@ struct WorkoutExerciseDetailView : View {
                     }
                     .listStyleCompat_InsetGroupedListStyle()
                     .navigationBarTitle("Previous sessions", displayMode: .inline)
-                    .navigationBarItems(trailing: Button("Done") { showHistory = false })
+                    .navigationBarItems(trailing: Button("Done") { showHistory = false }.fontWeight(.semibold))
                 }
             }
             .sheet(isPresented: $showExerciseNote) {
                 NavigationStack {
                     ExerciseNoteEditor(workoutExercise: workoutExercise)
                         .navigationBarTitle(Text("Exercise note"), displayMode: .inline)
-                        .navigationBarItems(trailing: Button("Done") { showExerciseNote = false })
+                        .navigationBarItems(trailing: Button("Done") { showExerciseNote = false }.fontWeight(.semibold))
                 }
                 .presentationDetents([.medium])
             }

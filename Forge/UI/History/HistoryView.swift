@@ -226,6 +226,21 @@ private struct WorkoutCell: View {
         return "\(exercises.count) exercises · \(sets) sets"
     }
 
+    /// A small outlined pill, used for both the duration and the exercise/set counts.
+    private func pill(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder()
+                    .foregroundColor(Color(.systemFill))
+            )
+            .fixedSize()
+    }
+
     var body: some View {
         // Center the duration and counts against the left column (which may grow with a comment), so
         // they sit centered like the row's chevron rather than pinned to the top.
@@ -249,24 +264,11 @@ private struct WorkoutCell: View {
 
             Spacer()
 
-            // Duration and the exercise/set counts sit on the right, so the comment has the left column
-            // to itself and the row does not grow tall.
+            // Duration and the exercise/set counts sit on the right as pills, so the comment has the
+            // left column to itself and the row stays compact.
             VStack(alignment: .trailing, spacing: 4) {
-                durationString.map {
-                    Text($0)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(4)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .strokeBorder()
-                                .foregroundColor(Color(.systemFill))
-                        )
-                }
-                Text(summaryLine)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .fixedSize()
+                durationString.map { pill($0) }
+                pill(summaryLine)
             }
         }
     }

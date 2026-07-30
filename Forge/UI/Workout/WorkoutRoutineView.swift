@@ -91,16 +91,8 @@ struct WorkoutRoutineView: View {
             // stray tap can't change the routine.
             Section(header: Text("Characteristics")) {
                 if editMode?.wrappedValue.isEditing == true {
-                    TextField("Title", text: workoutRoutineTitle, onEditingChanged: { isEditingTextField in
-                        if !isEditingTextField {
-                            self.adjustAndSaveWorkoutRoutineTitleInput()
-                        }
-                    })
-                    TextField("Comment", text: workoutRoutineComment, onEditingChanged: { isEditingTextField in
-                        if !isEditingTextField {
-                            self.adjustAndSaveWorkoutRoutineCommentInput()
-                        }
-                    })
+                    ClearableTextField(titleKey: "Title", text: workoutRoutineTitle, onCommit: { self.adjustAndSaveWorkoutRoutineTitleInput() })
+                    ClearableTextField(titleKey: "Comment", text: workoutRoutineComment, onCommit: { self.adjustAndSaveWorkoutRoutineCommentInput() })
                 } else {
                     LabeledContent("Title") { Text(workoutRoutine.title ?? "Untitled").foregroundColor(.secondary) }
                     if let comment = workoutRoutine.comment, !comment.isEmpty {
