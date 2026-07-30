@@ -444,13 +444,12 @@ private struct SupersetCard: View {
     /// as part of the same system. Ungrouping lives in the trailing menu, on the group rather than in an
     /// exercise's menu.
     private var supersetHeader: some View {
-        // An "S" chip (same style as the A/B/C member badges) marks the group; the note sits beside it.
+        // A link glyph marks the group (a letter chip would read like another A/B/C member badge); the
+        // note sits beside it.
         HStack(alignment: .center, spacing: Theme.Spacing.s) {
-            Text("S")
-                .font(.forgeCaption.weight(.bold))
+            Image(systemName: "link")
+                .font(.forgeCaption)
                 .foregroundColor(.forgeSecondaryLabel)
-                .frame(width: 22, height: 22)
-                .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.forgeSeparator))
                 .accessibilityLabel("Superset")
             if let note {
                 Text(note)
