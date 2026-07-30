@@ -21,6 +21,7 @@ struct TimerBannerView: View {
     @ObservedObject private var refresher = Refresher()
     
     @State private var activeSheet: SheetType?
+    @State private var showEditHint = false
 
     private enum SheetType: Identifiable {
         case restTimer
@@ -38,13 +39,10 @@ struct TimerBannerView: View {
     }()
     
     private var closeSheetButton: some View {
-        Button {
+        // Plain button so the navigation bar gives it the native Liquid Glass treatment; wrapping it in a
+        // manual capsule made it read flat instead of glassy.
+        Button("Close") {
             self.activeSheet = nil
-        } label: {
-            Text("Close")
-                .padding(.horizontal, Theme.Spacing.m)
-                .padding(.vertical, Theme.Spacing.xs)
-                .forgeGlassCapsule()
         }
     }
     
@@ -63,8 +61,8 @@ struct TimerBannerView: View {
                 .navigationBarTitle("Rest timer", displayMode: .inline)
                 .navigationBarItems(leading: closeSheetButton)
         }
-        // A compact sheet, not a full screen. Allow expanding for the running-timer view.
-        .presentationDetents([.medium, .large])
+        // The timer content is compact, so open at a shorter height than medium. Still draggable taller.
+        .presentationDetents([.height(400), .large])
     }
     
     private var stopwatchLabel: some View {
@@ -78,15 +76,29 @@ struct TimerBannerView: View {
 
     var body: some View {
         HStack {
-            // The stopwatch opens the start/end editor only in edit mode. It reads normally otherwise;
-            // in edit mode it gets a glass highlight to show it is now tappable.
-            if isEditing {
-                Button(action: { self.activeSheet = .editTime }) {
-                    stopwatchLabel.forgeGlassCapsule()
+            // The stopwatch is always tappable. In edit mode it opens the start/end editor; otherwise a
+            // tap shows a brief hint that the times can only be changed in edit mode.
+            Button(action: {
+                if isEditing {
+                    self.activeSheet = .editTime
+                } else {
+                    Haptics.impact(.light)
+                    withAnimation { showEditHint = true }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        withAnimation { showEditHint = false }
+                    }
                 }
-                .buttonStyle(.plain)
-            } else {
+            }) {
                 stopwatchLabel
+            }
+            .buttonStyle(.plain)
+
+            if showEditHint {
+                Text("Editable in Edit mode")
+                    .font(.caption2)
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
             }
 
             Spacer()
