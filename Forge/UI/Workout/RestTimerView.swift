@@ -14,6 +14,7 @@ struct RestTimerView: View {
     @ObservedObject private var refresher = Refresher()
     
     @State private var showCustomTimerSelector = false
+    @State private var customTime: TimeInterval = 90
 
     // i.e. 8.1 and 8.9 should be displayed as 9
     private var roundedRemainingTime: TimeInterval? {
@@ -73,7 +74,7 @@ struct RestTimerView: View {
                     self.restTimerStore.restTimerDuration = nil
                 }
             }) {
-                Text("-10s")
+                Text("\u{2212}10s")
             }
 
             CircleButton(action: {
@@ -160,17 +161,30 @@ struct RestTimerView: View {
     }
     
     private var customTimerSelector: some View {
-        VStack {
-            List(restTimerCustomTimes, id: \.self) { time in
-                Button(restTimerDurationFormatter.string(from: time)!) {
-                    self.startTimer(duration: time)
+        VStack(spacing: Theme.Spacing.l) {
+            // A wheel picker, matching how a rest time is chosen elsewhere in the app, instead of a raw
+            // list with a "Back" button.
+            Picker("Rest time", selection: $customTime) {
+                ForEach(restTimerCustomTimes, id: \.self) { time in
+                    Text(restTimerDurationFormatter.string(from: time) ?? "").tag(time)
+                }
+            }
+            .pickerStyle(.wheel)
+            .frame(maxHeight: 200)
+
+            HStack(spacing: Theme.Spacing.m) {
+                timeTile("Back", filled: false) {
+                    self.showCustomTimerSelector = false
+                }
+                timeTile("Start") {
+                    self.startTimer(duration: customTime)
                     self.showCustomTimerSelector = false
                 }
             }
-            Button("Back") {
-                self.showCustomTimerSelector = false
-            }
+            .padding(.horizontal)
+            Spacer(minLength: 0)
         }
+        .padding(.top)
     }
 
     private var stoppedTimerView: some View {
