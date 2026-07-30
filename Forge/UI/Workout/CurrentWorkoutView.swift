@@ -441,18 +441,19 @@ private struct SupersetCard: View {
     /// as part of the same system. Ungrouping lives in the trailing menu, on the group rather than in an
     /// exercise's menu.
     private var supersetHeader: some View {
-        // Menu stays vertically centered across the label and note; note sits tight under the label.
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Superset")
-                    .font(.footnote.bold())
-                    .foregroundColor(.secondary)
-                if let note {
-                    Text(note)
-                        .font(.forgeCaption.italic())
-                        .foregroundColor(.forgeSecondaryLabel)
-                        .lineLimit(3)
-                }
+        // An "S" chip (same style as the A/B/C member badges) marks the group; the note sits beside it.
+        HStack(alignment: .center, spacing: Theme.Spacing.s) {
+            Text("S")
+                .font(.forgeCaption.weight(.bold))
+                .foregroundColor(.forgeSecondaryLabel)
+                .frame(width: 22, height: 22)
+                .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.forgeSeparator))
+                .accessibilityLabel("Superset")
+            if let note {
+                Text(note)
+                    .font(.forgeCaption.italic())
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .lineLimit(2)
             }
             Spacer()
             Menu {
