@@ -282,17 +282,13 @@ private struct RoutineMenuRow: View {
                     .font(.caption)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            // In a plan, each routine is a recessed well inside the plan card (darker than the card, with
-            // a hairline edge), so the nesting is clear instead of grey boxes on grey.
+            // In a plan, each routine is a recessed dark well inside the plan card (no outline), so the
+            // nesting reads softly instead of as outlined boxes.
             .padding(nested ? Theme.Spacing.m : 0)
             .background {
                 if nested {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(Color.forgeBackground)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .strokeBorder(Color.forgeSeparator, lineWidth: 1)
-                        )
                 }
             }
             .contentShape(Rectangle())
