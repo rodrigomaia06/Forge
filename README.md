@@ -64,21 +64,9 @@ re-signs the app for you. You need an iPhone, a free Apple ID, and a computer. G
 First, on the iPhone, turn on Developer Mode: Settings, Privacy & Security, Developer Mode.
 iOS 16 and later require it for sideloaded apps.
 
-### macOS or Windows
+### Install with iLoader
 
-Use [AltStore](https://altstore.io):
-
-1. Install AltServer on the computer and AltStore on the iPhone, following the AltStore guide.
-2. Connect the iPhone, open AltStore, and add the Forge `.ipa` (My Apps, then the plus
-   button). Sign in with your Apple ID when asked.
-3. Trust the signer on the iPhone under Settings, General, VPN & Device Management.
-4. Keep AltServer running on the same Wi-Fi so it can refresh the signature every seven days.
-
-[Sideloadly](https://sideloadly.io) works the same way on macOS and Windows.
-
-### Linux
-
-Use [iLoader](https://iloader.app), which runs the same on Windows, macOS, and Linux:
+[iLoader](https://iloader.app) runs the same on Windows, macOS, and Linux:
 
 1. Install iLoader and connect the iPhone. On Linux, install `usbmuxd` first if it is not
    already present.
