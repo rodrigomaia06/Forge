@@ -89,6 +89,7 @@ struct BackupAndExportView: View {
             Button(pending.summary.workouts > 0 ? "Add to data and History" : "Add to my data") {
                 confirmJSONImport(pending)
             }
+            .keyboardShortcut(.defaultAction)
             Button("Cancel", role: .cancel) {}
         } message: { pending in
             Text(Self.importWarning(for: pending.summary))

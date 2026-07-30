@@ -344,12 +344,14 @@ struct CurrentWorkoutView: View {
         }
         .alert("Finish workout?", isPresented: $showingFinishConfirmation) {
             Button("Finish") { self.confirmFinish() }
+                .keyboardShortcut(.defaultAction)
             Button("Cancel", role: .cancel) { }
         } message: {
             Text(finishConfirmationMessage)
         }
         .alert("Update routine?", isPresented: Binding(get: { routineUpdatePending != nil }, set: { if !$0 { routineUpdatePending = nil } })) {
             Button("Update") { self.finishWorkout(updateRoutine: true) }
+                .keyboardShortcut(.defaultAction)
             Button("Keep routine", role: .cancel) { self.finishWorkout(updateRoutine: false) }
         } message: {
             Text("This workout's exercises or sets changed. Update the routine to match, or keep it as it was?")
