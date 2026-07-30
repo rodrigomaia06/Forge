@@ -448,7 +448,9 @@ private struct SupersetCard: View {
         // note sits beside it.
         HStack(alignment: .center, spacing: Theme.Spacing.s) {
             Image(systemName: "link")
-                .font(.forgeCaption)
+                .font(.body)
+                // Fixed height (matching the menu button) so a larger glyph does not grow the row.
+                .frame(height: 24)
                 .foregroundColor(.forgeSecondaryLabel)
                 .accessibilityLabel("Superset")
             if let note {
