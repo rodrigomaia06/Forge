@@ -62,10 +62,15 @@ struct AddExercisesSheet: View {
         if let equipment { exercises = exercises.filter { $0.equipment.contains { $0.contains(equipment) } } }
         if let bodyPart { exercises = exercises.filter { $0.muscleGroup == bodyPart } }
         if !search.isEmpty { exercises = ExerciseStore.filter(exercises: exercises, using: search) }
-        let groups = ExerciseStore.splitIntoMuscleGroups(exercises: exercises)
+        var groups = ExerciseStore.splitIntoMuscleGroups(exercises: exercises)
         // Recent is only meaningful with no search or filters applied.
         if search.isEmpty, !filtersActive, !recentExercises.isEmpty {
-            return [ExerciseGroup(title: "Recent", exercises: recentExercises)] + groups
+            groups = [ExerciseGroup(title: "Recent", exercises: recentExercises)] + groups
+        }
+        // Selected first, so what you have picked stays visible at the top, even while searching.
+        if !exerciseSelectorSelection.isEmpty {
+            let selected = allExercises.filter { exerciseSelectorSelection.contains($0) }
+            groups = [ExerciseGroup(title: "Selected", exercises: selected)] + groups
         }
         return groups
     }
@@ -111,36 +116,35 @@ struct AddExercisesSheet: View {
                         Button("Cancel") { self.resetAndDismiss() }
                     }
                     ToolbarItem(placement: .topBarTrailing) { filterMenu }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Add") {
-                            self.onAdd(self.exerciseSelectorSelection)
-                            self.resetAndDismiss()
-                        }
-                        .fontWeight(.semibold)
-                        .disabled(self.exerciseSelectorSelection.isEmpty)
-                    }
                 }
+                // Add lives in a bottom bar, not the nav bar, so focusing the search field cannot hide it.
                 .safeAreaInset(edge: .bottom) {
-                    // Offered only where a superset applies, and only once there are two exercises to group.
-                    // Plain Add above still adds the same selection as separate exercises.
-                    if onAddSuperset != nil, exerciseSelectorSelection.count >= 2 {
-                        supersetBar
+                    if !exerciseSelectorSelection.isEmpty {
+                        addBar
                     }
                 }
         }
     }
 
-    private var supersetBar: some View {
-        HStack {
+    private var addBar: some View {
+        HStack(spacing: Theme.Spacing.m) {
             Text("\(exerciseSelectorSelection.count) selected")
                 .font(.forgeCaption)
                 .foregroundColor(.forgeSecondaryLabel)
             Spacer()
+            if onAddSuperset != nil, exerciseSelectorSelection.count >= 2 {
+                Button("Add as superset") {
+                    onAddSuperset?(orderedSelection)
+                    resetAndDismiss()
+                }
+                .font(.forgeHeadline)
+                .foregroundColor(.forgeAccent)
+            }
             Button {
-                onAddSuperset?(orderedSelection)
+                onAdd(exerciseSelectorSelection)
                 resetAndDismiss()
             } label: {
-                Label("Add as superset", systemImage: "link")
+                Text("Add")
                     .font(.forgeHeadline)
                     .foregroundColor(.forgeBackground)
                     .padding(.horizontal, Theme.Spacing.l)

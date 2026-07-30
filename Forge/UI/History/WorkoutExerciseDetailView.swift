@@ -109,11 +109,8 @@ struct WorkoutExerciseDetailView : View {
         set.isCompleted = true
         let workout = set.workoutExercise?.workout
         workout?.start = workout?.start ?? Date()
-        // A superset keeps its exercises together and in order, so a grouped exercise is not reordered on
-        // completion; a lone exercise still moves behind the last begun one.
-        if workoutExercise.reordersBehindLastBegunOnSetCompletion {
-            moveWorkoutExerciseBehindLastBegun()
-        }
+        // Do not reorder the exercise on completion: it reflows the list and jumps the scroll position out
+        // from under the user. The order stays put where they are looking.
         Haptics.success()
         // Inside a superset the rest timer holds until the last exercise of the round; other exercises
         // start it on completion as before.
@@ -173,23 +170,6 @@ struct WorkoutExerciseDetailView : View {
     }
 
 
-    private func moveWorkoutExerciseBehindLastBegun() {
-        assert(isCurrentWorkout)
-        guard let workout = workoutExercise.workout else { return }
-        
-        workout.removeFromWorkoutExercises(workoutExercise) // remove before doing the other stuff!
-        
-        let lastBegun = workout.workoutExercises?
-            .compactMap { $0 as? WorkoutExercise }
-            .last { $0.numberOfCompletedSets ?? 0 > 0 }
-        
-        if let lastBegun = lastBegun, let index = workout.workoutExercises?.index(of: lastBegun), index != NSNotFound {
-            workout.insertIntoWorkoutExercises(workoutExercise, at: index + 1) // insert after last begun exercise
-        } else {
-            workout.insertIntoWorkoutExercises(workoutExercise, at: 0) // no workout exercise begun
-        }
-    }
-    
     private func rpe(rpe: Double) -> some View {
         VStack {
             Group {
