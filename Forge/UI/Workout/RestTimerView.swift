@@ -94,10 +94,18 @@ struct RestTimerView: View {
             Button {
                 startTimer(duration: customTime)
             } label: {
-                Text("Start").frame(maxWidth: .infinity)
+                Text("Start")
+                    .font(.forgeHeadline)
+                    // Dark text on the light fill; borderedProminent left it white-on-white.
+                    .foregroundColor(.forgeBackground)
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: 50)
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
+                            .fill(Color.forgeAccent)
+                    )
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .buttonStyle(.plain)
             .padding(.horizontal)
         }
         .padding()
