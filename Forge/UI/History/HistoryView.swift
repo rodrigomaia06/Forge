@@ -227,8 +227,8 @@ private struct WorkoutCell: View {
     }
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading) {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(workout.displayTitle(in: self.exerciseStore.exercises, showPlan: settingsStore.showPlanInWorkoutTitle))
                     .font(.body)
 
@@ -236,10 +236,6 @@ private struct WorkoutCell: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                Text(summaryLine)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
                 workout.comment.map {
                     Text($0.enquoted)
                         .lineLimit(1)
@@ -248,19 +244,27 @@ private struct WorkoutCell: View {
                 }
             }
             .layoutPriority(1)
-            
+
             Spacer()
-            
-            durationString.map {
-                Text($0)
-                    .font(.caption)
+
+            // Duration and the exercise/set counts sit on the right, so the comment has the left column
+            // to itself and the row does not grow tall.
+            VStack(alignment: .trailing, spacing: 4) {
+                durationString.map {
+                    Text($0)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .strokeBorder()
+                                .foregroundColor(Color(.systemFill))
+                        )
+                }
+                Text(summaryLine)
+                    .font(.caption2)
                     .foregroundColor(.secondary)
-                    .padding(4)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder()
-                            .foregroundColor(Color(.systemFill))
-                    )
+                    .fixedSize()
             }
         }
     }

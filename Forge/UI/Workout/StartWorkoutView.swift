@@ -278,11 +278,17 @@ private struct RoutineMenuRow: View {
                     .font(.caption)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            // In a plan, each routine is an inset sub-card inside the plan card, so the nesting is clear.
-            .padding(nested ? Theme.Spacing.s : 0)
+            // In a plan, each routine is a recessed well inside the plan card (darker than the card, with
+            // a hairline edge), so the nesting is clear instead of grey boxes on grey.
+            .padding(nested ? Theme.Spacing.m : 0)
             .background {
                 if nested {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color(.tertiarySystemFill))
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.forgeBackground)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(Color.forgeSeparator, lineWidth: 1)
+                        )
                 }
             }
             .contentShape(Rectangle())
