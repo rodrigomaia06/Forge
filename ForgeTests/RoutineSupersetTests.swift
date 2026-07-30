@@ -74,6 +74,17 @@ final class RoutineSupersetTests: XCTestCase {
         XCTAssertEqual(routine.exerciseSlots.map { $0.exercises }, [[e[0], e[1]], [e[2]]])
     }
 
+    func testRoutineSupersetNoteSharedAndCleared() {
+        let (routine, e) = makeRoutine(exercises: 3)
+        let uuid = routine.makeSuperset(from: [e[0], e[1]])!
+        e[0].setSupersetNote("tempo 3-1-1")
+        XCTAssertEqual(e[1].supersetComment, "tempo 3-1-1")
+        XCTAssertNil(e[2].supersetComment)
+        XCTAssertEqual(e[1].supersetNote, "tempo 3-1-1")
+        routine.ungroupSuperset(id: uuid)
+        XCTAssertNil(e[0].supersetComment)
+    }
+
     // MARK: routine -> workout
 
     func testCreateWorkoutCarriesGroupingWithFreshIds() {

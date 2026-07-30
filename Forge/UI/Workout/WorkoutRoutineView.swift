@@ -18,6 +18,7 @@ struct WorkoutRoutineView: View {
     @Environment(\.editMode) var editMode
 
     @State private var showExerciseSelector = false
+    @State private var noteEditorExercise: WorkoutRoutineExercise?
     
     @State private var workoutRoutineTitleInput: String? = nil
     private var workoutRoutineTitle: Binding<String> {
@@ -133,13 +134,24 @@ struct WorkoutRoutineView: View {
                                         .foregroundColor(.secondary)
                                         .font(.caption)
                                 }
+                                // Show the group's shared note once, under the first member.
+                                if workoutRoutineExercise.supersetIndex == 0, let note = workoutRoutineExercise.supersetNote {
+                                    Text(note)
+                                        .font(.forgeCaption.italic())
+                                        .foregroundColor(.forgeSecondaryLabel)
+                                        .lineLimit(2)
+                                }
                             }
                         }
                     }
-                    // Ungroup lives on the row, not in a per-exercise menu. Swipe from the leading edge to
-                    // break the group; the exercises stay in the routine.
+                    // Note and Ungroup live on the row, not in a per-exercise menu. Swipe from the leading
+                    // edge; the exercises stay in the routine.
                     .swipeActions(edge: .leading) {
                         if let uuid = workoutRoutineExercise.supersetUUID {
+                            Button { noteEditorExercise = workoutRoutineExercise } label: {
+                                Label(workoutRoutineExercise.supersetNote == nil ? "Add note" : "Change note", systemImage: "square.and.pencil")
+                            }
+                            .tint(.forgeAccent)
                             Button {
                                 self.workoutRoutine.ungroupSuperset(id: uuid)
                                 self.managedObjectContext.saveOrCrash()
@@ -196,6 +208,37 @@ struct WorkoutRoutineView: View {
         .navigationBarItems(trailing: EditButton())
         .sheet(isPresented: self.$showExerciseSelector) {
             self.exerciseSelectorSheet
+        }
+        .sheet(item: $noteEditorExercise) { exercise in
+            NavigationStack {
+                RoutineSupersetNoteEditor(anchor: exercise)
+                    .navigationBarTitle("Superset note", displayMode: .inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { noteEditorExercise = nil }.fontWeight(.semibold)
+                        }
+                    }
+            }
+        }
+    }
+}
+
+/// Edits a routine superset's shared note, writing it to every member of the group.
+private struct RoutineSupersetNoteEditor: View {
+    @ObservedObject var anchor: WorkoutRoutineExercise
+    @State private var draft = ""
+
+    var body: some View {
+        Form {
+            Section(footer: Text("A note for the whole superset.")) {
+                TextField("Note", text: $draft, axis: .vertical)
+                    .lineLimit(3...8)
+            }
+        }
+        .onAppear { draft = anchor.supersetNote ?? "" }
+        .onDisappear {
+            anchor.setSupersetNote(draft)
+            anchor.managedObjectContext?.saveOrCrash()
         }
     }
 }
