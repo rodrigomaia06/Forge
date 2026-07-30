@@ -139,7 +139,7 @@ struct WorkoutRoutineView: View {
                 }) {
                     HStack {
                         Image(systemName: "plus")
-                        Text("Add Exercises")
+                        Text("Add exercises")
                     }
                 }
             }

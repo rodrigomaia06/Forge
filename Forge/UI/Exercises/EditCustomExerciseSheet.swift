@@ -53,7 +53,7 @@ struct EditCustomExerciseSheet: View {
     var body: some View {
         NavigationStack {
             EditCustomExerciseView(exerciseValues: $exerciseValues)
-                .navigationBarTitle("Edit Exercise", displayMode: .inline)
+                .navigationBarTitle("Edit exercise", displayMode: .inline)
                 .navigationBarItems(
                     leading:
                     Button("Cancel") {

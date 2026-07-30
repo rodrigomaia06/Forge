@@ -281,7 +281,7 @@ struct WorkoutRoutineSetEditor: View {
             }
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .foregroundColor(.accentColor)
+                    .foregroundColor(.forgeAccent)
             )
         }
     }
@@ -345,7 +345,7 @@ struct WorkoutRoutineSetEditor: View {
                             .foregroundColor(.white)
                             .background(
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .foregroundColor(Color.accentColor)
+                                    .foregroundColor(Color.forgeAccent)
                             )
                             .frame(width: geometry.size.width / 4, height: geometry.size.height / 4)
                     }

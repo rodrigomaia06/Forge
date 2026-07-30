@@ -92,13 +92,13 @@ struct WorkoutSetEditor : View {
     }
     
     private var doneButton: some View {
-        textButton(label: Text(workoutSet.isCompleted ? "Ok" : "Complete Set").foregroundColor(.white), color: .accentColor, action: {
+        textButton(label: Text(workoutSet.isCompleted ? "OK" : "Complete set").foregroundColor(.white), color: .forgeAccent, action: {
             self.onDone()
         })
     }
-    
+
     private var nextButton: some View {
-        textButton(label: Text("Next").foregroundColor(.white), color: .accentColor, action: { self.showKeyboard = .repetitions })
+        textButton(label: Text("Next").foregroundColor(.white), color: .forgeAccent, action: { self.showKeyboard = .repetitions })
     }
         
     private var hideKeyboardButton: some View {
@@ -230,7 +230,7 @@ struct WorkoutSetEditor : View {
                             .foregroundColor(.white)
                             .background(
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .foregroundColor(Color.accentColor)
+                                    .foregroundColor(Color.forgeAccent)
                         )
                             .frame(width: geometry.size.width / 4, height: geometry.size.height / 4)
                     }
@@ -431,7 +431,7 @@ struct SetMoreView: View {
                         self.activeAlert = .tagInfo
                     }) {
                         Image(systemName: "questionmark.circle")
-                            .foregroundColor(.accentColor)
+                            .foregroundColor(.forgeAccent)
                     }
                 }) {
                 ForEach(WorkoutSetTag.allCases, id: \.self) { tag in
@@ -471,7 +471,7 @@ struct SetMoreView: View {
                             self.activeAlert = .rpeInfo
                         }) {
                             Image(systemName: "questionmark.circle")
-                                .foregroundColor(.accentColor)
+                                .foregroundColor(.forgeAccent)
                         }
                     }) {
                     ForEach(RPE.allowedValues.reversed(), id: \.self) { rpe in

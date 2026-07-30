@@ -104,7 +104,7 @@ private struct AllExercisesView: View {
             
             MuscleGroupSectionedExercisesView(exerciseGroups: filter.exerciseGroups)
         }
-        .navigationBarTitle(Text("All Exercises"), displayMode: .inline)
+        .navigationBarTitle(Text("All exercises"), displayMode: .inline)
     }
 }
 

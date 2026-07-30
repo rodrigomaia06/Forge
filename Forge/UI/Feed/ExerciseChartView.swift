@@ -55,7 +55,7 @@ struct ExerciseChartView : View {
                 }
             } else {
                 if #available(iOS 14.0, *) {
-                    chartView.tintColor = UIColor(.accentColor)
+                    chartView.tintColor = UIColor(Color.forgeAccent)
                 } else {
                     chartView.tintColor = .systemBlue
                 }

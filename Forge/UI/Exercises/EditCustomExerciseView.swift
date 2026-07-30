@@ -70,7 +70,7 @@ struct EditCustomExerciseView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                Button("Select Muscles")  {
+                Button("Select muscles")  {
                     self.showingMuscleSelectionSheet = true
                 }
             }
@@ -94,7 +94,7 @@ struct EditCustomExerciseView: View {
         .sheet(isPresented: $showingMuscleSelectionSheet) {
             NavigationStack {
                 MuscleSelectionView(muscles: Exercise.muscleNames, selection: self.$exerciseValues.muscles)
-                    .navigationBarTitle("Select Muscles", displayMode: .inline)
+                    .navigationBarTitle("Select muscles", displayMode: .inline)
                     .navigationBarItems(trailing:
                         Button("Done") {
                             self.showingMuscleSelectionSheet = false
