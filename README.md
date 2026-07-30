@@ -54,6 +54,33 @@ or a subscription.
 Forge stores workouts locally. It requires no account, includes no analytics or
 advertising SDKs, and sends nothing off the device unless you deliberately export it.
 
+## Installing
+
+Forge is not on the App Store. You sideload the `.ipa` and sign it with your own free
+Apple ID. This costs nothing, but a free Apple ID signature lasts seven days, so the tool
+re-signs the app for you. You need an iPhone, a free Apple ID, and a computer. Get the
+`.ipa` from the [Releases page](https://github.com/rodrigomaia06/Forge/releases) or a CI
+build artifact.
+
+First, on the iPhone, turn on Developer Mode: Settings, Privacy & Security, Developer Mode.
+iOS 16 and later require it for sideloaded apps.
+
+### Install with iLoader
+
+[iLoader](https://iloader.app) runs the same on Windows, macOS, and Linux:
+
+1. Install iLoader and connect the iPhone. On Linux, install `usbmuxd` first if it is not
+   already present.
+2. Open iLoader and sign in with your Apple ID.
+3. Import the Forge `.ipa` and install it to the phone. iLoader signs it with your Apple ID.
+
+### Notes
+
+- A free Apple ID allows three sideloaded apps at once and re-signs every seven days. If a
+  refresh is missed the app stops opening until it is signed again. Your data is kept.
+- The paid Apple Developer Program (99 USD per year) is only needed for TestFlight or the
+  App Store, not for sideloading.
+
 ## Use of AI
 
 Forge is developed with heavy use of an AI coding assistant (Claude Code). The assistant
@@ -63,16 +90,8 @@ as AI-assisted work that is human-reviewed, not unchecked generation.
 
 ## Building
 
-The Xcode project is generated with XcodeGen from `project.yml` (the `.xcodeproj` is not
-checked in). You need a recent Xcode and iOS 16 or later.
-
-- Install XcodeGen (for example, `brew install xcodegen`).
-- Run `xcodegen generate` in the repository root to create `Forge.xcodeproj`.
-- Open the project, select the `Forge` target, and set a unique bundle identifier under
-  Signing & Capabilities.
-- Select your development team, then build the `Forge` scheme.
-
-CI builds the app on a macOS runner on every push.
+Building needs a Mac with Xcode. Without one, fork the repository and let its CI build the
+app for you on a macOS runner. Both are covered in [docs/BUILDING.md](docs/BUILDING.md).
 
 ## License and attribution
 

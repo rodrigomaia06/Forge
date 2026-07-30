@@ -55,12 +55,6 @@ extension WorkoutExercise {
         !isInSuperset || isLastInSuperset
     }
 
-    /// Whether completing a set should reorder this exercise behind the last begun one. A superset keeps
-    /// its exercises together and in order, so grouped exercises are never reordered on completion.
-    public var reordersBehindLastBegunOnSetCompletion: Bool {
-        !isInSuperset
-    }
-
     /// The note shared by the whole superset. It is stored on each member and kept equal, so it survives a
     /// reorder within the group. Nil when there is no note or the exercise is not in a superset.
     public var supersetNote: String? {

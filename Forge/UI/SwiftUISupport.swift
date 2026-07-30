@@ -194,13 +194,24 @@ extension View {
 final class KeyboardDismissInstaller: NSObject, UIGestureRecognizerDelegate {
     static let shared = KeyboardDismissInstaller()
     private weak var installedWindow: UIWindow?
+    private weak var installedRecognizer: UITapGestureRecognizer?
 
     func install() {
-        let windows = UIApplication.shared.connectedScenes
+        // Only the key window. The old `?? windows.first` fallback could attach the recognizer to a stale
+        // or non-key window (keyboard/overlay/leftover scene window), where it would wedge touch delivery
+        // for the visible window while timers kept ticking, exactly the intermittent freeze seen.
+        let keyWindow = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .flatMap { $0.windows }
-        guard let window = windows.first(where: { $0.isKeyWindow }) ?? windows.first else { return }
-        if installedWindow === window { return }
+            .first { $0.isKeyWindow }
+        guard let window = keyWindow else { return }
+        // Already installed on this window: nothing to do.
+        if installedWindow === window, installedRecognizer != nil { return }
+        // The key window changed (e.g. after backgrounding). Remove the old recognizer first, so they never
+        // accumulate across the session.
+        if let old = installedRecognizer {
+            installedWindow?.removeGestureRecognizer(old)
+        }
         let tap = UITapGestureRecognizer(target: self, action: #selector(dismiss))
         tap.cancelsTouchesInView = false
         // Don't hold up the touch: buttons (Done, etc.) must fire on the first tap even while the
@@ -209,6 +220,7 @@ final class KeyboardDismissInstaller: NSObject, UIGestureRecognizerDelegate {
         tap.delegate = self
         window.addGestureRecognizer(tap)
         installedWindow = window
+        installedRecognizer = tap
     }
 
     @objc private func dismiss() {

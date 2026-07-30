@@ -62,10 +62,21 @@ struct AddExercisesSheet: View {
         if let equipment { exercises = exercises.filter { $0.equipment.contains { $0.contains(equipment) } } }
         if let bodyPart { exercises = exercises.filter { $0.muscleGroup == bodyPart } }
         if !search.isEmpty { exercises = ExerciseStore.filter(exercises: exercises, using: search) }
-        let groups = ExerciseStore.splitIntoMuscleGroups(exercises: exercises)
+        // Selected exercises live only in the Selected section, so they are not duplicated in the lists
+        // below when picked from Recent or a muscle group.
+        let unselected = exercises.filter { !exerciseSelectorSelection.contains($0) }
+        var groups = ExerciseStore.splitIntoMuscleGroups(exercises: unselected)
         // Recent is only meaningful with no search or filters applied.
-        if search.isEmpty, !filtersActive, !recentExercises.isEmpty {
-            return [ExerciseGroup(title: "Recent", exercises: recentExercises)] + groups
+        if search.isEmpty, !filtersActive {
+            let recent = recentExercises.filter { !exerciseSelectorSelection.contains($0) }
+            if !recent.isEmpty {
+                groups = [ExerciseGroup(title: "Recent", exercises: recent)] + groups
+            }
+        }
+        // Selected first, so what you have picked stays visible at the top, even while searching.
+        if !exerciseSelectorSelection.isEmpty {
+            let selected = allExercises.filter { exerciseSelectorSelection.contains($0) }
+            groups = [ExerciseGroup(title: "Selected", exercises: selected)] + groups
         }
         return groups
     }
@@ -102,45 +113,54 @@ struct AddExercisesSheet: View {
     
     var body: some View {
         NavigationStack {
-            ExerciseMultiSelectionView(exerciseGroups: exerciseGroups, selection: self.$exerciseSelectorSelection)
-                .navigationTitle("Add exercises")
-                .navigationBarTitleDisplayMode(.inline)
-                .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search")
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { self.resetAndDismiss() }
-                    }
-                    ToolbarItem(placement: .topBarTrailing) { filterMenu }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Add") {
-                            self.onAdd(self.exerciseSelectorSelection)
-                            self.resetAndDismiss()
-                        }
-                        .fontWeight(.semibold)
-                        .disabled(self.exerciseSelectorSelection.isEmpty)
-                    }
+            // A pinned search field above the list rather than .searchable: the system search takes over
+            // the nav bar with a Cancel button that hides the filter and lingers after the keyboard is
+            // dismissed. Keeping search in the content leaves the filter always in place.
+            VStack(spacing: 0) {
+                TextField("Search", text: $search)
+                    .textFieldStyle(SearchTextFieldStyle(text: $search))
+                    .padding(.horizontal, Theme.Spacing.l)
+                    .padding(.vertical, Theme.Spacing.s)
+
+                ExerciseMultiSelectionView(exerciseGroups: exerciseGroups, selection: self.$exerciseSelectorSelection)
+            }
+            .background(Color.forgeBackground.ignoresSafeArea())
+            .navigationTitle("Add exercises")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { self.resetAndDismiss() }
                 }
-                .safeAreaInset(edge: .bottom) {
-                    // Offered only where a superset applies, and only once there are two exercises to group.
-                    // Plain Add above still adds the same selection as separate exercises.
-                    if onAddSuperset != nil, exerciseSelectorSelection.count >= 2 {
-                        supersetBar
-                    }
+                ToolbarItem(placement: .topBarTrailing) { filterMenu }
+            }
+            // Add lives in a bottom bar, not the nav bar, so focusing the search field cannot hide it.
+            .safeAreaInset(edge: .bottom) {
+                if !exerciseSelectorSelection.isEmpty {
+                    addBar
                 }
+            }
         }
     }
 
-    private var supersetBar: some View {
-        HStack {
+    private var addBar: some View {
+        HStack(spacing: Theme.Spacing.m) {
             Text("\(exerciseSelectorSelection.count) selected")
                 .font(.forgeCaption)
                 .foregroundColor(.forgeSecondaryLabel)
             Spacer()
+            if onAddSuperset != nil, exerciseSelectorSelection.count >= 2 {
+                Button("Add as superset") {
+                    onAddSuperset?(orderedSelection)
+                    resetAndDismiss()
+                }
+                .font(.forgeHeadline)
+                .foregroundColor(.forgeAccent)
+            }
             Button {
-                onAddSuperset?(orderedSelection)
+                onAdd(exerciseSelectorSelection)
                 resetAndDismiss()
             } label: {
-                Label("Add as superset", systemImage: "link")
+                Text("Add")
                     .font(.forgeHeadline)
                     .foregroundColor(.forgeBackground)
                     .padding(.horizontal, Theme.Spacing.l)

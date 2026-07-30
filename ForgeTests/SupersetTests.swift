@@ -86,19 +86,14 @@ final class SupersetTests: XCTestCase {
         XCTAssertTrue(e[2].isLastInSuperset)
     }
 
-    func testRestAndReorderDecisions() {
+    func testRestTimerDecisions() {
         let (workout, e) = makeWorkout(exercises: 3) // A B C
         workout.makeSuperset(from: [e[0], e[1]]) // A,B superset; C single
 
-        // Single exercise: rest starts, reorders as normal.
+        // Single exercise and the last of a superset start the rest timer; earlier members hold it.
         XCTAssertTrue(e[2].startsRestTimerOnSetCompletion)
-        XCTAssertTrue(e[2].reordersBehindLastBegunOnSetCompletion)
-        // First in superset: rest holds, does not reorder.
         XCTAssertFalse(e[0].startsRestTimerOnSetCompletion)
-        XCTAssertFalse(e[0].reordersBehindLastBegunOnSetCompletion)
-        // Last in superset: rest starts, still does not reorder.
         XCTAssertTrue(e[1].startsRestTimerOnSetCompletion)
-        XCTAssertFalse(e[1].reordersBehindLastBegunOnSetCompletion)
     }
 
     func testUngroup() {
