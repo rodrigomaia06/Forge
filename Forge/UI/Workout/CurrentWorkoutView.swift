@@ -98,6 +98,25 @@ struct CurrentWorkoutView: View {
     private var workoutExercises: [WorkoutExercise] {
         workout.workoutExercises?.array as? [WorkoutExercise] ?? []
     }
+
+    /// A reorder-list row: the exercise name, prefixed with its A / B / C badge when it is in a superset,
+    /// so the grouping is visible while reordering.
+    @ViewBuilder private func reorderRow(_ workoutExercise: WorkoutExercise) -> some View {
+        let name = workoutExercise.exercise(in: exerciseStore.exercises)?.title ?? "Exercise"
+        if let label = workoutExercise.supersetLabel {
+            HStack(spacing: Theme.Spacing.s) {
+                Text(label)
+                    .font(.forgeCaption.weight(.bold))
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .frame(width: 20, height: 20)
+                    .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.forgeSeparator))
+                Text(name)
+            }
+            .accessibilityLabel("Superset \(label), \(name)")
+        } else {
+            Text(name)
+        }
+    }
     
     @State private var workoutCommentInput: String? = nil
     private var workoutComment: Binding<String> {
@@ -291,7 +310,7 @@ struct CurrentWorkoutView: View {
                     if editMode == .active {
                         Section(header: Text("Reorder exercises".uppercased())) {
                             ForEach(workoutExercises) { workoutExercise in
-                                Text(workoutExercise.exercise(in: exerciseStore.exercises)?.title ?? "Exercise")
+                                reorderRow(workoutExercise)
                                     // The lifted drag preview has rounded corners; without an explicit row
                                     // background the corners reveal the black window behind the list.
                                     .listRowBackground(Color.forgeSurface)
@@ -386,8 +405,11 @@ struct CurrentWorkoutView: View {
 /// One card holding the members of a superset. It owns the section and the shared header (the superset
 /// label and the rest note); each member renders its own rows and an A / B / C badge.
 private struct SupersetCard: View {
+    @Environment(\.managedObjectContext) private var managedObjectContext
     let exercises: [WorkoutExercise]
     let sectionHeader: String?
+
+    @State private var showingUngroupConfirmation = false
 
     var body: some View {
         Section {
@@ -396,7 +418,7 @@ private struct SupersetCard: View {
                 WorkoutExerciseDetailView(
                     workoutExercise: exercise,
                     embedded: true,
-                    supersetMember: .init(label: Self.letter(index), isLast: index == exercises.count - 1)
+                    supersetMember: .init(label: exercise.supersetLabel ?? "", isLast: index == exercises.count - 1)
                 )
             }
         } header: {
@@ -405,22 +427,37 @@ private struct SupersetCard: View {
     }
 
     private var supersetBar: some View {
-        HStack(spacing: Theme.Spacing.s) {
-            Label("Superset", systemImage: "link")
-                .font(.forgeCaption.weight(.semibold))
-                .foregroundColor(.forgeLabel)
-            Spacer()
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+            HStack {
+                Label("Superset", systemImage: "link")
+                    .font(.forgeCaption.weight(.semibold))
+                    .foregroundColor(.forgeLabel)
+                Spacer()
+                // Ungrouping lives on the group, not in an exercise's menu, so the menu stays about a
+                // single exercise.
+                Button("Ungroup") { showingUngroupConfirmation = true }
+                    .font(.forgeCaption)
+                    .foregroundColor(.forgeSecondaryLabel)
+            }
             // The one behavior change a superset makes: rest waits until the last exercise of the round.
             Label("rest after last set", systemImage: "timer")
                 .font(.forgeCaption)
                 .foregroundColor(.forgeSecondaryLabel)
         }
         .listRowInsets(EdgeInsets(top: Theme.Spacing.s, leading: Theme.Spacing.m, bottom: Theme.Spacing.xs, trailing: Theme.Spacing.m))
+        .alert("Ungroup superset?", isPresented: $showingUngroupConfirmation) {
+            Button("Ungroup") { ungroup() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("The exercises stay in the workout, no longer grouped.")
+        }
     }
 
-    /// A, B, C, ... for the member position (clamped so a very long superset does not run past Z).
-    private static func letter(_ index: Int) -> String {
-        String(UnicodeScalar(UInt8(65 + min(index, 25))))
+    private func ungroup() {
+        guard let workout = exercises.first?.workout, let uuid = exercises.first?.supersetUUID else { return }
+        Haptics.selection()
+        workout.ungroupSuperset(id: uuid)
+        managedObjectContext.saveOrCrash()
     }
 }
 

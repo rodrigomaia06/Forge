@@ -36,6 +36,13 @@ extension WorkoutExercise {
         return supersetPartners.firstIndex(of: self)
     }
 
+    /// The A / B / C label for this exercise's place in its superset, or nil when not in one. Clamped so a
+    /// very long superset does not run past Z.
+    public var supersetLabel: String? {
+        guard let index = supersetIndex else { return nil }
+        return String(UnicodeScalar(UInt8(65 + min(index, 25))))
+    }
+
     /// True when this is the last exercise in its superset round.
     public var isLastInSuperset: Bool {
         guard isInSuperset else { return false }
