@@ -113,22 +113,32 @@ struct AddExercisesSheet: View {
     
     var body: some View {
         NavigationStack {
-            ExerciseMultiSelectionView(exerciseGroups: exerciseGroups, selection: self.$exerciseSelectorSelection)
-                .navigationTitle("Add exercises")
-                .navigationBarTitleDisplayMode(.inline)
-                .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search")
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { self.resetAndDismiss() }
-                    }
-                    ToolbarItem(placement: .topBarTrailing) { filterMenu }
+            // A pinned search field above the list rather than .searchable: the system search takes over
+            // the nav bar with a Cancel button that hides the filter and lingers after the keyboard is
+            // dismissed. Keeping search in the content leaves the filter always in place.
+            VStack(spacing: 0) {
+                TextField("Search", text: $search)
+                    .textFieldStyle(SearchTextFieldStyle(text: $search))
+                    .padding(.horizontal, Theme.Spacing.l)
+                    .padding(.vertical, Theme.Spacing.s)
+
+                ExerciseMultiSelectionView(exerciseGroups: exerciseGroups, selection: self.$exerciseSelectorSelection)
+            }
+            .background(Color.forgeBackground.ignoresSafeArea())
+            .navigationTitle("Add exercises")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { self.resetAndDismiss() }
                 }
-                // Add lives in a bottom bar, not the nav bar, so focusing the search field cannot hide it.
-                .safeAreaInset(edge: .bottom) {
-                    if !exerciseSelectorSelection.isEmpty {
-                        addBar
-                    }
+                ToolbarItem(placement: .topBarTrailing) { filterMenu }
+            }
+            // Add lives in a bottom bar, not the nav bar, so focusing the search field cannot hide it.
+            .safeAreaInset(edge: .bottom) {
+                if !exerciseSelectorSelection.isEmpty {
+                    addBar
                 }
+            }
         }
     }
 
