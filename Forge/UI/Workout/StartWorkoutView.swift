@@ -233,7 +233,9 @@ private struct WorkoutPlanRoutines: View {
     var body: some View {
         ForEach(workoutRoutines) { workoutRoutine in
             RoutineMenuRow(routine: workoutRoutine, allPlans: allPlans, nested: true, onStart: onStart, onEdit: onEdit, onShare: onShare)
-                .listRowInsets(EdgeInsets(top: 3, leading: Theme.Spacing.m, bottom: 3, trailing: Theme.Spacing.m))
+                // A touch more vertical room so the wells breathe and the last one clears the plan card's
+                // rounded bottom corners instead of sitting flush against them.
+                .listRowInsets(EdgeInsets(top: 5, leading: Theme.Spacing.m, bottom: 6, trailing: Theme.Spacing.m))
                 .listRowSeparator(.hidden)
         }
     }
