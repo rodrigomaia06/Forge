@@ -27,6 +27,9 @@ public class WorkoutExercise: NSManagedObject, Codable {
         }
         request.predicate = predicate
         request.sortDescriptors = [NSSortDescriptor(keyPath: \WorkoutExercise.workout?.start, ascending: false)]
+        // Fault the past sessions in lazily, so opening a workout with several exercises does not
+        // materialize every past instance of each exercise up front on the main thread.
+        request.fetchBatchSize = 20
         return request
     }
     
