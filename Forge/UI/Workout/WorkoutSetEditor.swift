@@ -393,7 +393,7 @@ struct SetMoreView: View {
                     Image(systemName: "checkmark")
                         .foregroundColor(.secondary)
                 }
-            }.background(Color.fakeClear)
+            }.contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -416,7 +416,7 @@ struct SetMoreView: View {
                     Image(systemName: "checkmark")
                         .foregroundColor(.secondary)
                 }
-            }.background(Color.fakeClear)
+            }.contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
     }

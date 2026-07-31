@@ -464,7 +464,7 @@ private struct MoreView: View {
                     Image(systemName: "checkmark")
                         .foregroundColor(.secondary)
                 }
-            }.background(Color.fakeClear)
+            }.contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
     }

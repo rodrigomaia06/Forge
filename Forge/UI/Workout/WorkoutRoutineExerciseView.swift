@@ -62,7 +62,7 @@ struct WorkoutRoutineExerciseView: View {
     private var workoutRoutineSets: some View {
         ForEach(indexedWorkoutRoutineSets(for: workoutRoutineExercise), id: \.1.id) { (index, workoutRoutineSet) in
             WorkoutRoutineSetCell(workoutRoutineSet: workoutRoutineSet, index: index, isSelected: self.selectedWorkoutRoutineSet == workoutRoutineSet)
-                .background(Color.fakeClear) // hack that allows tap gesture to work (13.1 beta2)
+                .contentShape(Rectangle())
                 .onTapGesture {
                     guard self.editMode?.wrappedValue != .active else { return }
                     if self.selectedWorkoutRoutineSet?.hasChanges ?? false {
