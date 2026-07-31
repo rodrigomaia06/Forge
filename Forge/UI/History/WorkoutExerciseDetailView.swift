@@ -215,11 +215,12 @@ struct WorkoutExerciseDetailView : View {
         workoutExercise.workoutSets?.array as? [WorkoutSet] ?? []
     }
 
-    /// Flipping the mode re-signs every set's added weight, keeping the magnitudes, and saves.
+    /// Flipping the mode re-signs every set's added weight, keeping the magnitudes, and saves. Legacy sets
+    /// (value still in the plain weight field) fall back to it, so their amount is preserved not zeroed.
     private func applyBodyweightMode(assisted: Bool) {
         bodyweightAssisted = assisted
         for set in exerciseSets {
-            let magnitude = abs(set.addedWeightValue ?? 0)
+            let magnitude = abs(set.addedWeightValue ?? set.weightValue)
             set.addedWeightValue = assisted ? -magnitude : magnitude
         }
         managedObjectContext.saveOrCrash()
@@ -720,9 +721,11 @@ private struct ActiveSetRow: View {
         return String(format: "%g", value)
     }
 
-    /// Read-only weight display for a bodyweight set: BW, +added, or -assisted.
+    /// Read-only weight display for a bodyweight set: BW, +added, or -assisted. Sets logged before this
+    /// exercise became bodyweight keep their value in the plain weight field, so fall back to it and show
+    /// that value (as a weighted amount) instead of blank.
     private var bodyweightReadText: String {
-        guard let added = workoutSet.addedWeightValue else { return "—" }
+        let added = workoutSet.addedWeightValue ?? workoutSet.weightValue
         if added == 0 { return "BW" }
         let magnitude = WeightUnit.convert(weight: abs(added), from: .metric, to: weightUnit)
         let text = Self.weightFormatter.string(from: NSNumber(value: magnitude)) ?? String(format: "%g", magnitude)
@@ -747,8 +750,9 @@ private struct ActiveSetRow: View {
 
     private func syncInputsFromModel() {
         if isBodyweight {
-            // The field holds the non-negative magnitude; a pure bodyweight set (0) shows blank.
-            let magnitude = abs(workoutSet.addedWeightValue ?? 0)
+            // The field holds the non-negative magnitude; a pure bodyweight set (0) shows blank. Fall back
+            // to the legacy weight for sets logged before this exercise became bodyweight.
+            let magnitude = abs(workoutSet.addedWeightValue ?? workoutSet.weightValue)
             weightInput = magnitude == 0 ? "" : (Self.weightFormatter.string(from: NSNumber(value: WeightUnit.convert(weight: magnitude, from: .metric, to: weightUnit))) ?? "")
         } else {
             weightInput = workoutSet.weight == nil ? "" : (Self.weightFormatter.string(from: NSNumber(value: WeightUnit.convert(weight: workoutSet.weightValue, from: .metric, to: weightUnit))) ?? "")
