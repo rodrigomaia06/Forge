@@ -43,9 +43,9 @@ struct GeneralSettingsView: View {
             HStack {
                 Text("Bodyweight")
                 Spacer()
-                HStack(spacing: 4) {
+                HStack(spacing: 0) {
                     RightAlignedNumberField(text: bodyweightText, placeholder: "0", keyboardType: .decimalPad, alignment: .right, smallPlaceholder: false)
-                        .frame(width: 64, height: 28)
+                        .frame(width: 52, height: 28)
                     Text(settingsStore.weightUnit.unit.symbol)
                         .foregroundColor(.secondary)
                 }

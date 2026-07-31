@@ -133,12 +133,30 @@ struct WorkoutRoutineExerciseView: View {
         .transition(AnyTransition.move(edge: .bottom))
     }
     
+    private var isBodyweight: Bool {
+        workoutRoutineExercise.exercise(in: exerciseStore.exercises)?.isBodyweight ?? false
+    }
+
+    private var bodyweightModeSection: some View {
+        Section(footer: Text("A workout started from this routine logs added or assisted weight accordingly, without asking each time.")) {
+            Picker("Weight kind", selection: Binding(
+                get: { workoutRoutineExercise.assistedValue },
+                set: { workoutRoutineExercise.assistedValue = $0; managedObjectContext.saveOrCrash() }
+            )) {
+                Text("Added").tag(false)
+                Text("Assisted").tag(true)
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             List {
+                if isBodyweight { bodyweightModeSection }
                 Section {
                     ClearableTextField(titleKey: "Comment", text: workoutRoutineExerciseComment, onCommit: { self.adjustAndSaveWorkoutRoutineExerciseCommentInput() })
-                    
+
                     workoutRoutineSets
                     addSetButton
                 }

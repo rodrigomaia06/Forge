@@ -26,6 +26,7 @@
         <relationship name="workoutRoutine" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="WorkoutRoutine" inverseName="workouts" inverseEntity="WorkoutRoutine"/>
     </entity>
     <entity name="WorkoutExercise" representedClassName=".WorkoutExercise" elementID="TrainingExercise" syncable="YES" codeGenerationType="category">
+        <attribute name="assisted" optional="YES" attributeType="Boolean" usesScalarValueType="NO"/>
         <attribute name="comment" optional="YES" attributeType="String"/>
         <attribute name="exerciseUuid" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="supersetComment" optional="YES" attributeType="String"/>
@@ -49,6 +50,7 @@
         <relationship name="workouts" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Workout" inverseName="workoutRoutine" inverseEntity="Workout"/>
     </entity>
     <entity name="WorkoutRoutineExercise" representedClassName=".WorkoutRoutineExercise" syncable="YES" codeGenerationType="category">
+        <attribute name="assisted" optional="YES" attributeType="Boolean" usesScalarValueType="NO"/>
         <attribute name="comment" optional="YES" attributeType="String"/>
         <attribute name="exerciseUuid" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="supersetComment" optional="YES" attributeType="String"/>

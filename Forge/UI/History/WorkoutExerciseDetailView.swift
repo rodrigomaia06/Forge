@@ -35,9 +35,6 @@ struct WorkoutExerciseDetailView : View {
     }
     
     @State private var showExerciseInfo = false
-    // Added vs assisted mode for a bodyweight exercise. Held here (not derived from set signs) so it stays
-    // put when every set is a pure bodyweight rep, which has no sign to read back.
-    @State private var bodyweightAssisted = false
     // History (standalone) starts read-only; its Edit button flips this so sets become editable.
     @State private var historyEditMode: EditMode = .inactive
 
@@ -215,10 +212,16 @@ struct WorkoutExerciseDetailView : View {
         workoutExercise.workoutSets?.array as? [WorkoutSet] ?? []
     }
 
+    /// The workout is ad-hoc (not started from a routine), so the added/assisted choice is made here.
+    /// A routine-started workout inherits the routine's choice and hides the control.
+    private var isAdHocWorkout: Bool {
+        workoutExercise.workout?.workoutRoutine == nil
+    }
+
     /// Flipping the mode re-signs every set's added weight, keeping the magnitudes, and saves. Legacy sets
     /// (value still in the plain weight field) fall back to it, so their amount is preserved not zeroed.
     private func applyBodyweightMode(assisted: Bool) {
-        bodyweightAssisted = assisted
+        workoutExercise.assistedValue = assisted
         for set in exerciseSets {
             let magnitude = abs(set.addedWeightValue ?? set.weightValue)
             set.addedWeightValue = assisted ? -magnitude : magnitude
@@ -227,13 +230,13 @@ struct WorkoutExerciseDetailView : View {
     }
 
     private var bodyweightModeRow: some View {
-        Picker("Weight kind", selection: Binding(get: { bodyweightAssisted }, set: { applyBodyweightMode(assisted: $0) })) {
+        Picker("Weight kind", selection: Binding(get: { workoutExercise.assistedValue }, set: { applyBodyweightMode(assisted: $0) })) {
             Text("Added").tag(false)
             Text("Assisted").tag(true)
         }
         .pickerStyle(.segmented)
-        // Seed the mode from any existing assisted set the first time the control shows.
-        .onAppear { bodyweightAssisted = exerciseSets.contains { ($0.addedWeightValue ?? 0) < 0 } }
+        // Seed the stored mode from existing set signs the first time, if it was never set.
+        .onAppear { if workoutExercise.assisted == nil { workoutExercise.assistedValue = exerciseSets.contains { ($0.addedWeightValue ?? 0) < 0 } } }
         .listRowInsets(EdgeInsets(top: 4, leading: Theme.Spacing.m, bottom: 6, trailing: Theme.Spacing.m))
     }
 
@@ -290,7 +293,7 @@ struct WorkoutExerciseDetailView : View {
                 isUpNext: firstUncompletedSet == workoutSet,
                 showRPE: settingsStore.showRPE,
                 isBodyweight: exerciseIsBodyweight,
-                assisted: bodyweightAssisted,
+                assisted: workoutExercise.assistedValue,
                 previousText: previousPerformance(atZeroBased: index - 1),
                 weightPlaceholder: targetWeightHint(atZeroBased: index - 1) ?? "",
                 isEditable: setsEditable,
@@ -593,7 +596,7 @@ struct WorkoutExerciseDetailView : View {
     /// the standalone card and by a superset member (which the superset card wraps into one section).
     @ViewBuilder private var embeddedContent: some View {
         attachingSheets(to: exerciseHeaderRow)
-        if exerciseIsBodyweight && setsEditable { bodyweightModeRow }
+        if exerciseIsBodyweight && setsEditable && isAdHocWorkout { bodyweightModeRow }
         setsHeader
         currentWorkoutSets
         if setsEditable { addSetButton }
@@ -616,7 +619,7 @@ struct WorkoutExerciseDetailView : View {
 
                 List {
                     Section(header: Text("This session")) {
-                        if exerciseIsBodyweight && setsEditable { bodyweightModeRow }
+                        if exerciseIsBodyweight && setsEditable && isAdHocWorkout { bodyweightModeRow }
                         setsHeader
                         currentWorkoutSets
                         if setsEditable { addSetButton }

@@ -121,6 +121,7 @@ public class WorkoutRoutine: NSManagedObject, Codable {
                 workout.addToWorkoutExercises(workoutExercise)
                 workoutExercise.exerciseUuid = workoutRoutineExercise.exerciseUuid
                 workoutExercise.comment = workoutRoutineExercise.comment
+                workoutExercise.assistedValue = workoutRoutineExercise.assistedValue
                 workoutExercise.supersetComment = workoutRoutineExercise.supersetComment
                 if let routineGroup = workoutRoutineExercise.supersetUUID {
                     workoutExercise.supersetUUID = supersetIDMap[routineGroup] ?? {
