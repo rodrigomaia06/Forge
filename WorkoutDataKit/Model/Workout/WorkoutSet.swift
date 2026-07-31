@@ -113,22 +113,24 @@ public class WorkoutSet: NSManagedObject, Codable {
         set { addedWeight = newValue as NSNumber? }
     }
 
-    /// True when this set is logged as bodyweight: its load is the added or assisted weight, not an
-    /// absolute weight.
+    /// True when this set is logged as bodyweight: its load is the user's bodyweight plus the added or
+    /// assisted weight, rather than an absolute weight. A bodyweight exercise always stores addedWeight
+    /// (zero for a pure bodyweight set), which is what distinguishes it from a normal weighted set.
     public var isBodyweight: Bool { addedWeight != nil }
 
-    /// The effective load in kilograms used for stats and display: the added or assisted weight for a
-    /// bodyweight set, otherwise the absolute weight. (Bodyweight itself is not added in, by design.)
-    public var effectiveWeightValue: Double {
-        addedWeight?.doubleValue ?? weightValue
+    /// The effective load in kilograms used for stats: for a bodyweight set, the user's bodyweight plus the
+    /// added (+) or assisted (-) weight; otherwise the absolute weight. Pass the bodyweight setting in
+    /// kilograms (0 when it is unset, in which case only the added weight counts).
+    public func effectiveWeight(bodyweight: Double) -> Double {
+        isBodyweight ? bodyweight + (addedWeight?.doubleValue ?? 0) : weightValue
     }
 
     // MARK: Derived properties
 
-    public func estimatedOneRepMax(maxReps: Int) -> Double? {
+    public func estimatedOneRepMax(maxReps: Int, bodyweight: Double) -> Double? {
         guard repetitionsValue > 0 && repetitionsValue <= maxReps else { return nil }
         assert(repetitionsValue < 37) // formula doesn't work for 37+ reps
-        return effectiveWeightValue * (36 / (37 - Double(repetitionsValue))) // Brzycki 1RM formula
+        return effectiveWeight(bodyweight: bodyweight) * (36 / (37 - Double(repetitionsValue))) // Brzycki 1RM formula
     }
 
     public var isPersonalRecord: Bool? {

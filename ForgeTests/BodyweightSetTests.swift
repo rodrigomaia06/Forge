@@ -2,8 +2,9 @@
 //  BodyweightSetTests.swift
 //  ForgeTests
 //
-//  A bodyweight set is a normal WorkoutSet with addedWeight set: the load is the added (+), pure (0), or
-//  assisted (-) weight, and stats use that effective load. Normal sets (addedWeight nil) are unaffected.
+//  A bodyweight set is a WorkoutSet with addedWeight set (zero for a pure bodyweight rep). Its effective
+//  load is the user's bodyweight plus the added (+) or assisted (-) weight; stats use that load. Normal
+//  sets (addedWeight nil) ignore bodyweight and use their absolute weight.
 //
 
 import XCTest
@@ -35,21 +36,26 @@ final class BodyweightSetTests: XCTestCase {
     }
 
     func testIsBodyweightAndEffectiveWeight() {
+        let bw = 75.0
+
         let normal = makeSet(weight: 80, added: nil, reps: 5)
         XCTAssertFalse(normal.isBodyweight)
-        XCTAssertEqual(normal.effectiveWeightValue, 80)
+        XCTAssertEqual(normal.effectiveWeight(bodyweight: bw), 80) // bodyweight is ignored for normal sets
 
         let pure = makeSet(weight: 0, added: 0, reps: 8)
         XCTAssertTrue(pure.isBodyweight)
-        XCTAssertEqual(pure.effectiveWeightValue, 0)
+        XCTAssertEqual(pure.effectiveWeight(bodyweight: bw), 75) // just the bodyweight
 
         let weighted = makeSet(weight: 0, added: 20, reps: 5)
         XCTAssertTrue(weighted.isBodyweight)
-        XCTAssertEqual(weighted.effectiveWeightValue, 20)
+        XCTAssertEqual(weighted.effectiveWeight(bodyweight: bw), 95) // bodyweight + added
 
         let assisted = makeSet(weight: 0, added: -15, reps: 6)
         XCTAssertTrue(assisted.isBodyweight)
-        XCTAssertEqual(assisted.effectiveWeightValue, -15)
+        XCTAssertEqual(assisted.effectiveWeight(bodyweight: bw), 60) // bodyweight - assist
+
+        // With bodyweight unset (0), only the added weight counts.
+        XCTAssertEqual(weighted.effectiveWeight(bodyweight: 0), 20)
     }
 
     func testDisplayTitle() {
@@ -66,12 +72,12 @@ final class BodyweightSetTests: XCTestCase {
         XCTAssertFalse(normal.hasPrefix("BW"), normal)
     }
 
-    func testOneRepMaxUsesEffectiveWeight() {
-        // Brzycki: 20 * 36 / (37 - 5) = 22.5
+    func testOneRepMaxFactorsBodyweight() {
+        // Brzycki on the effective load: (75 + 20) * 36 / (37 - 5) = 106.875
         let weighted = makeSet(weight: 0, added: 20, reps: 5)
-        XCTAssertEqual(weighted.estimatedOneRepMax(maxReps: 10) ?? 0, 22.5, accuracy: 0.001)
-        // A normal set is unchanged.
+        XCTAssertEqual(weighted.estimatedOneRepMax(maxReps: 10, bodyweight: 75) ?? 0, 106.875, accuracy: 0.001)
+        // A normal set ignores bodyweight: 32 * 36 / (37 - 5) = 36
         let normal = makeSet(weight: 32, added: nil, reps: 5)
-        XCTAssertEqual(normal.estimatedOneRepMax(maxReps: 10) ?? 0, 36, accuracy: 0.001)
+        XCTAssertEqual(normal.estimatedOneRepMax(maxReps: 10, bodyweight: 75) ?? 0, 36, accuracy: 0.001)
     }
 }

@@ -21,6 +21,36 @@ struct GeneralSettingsView: View {
         }
     }
 
+    /// Bodyweight shown and edited in the user's unit; stored as kilograms. Empty or 0 clears it.
+    private var bodyweightText: Binding<String> {
+        Binding(
+            get: {
+                let kg = settingsStore.bodyweight
+                guard kg > 0 else { return "" }
+                let value = WeightUnit.convert(weight: kg, from: .metric, to: settingsStore.weightUnit)
+                return settingsStore.weightUnit.numberFormatter.string(from: value as NSNumber) ?? String(value)
+            },
+            set: { newValue in
+                let normalized = newValue.replacingOccurrences(of: ",", with: ".")
+                let value = Double(normalized) ?? 0
+                settingsStore.bodyweight = value > 0 ? WeightUnit.convert(weight: value, from: settingsStore.weightUnit, to: .metric) : 0
+            }
+        )
+    }
+
+    private var bodyweightSection: some View {
+        Section(header: Text("Bodyweight"), footer: Text("Weighs bodyweight exercises like pull-ups and dips in charts and totals. Log a per-set added or assisted weight for weighted or assisted reps. Leave at 0 to count only the added weight.")) {
+            HStack {
+                Text("Bodyweight")
+                Spacer()
+                RightAlignedNumberField(text: bodyweightText, placeholder: "0", keyboardType: .decimalPad, alignment: .right, smallPlaceholder: false)
+                    .frame(width: 90, height: 28)
+                Text(settingsStore.weightUnit.unit.symbol)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
     private var appearance: Binding<ForgeAppearance> {
         Binding(
             get: { ForgeAppearance(rawValue: settingsStore.appearance) ?? .dark },
@@ -110,6 +140,7 @@ struct GeneralSettingsView: View {
         Form {
             appearanceSection
             weightPickerSection
+            bodyweightSection
             calendarSection
             workoutNameSection
             restTimerSection
@@ -117,6 +148,7 @@ struct GeneralSettingsView: View {
             reminderSection
             recordsSection
         }
+        .keyboardDoneToolbar()
         .navigationBarTitle("General", displayMode: .inline)
     }
 }

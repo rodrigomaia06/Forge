@@ -219,7 +219,7 @@ struct WorkoutDetailView : View {
                 // reliably right under the control.
                 Menu {
                     Button {
-                        guard let logText = self.workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit) else { return }
+                        guard let logText = self.workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit, bodyweight: self.settingsStore.bodyweight) else { return }
                         self.activityItems = [logText]
                     } label: {
                         Label("Share as text", systemImage: "square.and.arrow.up")

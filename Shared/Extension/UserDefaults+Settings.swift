@@ -26,6 +26,7 @@ extension UserDefaults {
         case restTimerHaptic
         case appearance
         case showPlanInWorkoutTitle
+        case bodyweight
     }
 
     /// Whether a workout started from a routine is named "Plan - Routine" (true) or just the routine
@@ -147,6 +148,13 @@ extension UserDefaults {
         }
     }
     
+    /// The user's bodyweight in kilograms, used to weigh bodyweight exercises in stats. 0 means unset, in
+    /// which case only the per-set added or assisted weight counts.
+    var bodyweight: Double {
+        set { self.set(newValue, forKey: SettingsKeys.bodyweight.rawValue) }
+        get { self.value(forKey: SettingsKeys.bodyweight.rawValue) as? Double ?? 0 }
+    }
+
     /// Calendar first weekday: 1 = Sunday, 2 = Monday. Defaults to the locale's.
     var firstWeekday: Int {
         set {

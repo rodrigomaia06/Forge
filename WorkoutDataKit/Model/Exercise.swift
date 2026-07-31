@@ -23,6 +23,13 @@ public struct Exercise: Hashable {
     public let pdfPaths: [String]
 }
 
+extension Exercise {
+    /// True when this is a bodyweight exercise: its equipment lists "body" (push-ups, dips, pull-ups, and
+    /// so on). Its sets are logged as bodyweight with an added or assisted weight rather than an absolute
+    /// one. Editing an exercise's equipment to add or remove "body" is how the flag is changed.
+    public var isBodyweight: Bool { equipment.contains("body") }
+}
+
 // MARK: - Muscle Names
 extension Exercise {
     public var primaryMuscleCommonName: [String] {

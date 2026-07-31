@@ -126,11 +126,11 @@ public class Workout: NSManagedObject, Codable {
             })
     }
     
-    public var totalCompletedWeight: Double? {
+    public func totalCompletedWeight(bodyweight: Double) -> Double? {
         workoutExercises?
             .map { $0 as! WorkoutExercise }
             .reduce(0, { (weight, workoutExercise) -> Double in
-                weight + (workoutExercise.totalCompletedWeight ?? 0)
+                weight + (workoutExercise.totalCompletedWeight(bodyweight: bodyweight) ?? 0)
             })
     }
     
@@ -245,9 +245,9 @@ extension Workout {
 
 // MARK: - Workout Log
 extension Workout {
-    public func logText(in exercises: [Exercise], unit: UnitMass, formatter: MeasurementFormatter) -> String? {
+    public func logText(in exercises: [Exercise], unit: UnitMass, formatter: MeasurementFormatter, bodyweight: Double) -> String? {
         guard let start = start else { return nil }
-        guard let weight = totalCompletedWeight else { return nil }
+        guard let weight = totalCompletedWeight(bodyweight: bodyweight) else { return nil }
         let dateFormatter = DateFormatter() // we don't want relative formatting here
         dateFormatter.dateStyle = .long
         dateFormatter.timeStyle = .short
