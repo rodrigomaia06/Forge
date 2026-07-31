@@ -118,6 +118,8 @@ enum WorkoutDataExchange {
 
     struct WorkoutSetDTO: Codable {
         var weight: Double?
+        // The added or assisted weight for a bodyweight set (may be negative). Nil for a normal set.
+        var addedWeight: Double?
         var reps: Int16?
         var isCompleted: Bool
         var tag: String?
@@ -223,6 +225,7 @@ enum WorkoutDataExchange {
                     sets: orderedWorkoutSets(exercise).map { set in
                         WorkoutSetDTO(
                             weight: set.weight?.doubleValue,
+                            addedWeight: set.addedWeightValue,
                             reps: set.repetitions?.int16Value,
                             isCompleted: set.isCompleted,
                             tag: set.tagValue?.rawValue,
@@ -354,6 +357,7 @@ enum WorkoutDataExchange {
             for setDTO in exerciseDTO.sets {
                 let set = WorkoutSet.create(context: context)
                 if let weight = setDTO.weight { set.weightValue = weight }
+                set.addedWeightValue = setDTO.addedWeight
                 if let reps = setDTO.reps { set.repetitionsValue = reps }
                 set.isCompleted = setDTO.isCompleted
                 if let tag = setDTO.tag { set.tagValue = WorkoutSetTag(rawValue: tag) }

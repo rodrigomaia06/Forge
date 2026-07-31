@@ -106,12 +106,29 @@ public class WorkoutSet: NSManagedObject, Codable {
         }
     }
 
+    /// The added or assisted weight for a bodyweight set, in kilograms (may be zero or negative). Nil for a
+    /// normal set. Setting a value marks the set as bodyweight; setting nil makes it a normal set again.
+    public var addedWeightValue: Double? {
+        get { addedWeight?.doubleValue }
+        set { addedWeight = newValue as NSNumber? }
+    }
+
+    /// True when this set is logged as bodyweight: its load is the added or assisted weight, not an
+    /// absolute weight.
+    public var isBodyweight: Bool { addedWeight != nil }
+
+    /// The effective load in kilograms used for stats and display: the added or assisted weight for a
+    /// bodyweight set, otherwise the absolute weight. (Bodyweight itself is not added in, by design.)
+    public var effectiveWeightValue: Double {
+        addedWeight?.doubleValue ?? weightValue
+    }
+
     // MARK: Derived properties
-    
+
     public func estimatedOneRepMax(maxReps: Int) -> Double? {
         guard repetitionsValue > 0 && repetitionsValue <= maxReps else { return nil }
         assert(repetitionsValue < 37) // formula doesn't work for 37+ reps
-        return weightValue * (36 / (37 - Double(repetitionsValue))) // Brzycki 1RM formula
+        return effectiveWeightValue * (36 / (37 - Double(repetitionsValue))) // Brzycki 1RM formula
     }
 
     public var isPersonalRecord: Bool? {
@@ -157,6 +174,7 @@ public class WorkoutSet: NSManagedObject, Codable {
         case minTargetRepetitions
         case maxTargetRepetitions
         case weight
+        case addedWeight
         case targetWeight
         case rpe
         case targetRpe
@@ -177,6 +195,8 @@ public class WorkoutSet: NSManagedObject, Codable {
         uuid = try container.decodeIfPresent(UUID.self, forKey: .uuid) ?? UUID() // make sure we always have an UUID
         repetitionsValue = try container.decode(Int16.self, forKey: .repetitions)
         weightValue = try container.decode(Double.self, forKey: .weight)
+        // Older exports have no addedWeight; those sets decode as normal (non-bodyweight) sets.
+        addedWeightValue = try container.decodeIfPresent(Double.self, forKey: .addedWeight)
         rpeValue = try container.decodeIfPresent(Double.self, forKey: .rpe)
         tagValue = WorkoutSetTag(rawValue: try container.decodeIfPresent(String.self, forKey: .tag) ?? "")
         comment = try container.decodeIfPresent(String.self, forKey: .comment)
@@ -192,6 +212,7 @@ public class WorkoutSet: NSManagedObject, Codable {
         try container.encode(uuid ?? UUID(), forKey: .uuid)
         try container.encode(repetitionsValue, forKey: .repetitions)
         try container.encode(weightValue, forKey: .weight)
+        try container.encodeIfPresent(addedWeightValue, forKey: .addedWeight)
         try container.encodeIfPresent(rpeValue, forKey: .rpe)
         try container.encodeIfPresent(tagValue?.rawValue, forKey: .tag)
         try container.encodeIfPresent(comment, forKey: .comment)
@@ -206,11 +227,14 @@ public class WorkoutSet: NSManagedObject, Codable {
 
 extension WorkoutSet {
     public func displayTitle(unit: UnitMass, formatter: MeasurementFormatter) -> String {
-//        let numberFormatter = unit.numberFormatter
-//        numberFormatter.minimumFractionDigits = unit.defaultFractionDigits
-//        let weightInUnit = WeightUnit.convert(weight: weight, from: .metric, to: unit)
-//        return "\(numberFormatter.string(from: weightInUnit as NSNumber) ?? String(format: "%\(unit.maximumFractionDigits).f")) \(unit.abbrev) × \(repetitions)"
-        return formatter.string(from: Measurement(value: weightValue, unit: UnitMass.kilograms).converted(to: unit)) + " × \(repetitionsValue)"
+        let reps = " × \(repetitionsValue)"
+        // A bodyweight set reads as BW, BW + added, or BW - assisted, rather than an absolute weight.
+        if let added = addedWeight?.doubleValue {
+            guard added != 0 else { return "BW" + reps }
+            let magnitude = formatter.string(from: Measurement(value: abs(added), unit: UnitMass.kilograms).converted(to: unit))
+            return "BW \(added > 0 ? "+" : "-") \(magnitude)" + reps
+        }
+        return formatter.string(from: Measurement(value: weightValue, unit: UnitMass.kilograms).converted(to: unit)) + reps
     }
     
     public func logTitle(unit: UnitMass, formatter: MeasurementFormatter) -> String {

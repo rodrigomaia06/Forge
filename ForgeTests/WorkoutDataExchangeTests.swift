@@ -226,6 +226,32 @@ final class WorkoutDataExchangeTests: XCTestCase {
         XCTAssertEqual(re[1].supersetUUID, re[2].supersetUUID)
     }
 
+    func testBodyweightSetRoundTrip() throws {
+        let context = container.viewContext
+        let workout = Workout.create(context: context)
+        workout.start = Date(timeIntervalSince1970: 1_700_000_000)
+        workout.end = Date(timeIntervalSince1970: 1_700_003_600)
+        let exercise = WorkoutExercise.create(context: context)
+        exercise.exerciseUuid = UUID()
+        exercise.workout = workout
+        let set = WorkoutSet.create(context: context)
+        set.addedWeightValue = 20 // weighted pull-up
+        set.repetitionsValue = 5
+        set.isCompleted = true
+        set.workoutExercise = exercise
+        try context.save()
+
+        let data = try WorkoutDataExchange.export(workouts: [workout])
+        let other = setUpInMemoryNSPersistentContainer().viewContext
+        _ = try WorkoutDataExchange.import(data, into: other, includeWorkouts: true)
+
+        let imported = try fetch(Workout.self, "Workout", in: other)[0]
+        let importedSet = ((imported.workoutExercises?.array as? [WorkoutExercise] ?? [])
+            .flatMap { $0.workoutSets?.array as? [WorkoutSet] ?? [] })[0]
+        XCTAssertEqual(importedSet.addedWeightValue, 20)
+        XCTAssertTrue(importedSet.isBodyweight)
+    }
+
     func testRejectsNewerFormatVersion() throws {
         let json = "{\"formatVersion\": 9999, \"plans\": [], \"workouts\": []}".data(using: .utf8)!
         XCTAssertThrowsError(try WorkoutDataExchange.import(json, into: container.viewContext))

@@ -75,7 +75,7 @@ public class WorkoutExercise: NSManagedObject, Codable {
         workoutSets?
             .compactMap { $0 as? WorkoutSet }
             .reduce(0, { (weight, workoutSet) -> Double in
-                weight + (workoutSet.isCompleted ? workoutSet.weightValue * Double(workoutSet.repetitionsValue) : 0)
+                weight + (workoutSet.isCompleted ? workoutSet.effectiveWeightValue * Double(workoutSet.repetitionsValue) : 0)
             })
     }
     
