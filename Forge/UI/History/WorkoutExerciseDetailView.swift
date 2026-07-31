@@ -281,6 +281,10 @@ struct WorkoutExerciseDetailView : View {
             Haptics.impact(.light)
             let workoutSet = WorkoutSet.create(context: self.workoutExercise.managedObjectContext!)
             workoutSet.workoutExercise = self.workoutExercise
+            if self.workoutExercise.exercise(in: exerciseStore.exercises)?.isBodyweight == true {
+                // Mark it as a bodyweight set (addedWeight 0, not nil) so it reads as BW before it is edited.
+                workoutSet.addedWeightValue = 0
+            }
             if !self.isCurrentWorkout {
                 // don't allow uncompleted sets if not in current workout
                 workoutSet.isCompleted = true

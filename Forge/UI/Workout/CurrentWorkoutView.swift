@@ -87,9 +87,13 @@ struct CurrentWorkoutView: View {
                 numberOfSets = median.workoutSets?.count ?? numberOfSets
             }
         }
+        // A bodyweight exercise's sets start marked as bodyweight (addedWeight 0, not nil) so they read as
+        // BW right away and use the bodyweight in stats.
+        let isBodyweight = workoutExercise.exercise(in: exerciseStore.exercises)?.isBodyweight ?? false
         var workoutSets = [WorkoutSet]()
         for _ in 0..<numberOfSets {
             let workoutSet = WorkoutSet.create(context: managedObjectContext)
+            if isBodyweight { workoutSet.addedWeightValue = 0 }
             workoutSets.append(workoutSet)
         }
         return NSOrderedSet(array: workoutSets)
