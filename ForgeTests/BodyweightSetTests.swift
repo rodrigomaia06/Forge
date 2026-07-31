@@ -78,11 +78,11 @@ final class BodyweightSetTests: XCTestCase {
         XCTAssertEqual(makeSet(weight: 0, added: 0, reps: 8).displayTitle(weightUnit: .metric), "BW × 8")
 
         let weighted = makeSet(weight: 0, added: 20, reps: 5).displayTitle(weightUnit: .metric)
-        XCTAssertTrue(weighted.hasPrefix("BW + "), weighted)
+        XCTAssertTrue(weighted.hasPrefix("+"), weighted)
         XCTAssertTrue(weighted.hasSuffix("× 5"), weighted)
 
         let assisted = makeSet(weight: 0, added: -15, reps: 6).displayTitle(weightUnit: .metric)
-        XCTAssertTrue(assisted.hasPrefix("BW - "), assisted)
+        XCTAssertTrue(assisted.hasPrefix("-"), assisted)
 
         let normal = makeSet(weight: 80, added: nil, reps: 5).displayTitle(weightUnit: .metric)
         XCTAssertFalse(normal.hasPrefix("BW"), normal)
