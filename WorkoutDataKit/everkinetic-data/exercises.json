@@ -5771,27 +5771,6 @@
     ]
   },
   {
-    "uuid": "ABA5AD44-81A9-5816-9A50-D4383FDFC723",
-    "id": 6000,
-    "title": "Chest Dip",
-    "alias": [],
-    "primary": [
-      "pectoralis major"
-    ],
-    "secondary": [
-      "triceps brachii",
-      "deltoid"
-    ],
-    "equipment": [
-      "body"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
     "uuid": "850D8977-98B0-5C4D-8898-413377FD829B",
     "id": 6001,
     "title": "Chest Press: Machine",
@@ -5884,26 +5863,6 @@
     "secondary": [],
     "equipment": [
       "dumbbell"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
-    "uuid": "32D30AE5-552D-57E2-BB14-068443BB351A",
-    "id": 6006,
-    "title": "Pull Up (Weighted)",
-    "alias": [],
-    "primary": [
-      "latissimus dorsi"
-    ],
-    "secondary": [
-      "biceps brachii"
-    ],
-    "equipment": [
-      "body"
     ],
     "steps": [],
     "tips": [],
@@ -6025,27 +5984,6 @@
     "secondary": [
       "biceps brachii",
       "trapezius"
-    ],
-    "equipment": [
-      "barbell"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
-    "uuid": "2EB4B804-B446-58F3-B623-12B55DD5AD3A",
-    "id": 6013,
-    "title": "Romanian Deadlift: Barbell",
-    "alias": [],
-    "primary": [
-      "ischiocrural muscles"
-    ],
-    "secondary": [
-      "glutaeus maximus",
-      "erector spinae"
     ],
     "equipment": [
       "barbell"
@@ -6251,24 +6189,6 @@
     "png": []
   },
   {
-    "uuid": "4F927F29-5D2A-5FEA-A1A4-BE999A9FAF15",
-    "id": 6024,
-    "title": "Front Raise: Cable",
-    "alias": [],
-    "primary": [
-      "deltoid"
-    ],
-    "secondary": [],
-    "equipment": [
-      "cable"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
     "uuid": "9A93E466-D1CB-5A26-A462-ECCD626D42C3",
     "id": 6025,
     "title": "Upright Row: Cable",
@@ -6418,44 +6338,6 @@
     "png": []
   },
   {
-    "uuid": "D909113D-8C02-53E6-9365-9ECBC79288C0",
-    "id": 6033,
-    "title": "Triceps Dip (Bench)",
-    "alias": [],
-    "primary": [
-      "triceps brachii"
-    ],
-    "secondary": [],
-    "equipment": [
-      "body"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
-    "uuid": "1A12F0A7-AE90-5E85-8B5B-D5DD918328ED",
-    "id": 6034,
-    "title": "Close Grip Push Up",
-    "alias": [],
-    "primary": [
-      "triceps brachii"
-    ],
-    "secondary": [
-      "pectoralis major"
-    ],
-    "equipment": [
-      "body"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
     "uuid": "49BAF818-60DA-555F-B54F-6F72194AAFFA",
     "id": 6035,
     "title": "Pendulum Squat",
@@ -6538,27 +6420,6 @@
     "png": []
   },
   {
-    "uuid": "36681BE9-7C80-53B9-BE63-E6536686169A",
-    "id": 6039,
-    "title": "Leg Press (Machine)",
-    "alias": [],
-    "primary": [
-      "quadriceps"
-    ],
-    "secondary": [
-      "glutaeus maximus",
-      "ischiocrural muscles"
-    ],
-    "equipment": [
-      "machine"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
     "uuid": "490F3FE8-2353-504D-BB55-32A91ADDD40D",
     "id": 6040,
     "title": "Hip Thrust: Barbell",
@@ -6599,24 +6460,6 @@
     "png": []
   },
   {
-    "uuid": "FFDFB5BE-FA4A-50D5-9DB1-60125041B95C",
-    "id": 6042,
-    "title": "Leg Curl (Seated, Machine)",
-    "alias": [],
-    "primary": [
-      "ischiocrural muscles"
-    ],
-    "secondary": [],
-    "equipment": [
-      "machine"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
     "uuid": "7CBEB539-8BE9-55B8-B539-1E236A6BBEE3",
     "id": 6043,
     "title": "Nordic Curl",
@@ -6640,26 +6483,6 @@
     "uuid": "7F8A5C50-42EE-578B-9137-580EED4AACAA",
     "id": 6044,
     "title": "Calf Raise: Leg Press",
-    "alias": [],
-    "primary": [
-      "gastrocnemius"
-    ],
-    "secondary": [
-      "soleus"
-    ],
-    "equipment": [
-      "machine"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
-    "uuid": "7EAAEE8F-F27C-51FC-AFB4-51DF43171540",
-    "id": 6045,
-    "title": "Standing Calf Raise: Machine",
     "alias": [],
     "primary": [
       "gastrocnemius"
@@ -6710,42 +6533,6 @@
     ],
     "equipment": [
       "kettlebell"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
-    "uuid": "8B56E6A2-61F2-5B12-BCF2-773DE184664A",
-    "id": 6048,
-    "title": "Decline Crunch",
-    "alias": [],
-    "primary": [
-      "abdominals"
-    ],
-    "secondary": [],
-    "equipment": [
-      "body"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
-    "uuid": "F2447D83-C514-5FEF-BA1D-3B4863092181",
-    "id": 6049,
-    "title": "Cable Crunch",
-    "alias": [],
-    "primary": [
-      "abdominals"
-    ],
-    "secondary": [],
-    "equipment": [
-      "cable"
     ],
     "steps": [],
     "tips": [],
