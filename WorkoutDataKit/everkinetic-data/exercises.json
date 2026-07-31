@@ -1911,6 +1911,7 @@
       "pectoralis major"
     ],
     "equipment": [
+      "body",
       "bar"
     ],
     "steps": [
@@ -1946,6 +1947,7 @@
       "biceps brachii"
     ],
     "equipment": [
+      "body",
       "bar"
     ],
     "steps": [
