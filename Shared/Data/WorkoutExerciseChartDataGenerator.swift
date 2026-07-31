@@ -28,18 +28,18 @@ enum WorkoutExerciseChartData {
         }
     }
 
-    static func evaluator(for measurementType: MeasurementType, weightUnit: WeightUnit, maxRepetitionsForOneRepMax: Int, bodyweight: Double) -> WorkoutExerciseChartDataGenerator.Evaluator {
+    static func evaluator(for measurementType: MeasurementType, weightUnit: WeightUnit, maxRepetitionsForOneRepMax: Int, fallbackBodyweight: Double) -> WorkoutExerciseChartDataGenerator.Evaluator {
         switch measurementType {
         case .oneRM:
             return {
                 $0.workoutSets?
                     .compactMap { $0 as? WorkoutSet }
-                    .compactMap { $0.estimatedOneRepMax(maxReps: maxRepetitionsForOneRepMax, bodyweight: bodyweight) }
+                    .compactMap { $0.estimatedOneRepMax(maxReps: maxRepetitionsForOneRepMax, fallbackBodyweight: fallbackBodyweight) }
                     .max()
                     .map { WeightUnit.convert(weight: $0, from: .metric, to: weightUnit) }
             }
         case .totalWeight:
-            return  { $0.totalCompletedWeight(bodyweight: bodyweight).map { WeightUnit.convert(weight: Double($0), from: .metric, to: weightUnit) } }
+            return  { $0.totalCompletedWeight(fallbackBodyweight: fallbackBodyweight).map { WeightUnit.convert(weight: Double($0), from: .metric, to: weightUnit) } }
         case .totalSets:
             return { $0.numberOfCompletedSets.map { Double($0) } }
         case .totalRepetitions:

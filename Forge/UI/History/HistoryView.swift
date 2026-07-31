@@ -126,7 +126,7 @@ struct HistoryView : View {
                                         if UIDevice.current.userInterfaceIdiom != .pad {
                                             // not working on iPad, last checked iOS 13.4
                                             Button("Share") {
-                                                guard let logText = workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit, bodyweight: self.settingsStore.bodyweight) else { return }
+                                                guard let logText = workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit, fallbackBodyweight: self.settingsStore.bodyweight) else { return }
                                                 self.activityItems = [logText]
                                             }
                                         }

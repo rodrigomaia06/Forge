@@ -231,6 +231,7 @@ final class WorkoutDataExchangeTests: XCTestCase {
         let workout = Workout.create(context: context)
         workout.start = Date(timeIntervalSince1970: 1_700_000_000)
         workout.end = Date(timeIntervalSince1970: 1_700_003_600)
+        workout.bodyweightValue = 80 // frozen bodyweight for this session
         let exercise = WorkoutExercise.create(context: context)
         exercise.exerciseUuid = UUID()
         exercise.workout = workout
@@ -246,6 +247,7 @@ final class WorkoutDataExchangeTests: XCTestCase {
         _ = try WorkoutDataExchange.import(data, into: other, includeWorkouts: true)
 
         let imported = try fetch(Workout.self, "Workout", in: other)[0]
+        XCTAssertEqual(imported.bodyweightValue, 80) // the frozen bodyweight survives the round trip
         let importedSet = ((imported.workoutExercises?.array as? [WorkoutExercise] ?? [])
             .flatMap { $0.workoutSets?.array as? [WorkoutSet] ?? [] })[0]
         XCTAssertEqual(importedSet.addedWeightValue, 20)

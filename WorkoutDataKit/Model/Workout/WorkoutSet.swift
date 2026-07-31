@@ -118,19 +118,22 @@ public class WorkoutSet: NSManagedObject, Codable {
     /// (zero for a pure bodyweight set), which is what distinguishes it from a normal weighted set.
     public var isBodyweight: Bool { addedWeight != nil }
 
-    /// The effective load in kilograms used for stats: for a bodyweight set, the user's bodyweight plus the
-    /// added (+) or assisted (-) weight; otherwise the absolute weight. Pass the bodyweight setting in
-    /// kilograms (0 when it is unset, in which case only the added weight counts).
-    public func effectiveWeight(bodyweight: Double) -> Double {
-        isBodyweight ? bodyweight + (addedWeight?.doubleValue ?? 0) : weightValue
+    /// The effective load in kilograms used for stats: for a bodyweight set, the bodyweight plus the added
+    /// (+) or assisted (-) weight; otherwise the absolute weight. The bodyweight is the value frozen on the
+    /// set's workout when it finished; `fallbackBodyweight` (the current setting) is used only while a
+    /// workout is still in progress, before its bodyweight has been captured.
+    public func effectiveWeight(fallbackBodyweight: Double) -> Double {
+        guard isBodyweight else { return weightValue }
+        let bodyweight = workoutExercise?.workout?.bodyweightValue ?? fallbackBodyweight
+        return bodyweight + (addedWeight?.doubleValue ?? 0)
     }
 
     // MARK: Derived properties
 
-    public func estimatedOneRepMax(maxReps: Int, bodyweight: Double) -> Double? {
+    public func estimatedOneRepMax(maxReps: Int, fallbackBodyweight: Double) -> Double? {
         guard repetitionsValue > 0 && repetitionsValue <= maxReps else { return nil }
         assert(repetitionsValue < 37) // formula doesn't work for 37+ reps
-        return effectiveWeight(bodyweight: bodyweight) * (36 / (37 - Double(repetitionsValue))) // Brzycki 1RM formula
+        return effectiveWeight(fallbackBodyweight: fallbackBodyweight) * (36 / (37 - Double(repetitionsValue))) // Brzycki 1RM formula
     }
 
     public var isPersonalRecord: Bool? {

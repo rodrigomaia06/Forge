@@ -71,11 +71,11 @@ public class WorkoutExercise: NSManagedObject, Codable {
             })
     }
 
-    public func totalCompletedWeight(bodyweight: Double) -> Double? {
+    public func totalCompletedWeight(fallbackBodyweight: Double) -> Double? {
         workoutSets?
             .compactMap { $0 as? WorkoutSet }
             .reduce(0, { (weight, workoutSet) -> Double in
-                weight + (workoutSet.isCompleted ? workoutSet.effectiveWeight(bodyweight: bodyweight) * Double(workoutSet.repetitionsValue) : 0)
+                weight + (workoutSet.isCompleted ? workoutSet.effectiveWeight(fallbackBodyweight: fallbackBodyweight) * Double(workoutSet.repetitionsValue) : 0)
             })
     }
     

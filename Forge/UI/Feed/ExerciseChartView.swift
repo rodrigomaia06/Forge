@@ -29,7 +29,7 @@ struct ExerciseChartView : View {
             for: measurementType,
             weightUnit: settingsStore.weightUnit,
             maxRepetitionsForOneRepMax: settingsStore.maxRepetitionsOneRepMax,
-            bodyweight: settingsStore.bodyweight)
+            fallbackBodyweight: settingsStore.bodyweight)
         ).lineChartData(label: measurementType.title)
     }
     

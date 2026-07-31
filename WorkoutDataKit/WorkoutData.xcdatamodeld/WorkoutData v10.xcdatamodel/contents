@@ -14,6 +14,7 @@
         <attribute name="restTime" optional="YES" attributeType="Double" usesScalarValueType="NO"/>
     </entity>
     <entity name="Workout" representedClassName=".Workout" elementID="Training" syncable="YES" codeGenerationType="category">
+        <attribute name="bodyweight" optional="YES" attributeType="Double" usesScalarValueType="NO"/>
         <attribute name="comment" optional="YES" attributeType="String"/>
         <attribute name="customAttributesJSON" optional="YES" attributeType="String"/>
         <attribute name="end" optional="YES" attributeType="Date" usesScalarValueType="NO"/>

@@ -10,7 +10,7 @@ import Foundation
 import WorkoutDataKit
 
 extension Workout {
-    func logText(in exercises: [Exercise], weightUnit: WeightUnit, bodyweight: Double) -> String? {
-        logText(in: exercises, unit: weightUnit.unit, formatter: weightUnit.formatter, bodyweight: bodyweight)
+    func logText(in exercises: [Exercise], weightUnit: WeightUnit, fallbackBodyweight: Double) -> String? {
+        logText(in: exercises, unit: weightUnit.unit, formatter: weightUnit.formatter, fallbackBodyweight: fallbackBodyweight)
     }
 }

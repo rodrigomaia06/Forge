@@ -97,6 +97,8 @@ enum WorkoutDataExchange {
         var comment: String?
         var start: Date?
         var end: Date?
+        // The bodyweight frozen on the workout when it finished, used to weigh its bodyweight sets.
+        var bodyweight: Double?
         var attributes: [String: String]?
         var exercises: [WorkoutExerciseDTO]
         // Optional link to a routine (and its plan) imported in the same file. When set and no explicit
@@ -215,6 +217,7 @@ enum WorkoutDataExchange {
             comment: workout.comment,
             start: workout.start,
             end: workout.end,
+            bodyweight: workout.bodyweightValue,
             attributes: workout.customAttributes.isEmpty ? nil : workout.customAttributes,
             exercises: exercises.map { exercise in
                 WorkoutExerciseDTO(
@@ -343,6 +346,7 @@ enum WorkoutDataExchange {
         workout.start = dto.start ?? dto.end
         workout.end = dto.end ?? dto.start
         workout.isCurrentWorkout = false
+        workout.bodyweightValue = dto.bodyweight
         if let attributes = dto.attributes { workout.customAttributes = attributes }
         var groupIDs: [Int: UUID] = [:]
         for exerciseDTO in dto.exercises {

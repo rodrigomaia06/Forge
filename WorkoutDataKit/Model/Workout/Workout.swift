@@ -126,11 +126,19 @@ public class Workout: NSManagedObject, Codable {
             })
     }
     
-    public func totalCompletedWeight(bodyweight: Double) -> Double? {
+    /// The bodyweight in kilograms frozen on this workout when it finished, used to weigh its bodyweight
+    /// sets. Nil while the workout is in progress (stats then use the current setting) and for workouts
+    /// finished before this was recorded.
+    public var bodyweightValue: Double? {
+        get { bodyweight?.doubleValue }
+        set { bodyweight = newValue as NSNumber? }
+    }
+
+    public func totalCompletedWeight(fallbackBodyweight: Double) -> Double? {
         workoutExercises?
             .map { $0 as! WorkoutExercise }
             .reduce(0, { (weight, workoutExercise) -> Double in
-                weight + (workoutExercise.totalCompletedWeight(bodyweight: bodyweight) ?? 0)
+                weight + (workoutExercise.totalCompletedWeight(fallbackBodyweight: fallbackBodyweight) ?? 0)
             })
     }
     
@@ -141,6 +149,7 @@ public class Workout: NSManagedObject, Codable {
         case comment
         case start
         case end
+        case bodyweight
         case exercises
         case routineUuid
     }
@@ -160,6 +169,8 @@ public class Workout: NSManagedObject, Codable {
         comment = try container.decodeIfPresent(String.self, forKey: .comment)
         start = try container.decode(Date.self, forKey: .start)
         end = try container.decode(Date.self, forKey: .end)
+        // Older exports have no frozen bodyweight; those workouts decode without one.
+        bodyweightValue = try container.decodeIfPresent(Double.self, forKey: .bodyweight)
         workoutExercises = NSOrderedSet(array: try container.decodeIfPresent([WorkoutExercise].self, forKey: .exercises) ?? [])
         
         if let routineUuid = try container.decodeIfPresent(UUID.self, forKey: .routineUuid) {
@@ -182,6 +193,7 @@ public class Workout: NSManagedObject, Codable {
         try container.encodeIfPresent(comment, forKey: .comment)
         try container.encode(safeStart, forKey: .start)
         try container.encode(safeEnd, forKey: .end)
+        try container.encodeIfPresent(bodyweightValue, forKey: .bodyweight)
         try container.encodeIfPresent(workoutExercises?.array.compactMap { $0 as? WorkoutExercise }, forKey: .exercises)
         try container.encodeIfPresent(workoutRoutine?.uuid, forKey: .routineUuid)
     }
@@ -245,9 +257,9 @@ extension Workout {
 
 // MARK: - Workout Log
 extension Workout {
-    public func logText(in exercises: [Exercise], unit: UnitMass, formatter: MeasurementFormatter, bodyweight: Double) -> String? {
+    public func logText(in exercises: [Exercise], unit: UnitMass, formatter: MeasurementFormatter, fallbackBodyweight: Double) -> String? {
         guard let start = start else { return nil }
-        guard let weight = totalCompletedWeight(bodyweight: bodyweight) else { return nil }
+        guard let weight = totalCompletedWeight(fallbackBodyweight: fallbackBodyweight) else { return nil }
         let dateFormatter = DateFormatter() // we don't want relative formatting here
         dateFormatter.dateStyle = .long
         dateFormatter.timeStyle = .short

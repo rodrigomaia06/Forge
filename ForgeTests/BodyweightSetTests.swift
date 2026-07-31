@@ -40,22 +40,38 @@ final class BodyweightSetTests: XCTestCase {
 
         let normal = makeSet(weight: 80, added: nil, reps: 5)
         XCTAssertFalse(normal.isBodyweight)
-        XCTAssertEqual(normal.effectiveWeight(bodyweight: bw), 80) // bodyweight is ignored for normal sets
+        XCTAssertEqual(normal.effectiveWeight(fallbackBodyweight: bw), 80) // bodyweight is ignored for normal sets
 
         let pure = makeSet(weight: 0, added: 0, reps: 8)
         XCTAssertTrue(pure.isBodyweight)
-        XCTAssertEqual(pure.effectiveWeight(bodyweight: bw), 75) // just the bodyweight
+        XCTAssertEqual(pure.effectiveWeight(fallbackBodyweight: bw), 75) // just the bodyweight
 
         let weighted = makeSet(weight: 0, added: 20, reps: 5)
         XCTAssertTrue(weighted.isBodyweight)
-        XCTAssertEqual(weighted.effectiveWeight(bodyweight: bw), 95) // bodyweight + added
+        XCTAssertEqual(weighted.effectiveWeight(fallbackBodyweight: bw), 95) // bodyweight + added
 
         let assisted = makeSet(weight: 0, added: -15, reps: 6)
         XCTAssertTrue(assisted.isBodyweight)
-        XCTAssertEqual(assisted.effectiveWeight(bodyweight: bw), 60) // bodyweight - assist
+        XCTAssertEqual(assisted.effectiveWeight(fallbackBodyweight: bw), 60) // bodyweight - assist
 
         // With bodyweight unset (0), only the added weight counts.
-        XCTAssertEqual(weighted.effectiveWeight(bodyweight: 0), 20)
+        XCTAssertEqual(weighted.effectiveWeight(fallbackBodyweight: 0), 20)
+    }
+
+    func testFrozenWorkoutBodyweightWinsOverFallback() {
+        // A set on a finished workout uses that workout's frozen bodyweight, not the current setting.
+        let workout = Workout.create(context: context)
+        let exercise = WorkoutExercise.create(context: context)
+        exercise.workout = workout
+        let set = makeSet(weight: 0, added: 20, reps: 5)
+        set.workoutExercise = exercise
+
+        workout.bodyweightValue = 70
+        XCTAssertEqual(set.effectiveWeight(fallbackBodyweight: 999), 90) // 70 (frozen) + 20, fallback ignored
+
+        // Without a frozen value (workout still in progress), the fallback is used.
+        workout.bodyweightValue = nil
+        XCTAssertEqual(set.effectiveWeight(fallbackBodyweight: 80), 100) // 80 (fallback) + 20
     }
 
     func testDisplayTitle() {
@@ -75,9 +91,9 @@ final class BodyweightSetTests: XCTestCase {
     func testOneRepMaxFactorsBodyweight() {
         // Brzycki on the effective load: (75 + 20) * 36 / (37 - 5) = 106.875
         let weighted = makeSet(weight: 0, added: 20, reps: 5)
-        XCTAssertEqual(weighted.estimatedOneRepMax(maxReps: 10, bodyweight: 75) ?? 0, 106.875, accuracy: 0.001)
+        XCTAssertEqual(weighted.estimatedOneRepMax(maxReps: 10, fallbackBodyweight: 75) ?? 0, 106.875, accuracy: 0.001)
         // A normal set ignores bodyweight: 32 * 36 / (37 - 5) = 36
         let normal = makeSet(weight: 32, added: nil, reps: 5)
-        XCTAssertEqual(normal.estimatedOneRepMax(maxReps: 10, bodyweight: 75) ?? 0, 36, accuracy: 0.001)
+        XCTAssertEqual(normal.estimatedOneRepMax(maxReps: 10, fallbackBodyweight: 75) ?? 0, 36, accuracy: 0.001)
     }
 }
