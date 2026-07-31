@@ -35,6 +35,9 @@ struct WorkoutExerciseDetailView : View {
     }
     
     @State private var showExerciseInfo = false
+    // Added vs assisted mode for a bodyweight exercise. Held here (not derived from set signs) so it stays
+    // put when every set is a pure bodyweight rep, which has no sign to read back.
+    @State private var bodyweightAssisted = false
     // History (standalone) starts read-only; its Edit button flips this so sets become editable.
     @State private var historyEditMode: EditMode = .inactive
 
@@ -203,6 +206,36 @@ struct WorkoutExerciseDetailView : View {
         }
     }
 
+    /// True when this exercise is a bodyweight exercise, so its sets enter an added or assisted weight.
+    private var exerciseIsBodyweight: Bool {
+        workoutExercise.exercise(in: exerciseStore.exercises)?.isBodyweight ?? false
+    }
+
+    private var exerciseSets: [WorkoutSet] {
+        workoutExercise.workoutSets?.array as? [WorkoutSet] ?? []
+    }
+
+    /// Flipping the mode re-signs every set's added weight, keeping the magnitudes, and saves.
+    private func applyBodyweightMode(assisted: Bool) {
+        bodyweightAssisted = assisted
+        for set in exerciseSets {
+            let magnitude = abs(set.addedWeightValue ?? 0)
+            set.addedWeightValue = assisted ? -magnitude : magnitude
+        }
+        managedObjectContext.saveOrCrash()
+    }
+
+    private var bodyweightModeRow: some View {
+        Picker("Weight kind", selection: Binding(get: { bodyweightAssisted }, set: { applyBodyweightMode(assisted: $0) })) {
+            Text("Added").tag(false)
+            Text("Assisted").tag(true)
+        }
+        .pickerStyle(.segmented)
+        // Seed the mode from any existing assisted set the first time the control shows.
+        .onAppear { bodyweightAssisted = exerciseSets.contains { ($0.addedWeightValue ?? 0) < 0 } }
+        .listRowInsets(EdgeInsets(top: 4, leading: Theme.Spacing.m, bottom: 6, trailing: Theme.Spacing.m))
+    }
+
     /// Column headers above the set rows (Set, Previous, kg, Reps).
     private var setsHeader: some View {
         HStack(spacing: Theme.Spacing.s) {
@@ -255,6 +288,8 @@ struct WorkoutExerciseDetailView : View {
                 isCurrentWorkout: isCurrentWorkout,
                 isUpNext: firstUncompletedSet == workoutSet,
                 showRPE: settingsStore.showRPE,
+                isBodyweight: exerciseIsBodyweight,
+                assisted: bodyweightAssisted,
                 previousText: previousPerformance(atZeroBased: index - 1),
                 weightPlaceholder: targetWeightHint(atZeroBased: index - 1) ?? "",
                 isEditable: setsEditable,
@@ -557,6 +592,7 @@ struct WorkoutExerciseDetailView : View {
     /// the standalone card and by a superset member (which the superset card wraps into one section).
     @ViewBuilder private var embeddedContent: some View {
         attachingSheets(to: exerciseHeaderRow)
+        if exerciseIsBodyweight && setsEditable { bodyweightModeRow }
         setsHeader
         currentWorkoutSets
         if setsEditable { addSetButton }
@@ -579,6 +615,7 @@ struct WorkoutExerciseDetailView : View {
 
                 List {
                     Section(header: Text("This session")) {
+                        if exerciseIsBodyweight && setsEditable { bodyweightModeRow }
                         setsHeader
                         currentWorkoutSets
                         if setsEditable { addSetButton }
@@ -661,6 +698,10 @@ private struct ActiveSetRow: View {
     let isCurrentWorkout: Bool
     let isUpNext: Bool
     let showRPE: Bool
+    /// When true, the weight field enters an added or assisted amount (stored in addedWeight) rather than
+    /// an absolute weight, and `assisted` decides its sign.
+    var isBodyweight: Bool = false
+    var assisted: Bool = false
     let previousText: String?
     /// The planned next-time target weight, shown as a faint hint in the weight box. Empty when none.
     var weightPlaceholder: String = ""
@@ -677,6 +718,15 @@ private struct ActiveSetRow: View {
     private var weightText: String {
         let value = WeightUnit.convert(weight: workoutSet.weightValue, from: .metric, to: weightUnit)
         return String(format: "%g", value)
+    }
+
+    /// Read-only weight display for a bodyweight set: BW, +added, or -assisted.
+    private var bodyweightReadText: String {
+        guard let added = workoutSet.addedWeightValue else { return "—" }
+        if added == 0 { return "BW" }
+        let magnitude = WeightUnit.convert(weight: abs(added), from: .metric, to: weightUnit)
+        let text = Self.weightFormatter.string(from: NSNumber(value: magnitude)) ?? String(format: "%g", magnitude)
+        return (added > 0 ? "+" : "-") + text
     }
 
     // The fields edit raw text, so an unset value shows blank (not "0"), an existing value edits
@@ -696,12 +746,29 @@ private struct ActiveSetRow: View {
     }()
 
     private func syncInputsFromModel() {
-        weightInput = workoutSet.weight == nil ? "" : (Self.weightFormatter.string(from: NSNumber(value: WeightUnit.convert(weight: workoutSet.weightValue, from: .metric, to: weightUnit))) ?? "")
+        if isBodyweight {
+            // The field holds the non-negative magnitude; a pure bodyweight set (0) shows blank.
+            let magnitude = abs(workoutSet.addedWeightValue ?? 0)
+            weightInput = magnitude == 0 ? "" : (Self.weightFormatter.string(from: NSNumber(value: WeightUnit.convert(weight: magnitude, from: .metric, to: weightUnit))) ?? "")
+        } else {
+            weightInput = workoutSet.weight == nil ? "" : (Self.weightFormatter.string(from: NSNumber(value: WeightUnit.convert(weight: workoutSet.weightValue, from: .metric, to: weightUnit))) ?? "")
+        }
         repsInput = workoutSet.repetitions == nil ? "" : "\(workoutSet.repetitionsValue)"
     }
 
     private func commitWeight() {
         let trimmed = weightInput.trimmingCharacters(in: .whitespaces)
+        if isBodyweight {
+            // Blank means a pure bodyweight set (added 0), not a normal set: keep addedWeight non-nil so it
+            // stays bodyweight. The sign comes from the exercise's added/assisted mode.
+            if trimmed.isEmpty {
+                workoutSet.addedWeightValue = 0
+            } else if let number = Self.weightFormatter.number(from: trimmed) {
+                let magnitude = max(0, min(WeightUnit.convert(weight: number.doubleValue, from: weightUnit, to: .metric), WorkoutSet.MAX_WEIGHT))
+                workoutSet.addedWeightValue = assisted ? -magnitude : magnitude
+            }
+            return
+        }
         if trimmed.isEmpty {
             workoutSet.weight = nil
         } else if let number = Self.weightFormatter.number(from: trimmed) {
@@ -769,7 +836,8 @@ private struct ActiveSetRow: View {
             onToggleComplete()
             return
         }
-        let hasWeight = !weightInput.trimmingCharacters(in: .whitespaces).isEmpty
+        // A bodyweight set needs no weight entry (blank means a pure bodyweight rep); only reps are required.
+        let hasWeight = isBodyweight || !weightInput.trimmingCharacters(in: .whitespaces).isEmpty
         let hasReps = (Int(repsInput.trimmingCharacters(in: .whitespaces)) ?? 0) > 0
         guard hasWeight, hasReps else {
             Haptics.error()
@@ -823,7 +891,7 @@ private struct ActiveSetRow: View {
                 setField($weightInput, keyboard: .decimalPad, width: 68, placeholder: weightPlaceholder, invalid: weightInvalid)
                 setField($repsInput, keyboard: .numberPad, width: 60, placeholder: targetRepsString ?? "", invalid: repsInvalid)
             } else {
-                readValue(workoutSet.weight == nil ? "—" : weightText, width: 68)
+                readValue(isBodyweight ? bodyweightReadText : (workoutSet.weight == nil ? "—" : weightText), width: 68)
                 readValue(workoutSet.repetitions == nil ? "—" : "\(workoutSet.repetitionsValue)", width: 60)
             }
 
