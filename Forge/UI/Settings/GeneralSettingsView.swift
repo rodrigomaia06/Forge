@@ -43,10 +43,12 @@ struct GeneralSettingsView: View {
             HStack {
                 Text("Bodyweight")
                 Spacer()
-                RightAlignedNumberField(text: bodyweightText, placeholder: "0", keyboardType: .decimalPad, alignment: .right, smallPlaceholder: false)
-                    .frame(width: 90, height: 28)
-                Text(settingsStore.weightUnit.unit.symbol)
-                    .foregroundColor(.secondary)
+                HStack(spacing: 4) {
+                    RightAlignedNumberField(text: bodyweightText, placeholder: "0", keyboardType: .decimalPad, alignment: .right, smallPlaceholder: false)
+                        .frame(width: 64, height: 28)
+                    Text(settingsStore.weightUnit.unit.symbol)
+                        .foregroundColor(.secondary)
+                }
             }
         }
     }

@@ -37,6 +37,7 @@ public class WorkoutDataStorage {
         }
         // The store loads synchronously (shouldAddStoreAsynchronously is false), so it is ready here.
         Self.mergeRenamedExercises(context: persistentContainer.viewContext)
+        Self.migrateBodyweightSets(context: persistentContainer.viewContext)
     }
     
     private func loadPersistentStores(tryToRecoverFromFailedMigration: Bool, completion: @escaping (NSPersistentStoreDescription) -> Void) {
@@ -135,6 +136,56 @@ extension WorkoutDataStorage {
             UserDefaults.standard.set(true, forKey: flagKey)
         } catch {
             os_log("Could not merge renamed exercises, will retry next launch: %@", log: .migration, type: .error, error as NSError)
+        }
+    }
+
+    /// UUIDs of the built-in bodyweight exercises (equipment lists "body").
+    private static var builtInBodyweightUUIDs: Set<UUID> {
+        guard let data = try? Data(contentsOf: ExerciseStore.defaultBuiltInExercisesURL),
+              let exercises = try? JSONDecoder().decode([Exercise].self, from: data) else { return [] }
+        return Set(exercises.filter { $0.isBodyweight }.map { $0.uuid })
+    }
+
+    /// One-time: sets logged for a bodyweight exercise before the load was stored in addedWeight keep it in
+    /// the plain weight field, so they do not count as bodyweight in stats. Move that value into addedWeight
+    /// as a weighted amount, so estimated 1RM and volume factor the bodyweight. The value is preserved; only
+    /// which field holds it changes. Covers built-in bodyweight exercises; a custom one keeps the display
+    /// fallback until its sets are edited.
+    /// Moves each not-yet-migrated set of the given exercises from the plain weight field into addedWeight
+    /// (as a weighted amount) and clears weight. Returns the number of sets changed. The value is preserved.
+    @discardableResult
+    public static func moveBodyweightWeightToAdded(context: NSManagedObjectContext, exerciseUUIDs: Set<UUID>) throws -> Int {
+        guard !exerciseUUIDs.isEmpty else { return 0 }
+        var changed = 0
+        var saveError: Error?
+        context.performAndWait {
+            let request: NSFetchRequest<WorkoutSet> = WorkoutSet.fetchRequest()
+            request.predicate = NSPredicate(format: "addedWeight == nil AND workoutExercise.exerciseUuid IN %@", Array(exerciseUUIDs))
+            guard let sets = try? context.fetch(request) else { return }
+            for set in sets {
+                set.addedWeightValue = set.weightValue
+                set.weight = nil
+                changed += 1
+            }
+            if context.hasChanges {
+                do { try context.save() } catch { saveError = error }
+            }
+        }
+        if let saveError = saveError { throw saveError }
+        return changed
+    }
+
+    static func migrateBodyweightSets(context: NSManagedObjectContext) {
+        let flagKey = "migratedBodyweightSetsV1"
+        guard !UserDefaults.standard.bool(forKey: flagKey) else { return }
+        let uuids = builtInBodyweightUUIDs
+        guard !uuids.isEmpty else { return }
+        do {
+            let changed = try moveBodyweightWeightToAdded(context: context, exerciseUUIDs: uuids)
+            if changed > 0 { os_log("Migrated %d bodyweight sets to added weight", log: .migration, type: .info, changed) }
+            UserDefaults.standard.set(true, forKey: flagKey)
+        } catch {
+            os_log("Could not migrate bodyweight sets, will retry next launch: %@", log: .migration, type: .error, error as NSError)
         }
     }
 

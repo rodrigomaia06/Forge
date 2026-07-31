@@ -40,6 +40,32 @@ final class ExerciseMergeTests: XCTestCase {
         XCTAssertEqual(try WorkoutDataStorage.remapRenamedExercises(context: context), 0)
     }
 
+    func testMovesLegacyBodyweightWeightIntoAddedWeight() throws {
+        let context = setUpInMemoryNSPersistentContainer().viewContext
+        let pullUp = UUID()
+        let workout = Workout.create(context: context)
+        workout.start = Date(timeIntervalSince1970: 1_700_000_000)
+        workout.end = Date(timeIntervalSince1970: 1_700_003_600)
+        let exercise = WorkoutExercise.create(context: context); exercise.exerciseUuid = pullUp; exercise.workout = workout
+
+        // A legacy weighted set (value in weight, addedWeight nil).
+        let legacy = WorkoutSet.create(context: context)
+        legacy.weightValue = 40; legacy.repetitionsValue = 5; legacy.isCompleted = true; legacy.workoutExercise = exercise
+        // An already-migrated set is left alone.
+        let migrated = WorkoutSet.create(context: context)
+        migrated.addedWeightValue = 10; migrated.weightValue = 0; migrated.repetitionsValue = 5; migrated.isCompleted = true; migrated.workoutExercise = exercise
+        try context.save()
+
+        let changed = try WorkoutDataStorage.moveBodyweightWeightToAdded(context: context, exerciseUUIDs: [pullUp])
+        XCTAssertEqual(changed, 1)
+        XCTAssertEqual(legacy.addedWeightValue, 40) // weight preserved, now weighted
+        XCTAssertNil(legacy.weight)
+        XCTAssertEqual(migrated.addedWeightValue, 10) // untouched
+
+        // Idempotent.
+        XCTAssertEqual(try WorkoutDataStorage.moveBodyweightWeightToAdded(context: context, exerciseUUIDs: [pullUp]), 0)
+    }
+
     func testMappingIsWellFormed() {
         // No id maps to itself, and no kept id is also a removed id (which would chain or loop).
         let map = WorkoutDataStorage.renamedExerciseUUIDs

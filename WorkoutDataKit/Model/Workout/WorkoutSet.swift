@@ -233,11 +233,11 @@ public class WorkoutSet: NSManagedObject, Codable {
 extension WorkoutSet {
     public func displayTitle(unit: UnitMass, formatter: MeasurementFormatter) -> String {
         let reps = " × \(repetitionsValue)"
-        // A bodyweight set reads as BW, BW + added, or BW - assisted, rather than an absolute weight.
+        // A bodyweight set reads as the added (+) or assisted (-) weight, or BW for a pure rep.
         if let added = addedWeight?.doubleValue {
             guard added != 0 else { return "BW" + reps }
             let magnitude = formatter.string(from: Measurement(value: abs(added), unit: UnitMass.kilograms).converted(to: unit))
-            return "BW \(added > 0 ? "+" : "-") \(magnitude)" + reps
+            return "\(added > 0 ? "+" : "-")\(magnitude)" + reps
         }
         return formatter.string(from: Measurement(value: weightValue, unit: UnitMass.kilograms).converted(to: unit)) + reps
     }
