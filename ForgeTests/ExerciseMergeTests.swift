@@ -22,6 +22,8 @@ final class ExerciseMergeTests: XCTestCase {
         let other = UUID() // an unrelated exercise
 
         let workout = Workout.create(context: context)
+        workout.start = Date(timeIntervalSince1970: 1_700_000_000)
+        workout.end = Date(timeIntervalSince1970: 1_700_003_600)
         let we = WorkoutExercise.create(context: context); we.exerciseUuid = removed; we.workout = workout
         let untouched = WorkoutExercise.create(context: context); untouched.exerciseUuid = other; untouched.workout = workout
         let routine = WorkoutRoutine.create(context: context)
