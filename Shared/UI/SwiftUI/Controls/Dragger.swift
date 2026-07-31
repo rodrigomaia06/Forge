@@ -204,9 +204,11 @@ struct Dragger : View {
                 
                 Spacer()
             }
-            // This is a hack since tap gesture currently doesn't work on Space that hasn't a background (beta6)
+            // A clear overlay with an explicit content shape catches taps over the whole area, including
+            // the empty space, without a visible fill.
             .overlay(
-                Color.fakeClear
+                Color.clear
+                    .contentShape(Rectangle())
                     .onTapGesture {
                         self.onTextTapped()
                     }
