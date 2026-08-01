@@ -35,11 +35,17 @@ extension View {
     func listStyleCompat_InsetGroupedListStyle() -> some View {
         if #available(iOS 16.0, *) {
             // Hide the system grouped background and use the dashboard canvas, so every screen shares
-            // the same near-black instead of the system's pure-black grouped background. Dragging the
-            // list down dismisses the keyboard everywhere these lists are used.
+            // the same near-black instead of the system's pure-black grouped background. Scrolling
+            // dismisses the keyboard everywhere these lists are used.
+            //
+            // .immediately, not .interactively: the interactive mode installs a pan gesture that
+            // coordinates keyboard dismissal with the scroll, and on a list that hosts a UITextField
+            // (RightAlignedNumberField) that gesture can wedge UIKit's gesture arbitration into a hard
+            // freeze (touch dead, timers running, force-quit only) on scroll. This list style is shared by
+            // every screen, so the safer mode is applied app-wide.
             listStyle(.insetGrouped)
                 .scrollContentBackground(.hidden)
-                .scrollDismissesKeyboard(.interactively)
+                .scrollDismissesKeyboard(.immediately)
                 .background(Color.forgeBackground.ignoresSafeArea())
         } else if #available(iOS 14.0, *) {
             listStyle(InsetGroupedListStyle())
@@ -247,9 +253,15 @@ final class KeyboardDismissInstaller: NSObject, UIGestureRecognizerDelegate {
 }
 
 extension View {
-    /// Dismisses the keyboard when tapping outside a text field. Apply once at the root.
+    /// Previously installed a window-level tap gesture recognizer to dismiss the keyboard on a background
+    /// tap. That recognizer was set to recognize simultaneously with every UIKit gesture (the navigation
+    /// interactive pop, sheet-dismiss drag, scroll pan, the text system's own gestures), which can wedge
+    /// UIKit's gesture arbitration and leave the whole UI unresponsive to touch while timers keep running,
+    /// recoverable only by force-quit. The editor screens are Lists with `.scrollDismissesKeyboard`, so a
+    /// drag dismisses the keyboard natively; the only lost behavior is dismissing by tapping empty,
+    /// non-scrolling space. Kept as a no-op so existing call sites are unaffected.
     func dismissesKeyboardOnBackgroundTap() -> some View {
-        onAppear { KeyboardDismissInstaller.shared.install() }
+        self
     }
 
     /// A single "Done" above the keyboard that dismisses whatever field is focused (numbers or text).

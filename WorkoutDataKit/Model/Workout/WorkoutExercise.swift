@@ -48,6 +48,13 @@ public class WorkoutExercise: NSManagedObject, Codable {
     public func exercise(in exercises: [Exercise]) -> Exercise? {
         ExerciseStore.find(in: exercises, with: exerciseUuid)
     }
+
+    /// For a bodyweight exercise, whether its sets are assisted (bodyweight minus the entered weight)
+    /// rather than weighted (bodyweight plus it). Defaults to weighted. Drives the sign of new entries.
+    public var assistedValue: Bool {
+        get { assisted?.boolValue ?? false }
+        set { assisted = newValue as NSNumber }
+    }
     
     public var isCompleted: Bool? {
         guard let workoutSets = workoutSets else { return nil }
@@ -71,11 +78,11 @@ public class WorkoutExercise: NSManagedObject, Codable {
             })
     }
 
-    public var totalCompletedWeight: Double? {
+    public func totalCompletedWeight(fallbackBodyweight: Double) -> Double? {
         workoutSets?
             .compactMap { $0 as? WorkoutSet }
             .reduce(0, { (weight, workoutSet) -> Double in
-                weight + (workoutSet.isCompleted ? workoutSet.weightValue * Double(workoutSet.repetitionsValue) : 0)
+                weight + (workoutSet.isCompleted ? workoutSet.effectiveWeight(fallbackBodyweight: fallbackBodyweight) * Double(workoutSet.repetitionsValue) : 0)
             })
     }
     

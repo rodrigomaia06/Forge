@@ -28,7 +28,8 @@ struct ExerciseChartView : View {
         WorkoutExerciseChartDataGenerator(workoutExercises: workoutExercises, evaluator: WorkoutExerciseChartData.evaluator(
             for: measurementType,
             weightUnit: settingsStore.weightUnit,
-            maxRepetitionsForOneRepMax: settingsStore.maxRepetitionsOneRepMax)
+            maxRepetitionsForOneRepMax: settingsStore.maxRepetitionsOneRepMax,
+            fallbackBodyweight: settingsStore.bodyweight)
         ).lineChartData(label: measurementType.title)
     }
     

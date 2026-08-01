@@ -60,18 +60,33 @@ struct HistoryView : View {
         return formatter
     }()
 
-    /// Workouts grouped into month sections, newest month first and newest workout first within a month,
-    /// so a long history reads as organized blocks rather than one flat scroll.
-    private var monthSections: [(id: String, title: String, workouts: [Workout])] {
-        let calendar = Calendar.current
+    /// A week section's header is the span of the days trained that week (e.g. "Jul 27 – 29, 2026"), which
+    /// collapses to a single date for one workout. Clearer than a "Week 5" number, which confuses because a
+    /// month spans 4 to 6 partial weeks depending on where the 1st lands.
+    private static let weekRangeFormatter: DateIntervalFormatter = {
+        let formatter = DateIntervalFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
+
+    /// Workouts grouped into week sections within each month (newest first), so a busy month reads as a
+    /// few small blocks rather than one long scroll. The week boundary follows the first-weekday setting.
+    private var weekSections: [(id: String, title: String, workouts: [Workout])] {
+        var calendar = Calendar.current
+        calendar.firstWeekday = settingsStore.firstWeekday
         let groups = Dictionary(grouping: displayedWorkouts) { workout in
-            calendar.dateComponents([.year, .month], from: workout.start ?? Date.distantPast)
+            calendar.dateComponents([.year, .month, .weekOfMonth], from: workout.start ?? Date.distantPast)
         }
         return groups
             .map { components, workouts -> (id: String, title: String, workouts: [Workout], sort: Date) in
-                let date = calendar.date(from: components) ?? Date.distantPast
                 let sorted = workouts.sorted { ($0.start ?? .distantPast) > ($1.start ?? .distantPast) }
-                return ("\(components.year ?? 0)-\(components.month ?? 0)", Self.monthFormatter.string(from: date), sorted, date)
+                let newest = sorted.first?.start ?? Date.distantPast
+                let oldest = sorted.last?.start ?? newest
+                let week = components.weekOfMonth ?? 0
+                // Label by the span of days trained that week; sort by the newest so partial weeks order right.
+                let title = Self.weekRangeFormatter.string(from: oldest, to: newest)
+                return ("\(components.year ?? 0)-\(components.month ?? 0)-\(week)", title, sorted, newest)
             }
             .sorted { $0.sort > $1.sort }
             .map { (id: $0.id, title: $0.title, workouts: $0.workouts) }
@@ -116,7 +131,7 @@ struct HistoryView : View {
                         DatePicker("To", selection: $toDate, in: fromDate..., displayedComponents: .date)
                     }
                 }
-                ForEach(monthSections, id: \.id) { section in
+                ForEach(weekSections, id: \.id) { section in
                     Section(header: Text(section.title)) {
                         ForEach(section.workouts) { workout in
                             NavigationLink(value: workout) {
@@ -126,7 +141,7 @@ struct HistoryView : View {
                                         if UIDevice.current.userInterfaceIdiom != .pad {
                                             // not working on iPad, last checked iOS 13.4
                                             Button("Share") {
-                                                guard let logText = workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit) else { return }
+                                                guard let logText = workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit, fallbackBodyweight: self.settingsStore.bodyweight) else { return }
                                                 self.activityItems = [logText]
                                             }
                                         }

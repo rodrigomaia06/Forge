@@ -76,8 +76,9 @@ struct TimerBannerView: View {
 
     var body: some View {
         HStack {
-            // The stopwatch is always tappable. In edit mode it opens the start/end editor; otherwise a
-            // tap shows a brief hint that the times can only be changed in edit mode.
+            // The elapsed-workout stopwatch on the left. Always tappable. In edit mode it opens the
+            // start/end editor; otherwise a tap shows a brief hint that the times can only be changed in
+            // edit mode.
             Button(action: {
                 if isEditing {
                     self.activeSheet = .editTime
@@ -103,6 +104,7 @@ struct TimerBannerView: View {
 
             Spacer()
 
+            // Rest timer on the right.
             Button(action: {
                 self.activeSheet = .restTimer
             }) {

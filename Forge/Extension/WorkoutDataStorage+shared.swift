@@ -17,7 +17,14 @@ extension WorkoutDataStorage {
 
     static let shared: WorkoutDataStorage = {
         let workoutDataStorage = WorkoutDataStorage(storeDescription: .init(url: groupStoreURL))
+        // Deliver the objectWillChange fan-out on a later runloop turn rather than synchronously inside the
+        // Core Data change notification, which can fire while SwiftUI is evaluating a body ("publishing
+        // changes from within view updates"). RunLoop.main (not DispatchQueue.main) defers it out of
+        // event-tracking mode too, so a change that fans objectWillChange across the whole plan/routine or
+        // workout subtree does not land mid-scroll or mid-touch and stall input. Views refresh a runloop
+        // later; they just won't update while a scroll is actively tracking, which these editors don't need.
         workoutDataStorage.persistentContainer.viewContext.publisher
+            .receive(on: RunLoop.main)
             .sink { changes in
                 WorkoutDataStorage.sendObjectsWillChange(changes: changes)
             }

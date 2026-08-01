@@ -88,7 +88,18 @@ final class SettingsStore: ObservableObject {
             userDefaults.maxRepetitionsOneRepMax = newValue
         }
     }
-    
+
+    /// The user's bodyweight in kilograms (0 = unset). Factored into stats for bodyweight exercises.
+    var bodyweight: Double {
+        get {
+            userDefaults.bodyweight
+        }
+        set {
+            self.objectWillChange.send()
+            userDefaults.bodyweight = newValue
+        }
+    }
+
     var autoBackup: Bool {
         get {
             userDefaults.autoBackup

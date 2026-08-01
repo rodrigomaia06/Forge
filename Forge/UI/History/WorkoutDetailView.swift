@@ -21,6 +21,9 @@ struct WorkoutDetailView : View {
     // system EditButton rendered a "Done" checkmark overlapping the "Edit" label inside the nav glass.
     @State private var editMode: EditMode = .inactive
     @State private var showingExerciseSelectorSheet = false
+    // When on, every exercise is shown expanded with its set table inline (like the live workout), instead
+    // of a compact list you tap into. A read-only overview of the whole workout in one scroll.
+    @State private var expanded = false
 
     @State private var activityItems: [Any]?
 
@@ -160,6 +163,14 @@ struct WorkoutDetailView : View {
 
                 CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: editMode.isEditing)
 
+            if expanded && !editMode.isEditing {
+                // Each exercise as its own read-only card with the set table inline (previous, weight, reps),
+                // so the whole workout reads in one scroll without tapping into each exercise.
+                ForEach(workoutExercises) { workoutExercise in
+                    WorkoutExerciseDetailView(workoutExercise: workoutExercise, embedded: true)
+                        .environmentObject(self.settingsStore)
+                }
+            } else {
             Section {
                 ForEach(workoutExercises) { workoutExercise in
                     NavigationLink(destination: WorkoutExerciseDetailView(workoutExercise: workoutExercise).environmentObject(self.settingsStore)) {
@@ -196,6 +207,7 @@ struct WorkoutDetailView : View {
                     }
                 }
             }
+            }
         }
         .listStyleCompat_InsetGroupedListStyle()
         .environment(\.editMode, $editMode)
@@ -219,7 +231,13 @@ struct WorkoutDetailView : View {
                 // reliably right under the control.
                 Menu {
                     Button {
-                        guard let logText = self.workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit) else { return }
+                        Haptics.selection()
+                        withAnimation { expanded.toggle() }
+                    } label: {
+                        Label(expanded ? "Compact view" : "Expanded view", systemImage: expanded ? "list.bullet" : "rectangle.grid.1x2")
+                    }
+                    Button {
+                        guard let logText = self.workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit, fallbackBodyweight: self.settingsStore.bodyweight) else { return }
                         self.activityItems = [logText]
                     } label: {
                         Label("Share as text", systemImage: "square.and.arrow.up")

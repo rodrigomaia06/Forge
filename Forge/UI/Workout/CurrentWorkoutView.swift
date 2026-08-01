@@ -87,9 +87,13 @@ struct CurrentWorkoutView: View {
                 numberOfSets = median.workoutSets?.count ?? numberOfSets
             }
         }
+        // A bodyweight exercise's sets start marked as bodyweight (addedWeight 0, not nil) so they read as
+        // BW right away and use the bodyweight in stats.
+        let isBodyweight = workoutExercise.exercise(in: exerciseStore.exercises)?.isBodyweight ?? false
         var workoutSets = [WorkoutSet]()
         for _ in 0..<numberOfSets {
             let workoutSet = WorkoutSet.create(context: managedObjectContext)
+            if isBodyweight { workoutSet.addedWeightValue = 0 }
             workoutSets.append(workoutSet)
         }
         return NSOrderedSet(array: workoutSets)
@@ -196,6 +200,10 @@ struct CurrentWorkoutView: View {
     }
 
     private func finishWorkout(updateRoutine: Bool) {
+        // Freeze the current bodyweight onto the workout so its bodyweight-set stats stay fixed even if the
+        // setting later changes. Stats read this frozen value; the live setting is only a fallback while a
+        // workout is still in progress.
+        workout.bodyweightValue = settingsStore.bodyweight
         workout.finishOrCrash()
 
         // Sync after finishing, so the routine matches the cleaned-up structure (uncompleted sets gone).

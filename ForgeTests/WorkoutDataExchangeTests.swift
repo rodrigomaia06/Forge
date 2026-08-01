@@ -41,6 +41,8 @@ final class WorkoutDataExchangeTests: XCTestCase {
         let exerciseUuid = UUID()
         let exercise = WorkoutRoutineExercise.create(context: context)
         exercise.exerciseUuid = exerciseUuid
+        exercise.assistedValue = true
+        exercise.singleRepTargetValue = true
         exercise.workoutRoutine = routine
         let set = WorkoutRoutineSet.create(context: context)
         set.minRepetitionsValue = 6
@@ -73,6 +75,9 @@ final class WorkoutDataExchangeTests: XCTestCase {
         XCTAssertEqual(exercises.count, 1)
         // The exercise reference is a stable definition id and is preserved.
         XCTAssertEqual(exercises[0].exerciseUuid, exerciseUuid)
+        // The bodyweight-assisted and single-rep-target flags survive the round trip.
+        XCTAssertTrue(exercises[0].assistedValue)
+        XCTAssertTrue(exercises[0].singleRepTargetValue)
 
         let sets = exercises[0].workoutRoutineSets?.array as? [WorkoutRoutineSet] ?? []
         XCTAssertEqual(sets.count, 1)
@@ -224,6 +229,34 @@ final class WorkoutDataExchangeTests: XCTestCase {
         XCTAssertNil(re[0].supersetUUID)
         XCTAssertNotNil(re[1].supersetUUID)
         XCTAssertEqual(re[1].supersetUUID, re[2].supersetUUID)
+    }
+
+    func testBodyweightSetRoundTrip() throws {
+        let context = container.viewContext
+        let workout = Workout.create(context: context)
+        workout.start = Date(timeIntervalSince1970: 1_700_000_000)
+        workout.end = Date(timeIntervalSince1970: 1_700_003_600)
+        workout.bodyweightValue = 80 // frozen bodyweight for this session
+        let exercise = WorkoutExercise.create(context: context)
+        exercise.exerciseUuid = UUID()
+        exercise.workout = workout
+        let set = WorkoutSet.create(context: context)
+        set.addedWeightValue = 20 // weighted pull-up
+        set.repetitionsValue = 5
+        set.isCompleted = true
+        set.workoutExercise = exercise
+        try context.save()
+
+        let data = try WorkoutDataExchange.export(workouts: [workout])
+        let other = setUpInMemoryNSPersistentContainer().viewContext
+        _ = try WorkoutDataExchange.import(data, into: other, includeWorkouts: true)
+
+        let imported = try fetch(Workout.self, "Workout", in: other)[0]
+        XCTAssertEqual(imported.bodyweightValue, 80) // the frozen bodyweight survives the round trip
+        let importedSet = ((imported.workoutExercises?.array as? [WorkoutExercise] ?? [])
+            .flatMap { $0.workoutSets?.array as? [WorkoutSet] ?? [] })[0]
+        XCTAssertEqual(importedSet.addedWeightValue, 20)
+        XCTAssertTrue(importedSet.isBodyweight)
     }
 
     func testRejectsNewerFormatVersion() throws {

@@ -1911,6 +1911,7 @@
       "pectoralis major"
     ],
     "equipment": [
+      "body",
       "bar"
     ],
     "steps": [
@@ -1946,6 +1947,7 @@
       "biceps brachii"
     ],
     "equipment": [
+      "body",
       "bar"
     ],
     "steps": [
@@ -5769,27 +5771,6 @@
     ]
   },
   {
-    "uuid": "ABA5AD44-81A9-5816-9A50-D4383FDFC723",
-    "id": 6000,
-    "title": "Chest Dip",
-    "alias": [],
-    "primary": [
-      "pectoralis major"
-    ],
-    "secondary": [
-      "triceps brachii",
-      "deltoid"
-    ],
-    "equipment": [
-      "body"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
     "uuid": "850D8977-98B0-5C4D-8898-413377FD829B",
     "id": 6001,
     "title": "Chest Press: Machine",
@@ -5882,26 +5863,6 @@
     "secondary": [],
     "equipment": [
       "dumbbell"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
-    "uuid": "32D30AE5-552D-57E2-BB14-068443BB351A",
-    "id": 6006,
-    "title": "Pull Up (Weighted)",
-    "alias": [],
-    "primary": [
-      "latissimus dorsi"
-    ],
-    "secondary": [
-      "biceps brachii"
-    ],
-    "equipment": [
-      "body"
     ],
     "steps": [],
     "tips": [],
@@ -6023,27 +5984,6 @@
     "secondary": [
       "biceps brachii",
       "trapezius"
-    ],
-    "equipment": [
-      "barbell"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
-    "uuid": "2EB4B804-B446-58F3-B623-12B55DD5AD3A",
-    "id": 6013,
-    "title": "Romanian Deadlift: Barbell",
-    "alias": [],
-    "primary": [
-      "ischiocrural muscles"
-    ],
-    "secondary": [
-      "glutaeus maximus",
-      "erector spinae"
     ],
     "equipment": [
       "barbell"
@@ -6249,24 +6189,6 @@
     "png": []
   },
   {
-    "uuid": "4F927F29-5D2A-5FEA-A1A4-BE999A9FAF15",
-    "id": 6024,
-    "title": "Front Raise: Cable",
-    "alias": [],
-    "primary": [
-      "deltoid"
-    ],
-    "secondary": [],
-    "equipment": [
-      "cable"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
     "uuid": "9A93E466-D1CB-5A26-A462-ECCD626D42C3",
     "id": 6025,
     "title": "Upright Row: Cable",
@@ -6416,44 +6338,6 @@
     "png": []
   },
   {
-    "uuid": "D909113D-8C02-53E6-9365-9ECBC79288C0",
-    "id": 6033,
-    "title": "Triceps Dip (Bench)",
-    "alias": [],
-    "primary": [
-      "triceps brachii"
-    ],
-    "secondary": [],
-    "equipment": [
-      "body"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
-    "uuid": "1A12F0A7-AE90-5E85-8B5B-D5DD918328ED",
-    "id": 6034,
-    "title": "Close Grip Push Up",
-    "alias": [],
-    "primary": [
-      "triceps brachii"
-    ],
-    "secondary": [
-      "pectoralis major"
-    ],
-    "equipment": [
-      "body"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
     "uuid": "49BAF818-60DA-555F-B54F-6F72194AAFFA",
     "id": 6035,
     "title": "Pendulum Squat",
@@ -6536,27 +6420,6 @@
     "png": []
   },
   {
-    "uuid": "36681BE9-7C80-53B9-BE63-E6536686169A",
-    "id": 6039,
-    "title": "Leg Press (Machine)",
-    "alias": [],
-    "primary": [
-      "quadriceps"
-    ],
-    "secondary": [
-      "glutaeus maximus",
-      "ischiocrural muscles"
-    ],
-    "equipment": [
-      "machine"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
     "uuid": "490F3FE8-2353-504D-BB55-32A91ADDD40D",
     "id": 6040,
     "title": "Hip Thrust: Barbell",
@@ -6597,24 +6460,6 @@
     "png": []
   },
   {
-    "uuid": "FFDFB5BE-FA4A-50D5-9DB1-60125041B95C",
-    "id": 6042,
-    "title": "Leg Curl (Seated, Machine)",
-    "alias": [],
-    "primary": [
-      "ischiocrural muscles"
-    ],
-    "secondary": [],
-    "equipment": [
-      "machine"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
     "uuid": "7CBEB539-8BE9-55B8-B539-1E236A6BBEE3",
     "id": 6043,
     "title": "Nordic Curl",
@@ -6638,26 +6483,6 @@
     "uuid": "7F8A5C50-42EE-578B-9137-580EED4AACAA",
     "id": 6044,
     "title": "Calf Raise: Leg Press",
-    "alias": [],
-    "primary": [
-      "gastrocnemius"
-    ],
-    "secondary": [
-      "soleus"
-    ],
-    "equipment": [
-      "machine"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
-    "uuid": "7EAAEE8F-F27C-51FC-AFB4-51DF43171540",
-    "id": 6045,
-    "title": "Standing Calf Raise: Machine",
     "alias": [],
     "primary": [
       "gastrocnemius"
@@ -6708,42 +6533,6 @@
     ],
     "equipment": [
       "kettlebell"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
-    "uuid": "8B56E6A2-61F2-5B12-BCF2-773DE184664A",
-    "id": 6048,
-    "title": "Decline Crunch",
-    "alias": [],
-    "primary": [
-      "abdominals"
-    ],
-    "secondary": [],
-    "equipment": [
-      "body"
-    ],
-    "steps": [],
-    "tips": [],
-    "references": [],
-    "pdf": [],
-    "png": []
-  },
-  {
-    "uuid": "F2447D83-C514-5FEF-BA1D-3B4863092181",
-    "id": 6049,
-    "title": "Cable Crunch",
-    "alias": [],
-    "primary": [
-      "abdominals"
-    ],
-    "secondary": [],
-    "equipment": [
-      "cable"
     ],
     "steps": [],
     "tips": [],
@@ -6824,6 +6613,354 @@
     ],
     "equipment": [
       "cable"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "826EA07F-603C-448C-84E1-5870BFA172A2",
+    "id": 9003,
+    "name": "dead-hang",
+    "title": "Dead Hang",
+    "alias": [],
+    "primer": "A passive hang from a bar that builds grip and shoulder endurance.",
+    "type": "isolation",
+    "primary": [
+      "forearm"
+    ],
+    "secondary": [
+      "latissimus dorsi"
+    ],
+    "equipment": [
+      "body",
+      "bar"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "2B4BBC41-7E15-45C5-980D-E470FDC85917",
+    "id": 9004,
+    "name": "muscle-up",
+    "title": "Muscle Up",
+    "alias": [],
+    "primer": "A pull up transitioning over the bar into a dip.",
+    "type": "compound",
+    "primary": [
+      "latissimus dorsi"
+    ],
+    "secondary": [
+      "pectoralis major",
+      "triceps brachii",
+      "biceps brachii"
+    ],
+    "equipment": [
+      "body",
+      "bar"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "CF639B6A-48BE-48AC-9A42-5707F444F27E",
+    "id": 9005,
+    "name": "pistol-squat",
+    "title": "Pistol Squat",
+    "alias": [],
+    "primer": "A single-leg squat to full depth with the other leg extended.",
+    "type": "compound",
+    "primary": [
+      "quadriceps"
+    ],
+    "secondary": [
+      "glutaeus maximus"
+    ],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "1C59D4C5-F64D-41EC-9E20-EFD3123926BE",
+    "id": 9006,
+    "name": "l-sit",
+    "title": "L-Sit",
+    "alias": [],
+    "primer": "A static hold with legs extended horizontally, supported on the hands.",
+    "type": "isolation",
+    "primary": [
+      "abdominals"
+    ],
+    "secondary": [
+      "quadriceps"
+    ],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "C8A3AB20-F0A0-47D5-848E-7351D8BAE8A3",
+    "id": 9007,
+    "name": "handstand-push-up",
+    "title": "Handstand Push Up",
+    "alias": [],
+    "primer": "A vertical press performed inverted against a wall.",
+    "type": "compound",
+    "primary": [
+      "deltoid"
+    ],
+    "secondary": [
+      "triceps brachii"
+    ],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "5D08DB29-B23F-40BA-B188-974BE6107109",
+    "id": 9008,
+    "name": "pull-over-dumbbell",
+    "title": "Pull-Over: Dumbbell",
+    "alias": [],
+    "primer": "A dumbbell arc over the head while lying on a bench.",
+    "type": "isolation",
+    "primary": [
+      "latissimus dorsi"
+    ],
+    "secondary": [
+      "pectoralis major"
+    ],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "6B6ABB98-3344-4738-B6EC-E4C9C5C0CE58",
+    "id": 9009,
+    "name": "burpee",
+    "title": "Burpee",
+    "alias": [],
+    "primer": "A squat, kick to plank, push up, and jump in one movement.",
+    "type": "compound",
+    "primary": [
+      "quadriceps"
+    ],
+    "secondary": [
+      "pectoralis major",
+      "deltoid"
+    ],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "7A3E6A8B-EB16-4FBA-A115-AFDC6FB1EFFD",
+    "id": 9010,
+    "name": "mountain-climber",
+    "title": "Mountain Climber",
+    "alias": [],
+    "primer": "Driving the knees to the chest from a plank, alternating.",
+    "type": "compound",
+    "primary": [
+      "abdominals"
+    ],
+    "secondary": [
+      "quadriceps"
+    ],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "BF9A4FB0-9AEF-43DF-A647-1299E7BBBA28",
+    "id": 9011,
+    "name": "farmers-walk-dumbbell",
+    "title": "Farmer's Walk: Dumbbell",
+    "alias": [],
+    "primer": "Walking while holding a heavy dumbbell in each hand.",
+    "type": "compound",
+    "primary": [
+      "forearm"
+    ],
+    "secondary": [
+      "trapezius"
+    ],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "FF8B4EE7-DCDD-4489-8C77-3F94196D9DDB",
+    "id": 9012,
+    "name": "wall-sit",
+    "title": "Wall Sit",
+    "alias": [],
+    "primer": "An isometric hold in a seated position against a wall.",
+    "type": "isolation",
+    "primary": [
+      "quadriceps"
+    ],
+    "secondary": [
+      "glutaeus maximus"
+    ],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "5B660E68-4DB2-416C-ABE6-144DEE6F3CBF",
+    "id": 9013,
+    "name": "hollow-hold",
+    "title": "Hollow Hold",
+    "alias": [],
+    "primer": "A supine hold with the shoulders and legs off the floor.",
+    "type": "isolation",
+    "primary": [
+      "abdominals"
+    ],
+    "secondary": [
+      "core"
+    ],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "7C287AB0-5A11-4314-B5EC-3BB5EC360A24",
+    "id": 9014,
+    "name": "reverse-nordic-curl",
+    "title": "Reverse Nordic Curl",
+    "alias": [],
+    "primer": "Kneeling and leaning back to load the quads through the knees.",
+    "type": "isolation",
+    "primary": [
+      "quadriceps"
+    ],
+    "secondary": [],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "5899CECC-AEC2-4C3B-9A29-357F1B7BA37A",
+    "id": 9015,
+    "name": "copenhagen-plank",
+    "title": "Copenhagen Plank",
+    "alias": [],
+    "primer": "A side plank with the top leg supported, loading the adductors.",
+    "type": "isolation",
+    "primary": [
+      "hip adductors"
+    ],
+    "secondary": [
+      "obliques"
+    ],
+    "equipment": [
+      "body"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "D4B6713A-A9A4-4F18-9507-5699B35283A8",
+    "id": 9016,
+    "name": "jefferson-curl",
+    "title": "Jefferson Curl",
+    "alias": [],
+    "primer": "A slow, segmented spinal flexion under light load to build back control.",
+    "type": "isolation",
+    "primary": [
+      "erector spinae"
+    ],
+    "secondary": [
+      "ischiocrural muscles"
+    ],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "pdf": [],
+    "png": []
+  },
+  {
+    "uuid": "3B22E3C5-192D-49B4-953A-E0A8DD5E2333",
+    "id": 9017,
+    "name": "calf-raise-standing-body",
+    "title": "Calf Raise (Standing)",
+    "alias": [],
+    "primer": "A bodyweight calf raise, rising onto the toes.",
+    "type": "isolation",
+    "primary": [
+      "gastrocnemius"
+    ],
+    "secondary": [
+      "soleus"
+    ],
+    "equipment": [
+      "body"
     ],
     "steps": [],
     "tips": [],

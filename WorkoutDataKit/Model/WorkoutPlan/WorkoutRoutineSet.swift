@@ -9,6 +9,7 @@
 import CoreData
 
 extension WorkoutRoutineSet {
+    // WorkoutRoutineSet already conforms to Identifiable via Core Data's generated properties.
     public var id: NSManagedObjectID { self.objectID }
 }
 

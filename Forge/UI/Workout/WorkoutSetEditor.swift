@@ -15,6 +15,11 @@ private enum KeyboardType {
     case none
 }
 
+private enum BodyweightMode {
+    case added
+    case assisted
+}
+
 struct WorkoutSetEditor : View {
     @EnvironmentObject var settingsStore: SettingsStore
     @EnvironmentObject var exerciseStore: ExerciseStore
@@ -28,6 +33,9 @@ struct WorkoutSetEditor : View {
     @State private var showKeyboard: KeyboardType = .none
     @State private var alwaysShowDecimalSeparator = false
     @State private var minimumFractionDigits = 0
+    // Whether the weight field is entering added or assisted weight, for a bodyweight set. The sign is
+    // held here because a zero magnitude cannot tell the two apart.
+    @State private var bodyweightMode: BodyweightMode = .added
     
     // used to immediatelly update the weight & rep texts so the keyboard feels more smooth
     @ObservedObject private var refresher = Refresher()
@@ -54,6 +62,57 @@ struct WorkoutSetEditor : View {
                 self.refresher.refresh()
             }
         )
+    }
+
+    /// True when this set belongs to a bodyweight exercise, so the weight field enters an added or
+    /// assisted amount rather than an absolute weight.
+    private var isBodyweight: Bool {
+        workoutSet.workoutExercise?.exercise(in: exerciseStore.exercises)?.isBodyweight ?? false
+    }
+
+    /// The magnitude of the added or assisted weight, in the user's unit. The sign comes from
+    /// `bodyweightMode`, so the field itself only ever holds a non-negative number.
+    private var workoutSetAddedMagnitude: Binding<Double?> {
+        Binding(
+            get: {
+                WeightUnit.convert(weight: abs(self.workoutSet.addedWeightValue ?? 0), from: .metric, to: self.settingsStore.weightUnit)
+            },
+            set: { newValue in
+                let magnitude = max(min(WeightUnit.convert(weight: newValue ?? 0, from: self.settingsStore.weightUnit, to: .metric), WorkoutSet.MAX_WEIGHT), 0)
+                self.workoutSet.addedWeightValue = self.bodyweightMode == .assisted ? -magnitude : magnitude
+                self.refresher.refresh()
+            }
+        )
+    }
+
+    /// The binding the weight field and keyboard drive: the added or assisted magnitude for a bodyweight
+    /// set, otherwise the absolute weight.
+    private var primaryWeightValue: Binding<Double?> {
+        isBodyweight ? workoutSetAddedMagnitude : workoutSetWeight
+    }
+
+    /// Marks a fresh bodyweight set as bodyweight (addedWeight starts at 0, not nil) and syncs the
+    /// added/assisted control to whatever sign the set already has.
+    private func syncBodyweightState() {
+        guard isBodyweight else { return }
+        if workoutSet.addedWeightValue == nil {
+            workoutSet.addedWeightValue = 0
+        }
+        bodyweightMode = (workoutSet.addedWeightValue ?? 0) < 0 ? .assisted : .added
+    }
+
+    private var bodyweightModePicker: some View {
+        Picker("Weight kind", selection: $bodyweightMode) {
+            Text("Added").tag(BodyweightMode.added)
+            Text("Assisted").tag(BodyweightMode.assisted)
+        }
+        .pickerStyle(.segmented)
+        .onChange(of: bodyweightMode) { _, _ in
+            // Re-sign the stored value when the kind flips, keeping the magnitude.
+            let magnitude = abs(workoutSet.addedWeightValue ?? 0)
+            workoutSet.addedWeightValue = bodyweightMode == .assisted ? -magnitude : magnitude
+            refresher.refresh()
+        }
     }
 
     private var weightNumberFormatter: NumberFormatter {
@@ -136,7 +195,7 @@ struct WorkoutSetEditor : View {
     
     private var weightDragger: some View {
         Dragger(
-            value: workoutSetWeight,
+            value: primaryWeightValue,
             numberFormatter: weightNumberFormatter,
             unit: settingsStore.weightUnit.unit.symbol,
             stepSize: weightStepSize,
@@ -196,7 +255,7 @@ struct WorkoutSetEditor : View {
         GeometryReader { geometry in
             HStack(spacing: 0) {
                 NumericKeyboard(
-                    value: self.showKeyboard == .weight ? self.workoutSetWeight : self.workoutSetRepetitions,
+                    value: self.showKeyboard == .weight ? self.primaryWeightValue : self.workoutSetRepetitions,
                     alwaysShowDecimalSeparator: self.showKeyboard == .weight ? self.$alwaysShowDecimalSeparator : .constant(false),
                     minimumFractionDigits: self.showKeyboard == .weight ? self.$minimumFractionDigits : .constant(0),
                     maximumFractionDigits: self.showKeyboard == .weight ? self.settingsStore.weightUnit.maximumFractionDigits : 0
@@ -243,6 +302,9 @@ struct WorkoutSetEditor : View {
     var body: some View {
         VStack { /// no spacing to the keyboard
             VStack(spacing: 24) {
+                if isBodyweight {
+                    bodyweightModePicker
+                }
                 HStack(spacing: 16) {
                     /**
                      NOTE: the draggers shouldn't be too low because
@@ -296,6 +358,7 @@ struct WorkoutSetEditor : View {
         )
         .sheet(isPresented: $showMoreSheet) { self.moreSheet }
         .alert(isPresented: $showHelpAlert) { Alert(title: Text("You can also drag ☰ up and down to adjust the values.")) }
+        .onAppear { syncBodyweightState() }
     }
 }
 

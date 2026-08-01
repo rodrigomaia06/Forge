@@ -203,6 +203,47 @@ struct WorkoutExerciseDetailView : View {
         }
     }
 
+    /// True when this exercise is a bodyweight exercise, so its sets enter an added or assisted weight.
+    private var exerciseIsBodyweight: Bool {
+        workoutExercise.exercise(in: exerciseStore.exercises)?.isBodyweight ?? false
+    }
+
+    private var exerciseSets: [WorkoutSet] {
+        workoutExercise.workoutSets?.array as? [WorkoutSet] ?? []
+    }
+
+    /// The workout is ad-hoc (not started from a routine), so the added/assisted choice is made here.
+    /// A routine-started workout inherits the routine's choice and hides the control.
+    private var isAdHocWorkout: Bool {
+        workoutExercise.workout?.workoutRoutine == nil
+    }
+
+    /// Flipping the mode re-signs every set's added weight, keeping the magnitudes, and saves. Legacy sets
+    /// (value still in the plain weight field) fall back to it, so their amount is preserved not zeroed.
+    private func applyBodyweightMode(assisted: Bool) {
+        workoutExercise.assistedValue = assisted
+        for set in exerciseSets {
+            let magnitude = abs(set.addedWeightValue ?? set.weightValue)
+            set.addedWeightValue = assisted ? -magnitude : magnitude
+        }
+        managedObjectContext.saveOrCrash()
+    }
+
+    private var bodyweightModeRow: some View {
+        // The displayed value is inferred from existing set signs when the mode was never set, so showing
+        // the control never writes to the model (which would publish a change during the update pass). It
+        // only persists when the user actually toggles it.
+        Picker("Weight kind", selection: Binding(
+            get: { workoutExercise.assisted?.boolValue ?? exerciseSets.contains { ($0.addedWeightValue ?? 0) < 0 } },
+            set: { applyBodyweightMode(assisted: $0) }
+        )) {
+            Text("Added").tag(false)
+            Text("Assisted").tag(true)
+        }
+        .pickerStyle(.segmented)
+        .listRowInsets(EdgeInsets(top: 4, leading: Theme.Spacing.m, bottom: 6, trailing: Theme.Spacing.m))
+    }
+
     /// Column headers above the set rows (Set, Previous, kg, Reps).
     private var setsHeader: some View {
         HStack(spacing: Theme.Spacing.s) {
@@ -255,6 +296,8 @@ struct WorkoutExerciseDetailView : View {
                 isCurrentWorkout: isCurrentWorkout,
                 isUpNext: firstUncompletedSet == workoutSet,
                 showRPE: settingsStore.showRPE,
+                isBodyweight: exerciseIsBodyweight,
+                assisted: workoutExercise.assistedValue,
                 previousText: previousPerformance(atZeroBased: index - 1),
                 weightPlaceholder: targetWeightHint(atZeroBased: index - 1) ?? "",
                 isEditable: setsEditable,
@@ -281,6 +324,10 @@ struct WorkoutExerciseDetailView : View {
             Haptics.impact(.light)
             let workoutSet = WorkoutSet.create(context: self.workoutExercise.managedObjectContext!)
             workoutSet.workoutExercise = self.workoutExercise
+            if self.workoutExercise.exercise(in: exerciseStore.exercises)?.isBodyweight == true {
+                // Mark it as a bodyweight set (addedWeight 0, not nil) so it reads as BW before it is edited.
+                workoutSet.addedWeightValue = 0
+            }
             if !self.isCurrentWorkout {
                 // don't allow uncompleted sets if not in current workout
                 workoutSet.isCompleted = true
@@ -553,6 +600,7 @@ struct WorkoutExerciseDetailView : View {
     /// the standalone card and by a superset member (which the superset card wraps into one section).
     @ViewBuilder private var embeddedContent: some View {
         attachingSheets(to: exerciseHeaderRow)
+        if exerciseIsBodyweight && setsEditable && isAdHocWorkout { bodyweightModeRow }
         setsHeader
         currentWorkoutSets
         if setsEditable { addSetButton }
@@ -575,6 +623,7 @@ struct WorkoutExerciseDetailView : View {
 
                 List {
                     Section(header: Text("This session")) {
+                        if exerciseIsBodyweight && setsEditable && isAdHocWorkout { bodyweightModeRow }
                         setsHeader
                         currentWorkoutSets
                         if setsEditable { addSetButton }
@@ -657,6 +706,10 @@ private struct ActiveSetRow: View {
     let isCurrentWorkout: Bool
     let isUpNext: Bool
     let showRPE: Bool
+    /// When true, the weight field enters an added or assisted amount (stored in addedWeight) rather than
+    /// an absolute weight, and `assisted` decides its sign.
+    var isBodyweight: Bool = false
+    var assisted: Bool = false
     let previousText: String?
     /// The planned next-time target weight, shown as a faint hint in the weight box. Empty when none.
     var weightPlaceholder: String = ""
@@ -673,6 +726,17 @@ private struct ActiveSetRow: View {
     private var weightText: String {
         let value = WeightUnit.convert(weight: workoutSet.weightValue, from: .metric, to: weightUnit)
         return String(format: "%g", value)
+    }
+
+    /// Read-only weight display for a bodyweight set: BW, +added, or -assisted. Sets logged before this
+    /// exercise became bodyweight keep their value in the plain weight field, so fall back to it and show
+    /// that value (as a weighted amount) instead of blank.
+    private var bodyweightReadText: String {
+        let added = workoutSet.addedWeightValue ?? workoutSet.weightValue
+        if added == 0 { return "BW" }
+        let magnitude = WeightUnit.convert(weight: abs(added), from: .metric, to: weightUnit)
+        let text = Self.weightFormatter.string(from: NSNumber(value: magnitude)) ?? String(format: "%g", magnitude)
+        return (added > 0 ? "+" : "-") + text
     }
 
     // The fields edit raw text, so an unset value shows blank (not "0"), an existing value edits
@@ -692,12 +756,30 @@ private struct ActiveSetRow: View {
     }()
 
     private func syncInputsFromModel() {
-        weightInput = workoutSet.weight == nil ? "" : (Self.weightFormatter.string(from: NSNumber(value: WeightUnit.convert(weight: workoutSet.weightValue, from: .metric, to: weightUnit))) ?? "")
+        if isBodyweight {
+            // The field holds the non-negative magnitude; a pure bodyweight set (0) shows blank. Fall back
+            // to the legacy weight for sets logged before this exercise became bodyweight.
+            let magnitude = abs(workoutSet.addedWeightValue ?? workoutSet.weightValue)
+            weightInput = magnitude == 0 ? "" : (Self.weightFormatter.string(from: NSNumber(value: WeightUnit.convert(weight: magnitude, from: .metric, to: weightUnit))) ?? "")
+        } else {
+            weightInput = workoutSet.weight == nil ? "" : (Self.weightFormatter.string(from: NSNumber(value: WeightUnit.convert(weight: workoutSet.weightValue, from: .metric, to: weightUnit))) ?? "")
+        }
         repsInput = workoutSet.repetitions == nil ? "" : "\(workoutSet.repetitionsValue)"
     }
 
     private func commitWeight() {
         let trimmed = weightInput.trimmingCharacters(in: .whitespaces)
+        if isBodyweight {
+            // Blank means a pure bodyweight set (added 0), not a normal set: keep addedWeight non-nil so it
+            // stays bodyweight. The sign comes from the exercise's added/assisted mode.
+            if trimmed.isEmpty {
+                workoutSet.addedWeightValue = 0
+            } else if let number = Self.weightFormatter.number(from: trimmed) {
+                let magnitude = max(0, min(WeightUnit.convert(weight: number.doubleValue, from: weightUnit, to: .metric), WorkoutSet.MAX_WEIGHT))
+                workoutSet.addedWeightValue = assisted ? -magnitude : magnitude
+            }
+            return
+        }
         if trimmed.isEmpty {
             workoutSet.weight = nil
         } else if let number = Self.weightFormatter.number(from: trimmed) {
@@ -748,8 +830,8 @@ private struct ActiveSetRow: View {
     /// A value box, entered from the right. A planned rep range (when there is one) shows as the
     /// placeholder inside the box, so it disappears once a value is typed and never floats out of place.
     /// The field fills the box, so tapping anywhere in it opens the keyboard.
-    private func setField(_ text: Binding<String>, keyboard: UIKeyboardType, width: CGFloat, placeholder: String = "", invalid: Bool = false) -> some View {
-        RightAlignedNumberField(text: text, placeholder: placeholder, keyboardType: keyboard)
+    private func setField(_ text: Binding<String>, keyboard: UIKeyboardType, width: CGFloat, placeholder: String = "", invalid: Bool = false, onCommit: @escaping () -> Void = {}) -> some View {
+        RightAlignedNumberField(text: text, placeholder: placeholder, keyboardType: keyboard, onCommit: onCommit)
             .frame(width: width, height: Self.boxHeight)
             .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
             .overlay(
@@ -765,7 +847,11 @@ private struct ActiveSetRow: View {
             onToggleComplete()
             return
         }
-        let hasWeight = !weightInput.trimmingCharacters(in: .whitespaces).isEmpty
+        // The field may still be focused (its onCommit hasn't fired), so persist the typed values first.
+        commitWeight()
+        commitReps()
+        // A bodyweight set needs no weight entry (blank means a pure bodyweight rep); only reps are required.
+        let hasWeight = isBodyweight || !weightInput.trimmingCharacters(in: .whitespaces).isEmpty
         let hasReps = (Int(repsInput.trimmingCharacters(in: .whitespaces)) ?? 0) > 0
         guard hasWeight, hasReps else {
             Haptics.error()
@@ -794,20 +880,14 @@ private struct ActiveSetRow: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.s) {
-            // The chip opens the options sheet (tag, note, target, RPE) only when the set is editable.
-            // In read-only history, tapping a set does nothing until Edit is tapped.
-            if isEditable {
-                // Full row-height tap target so the chip is easy to hit mid-workout, not just the 28pt circle.
-                Button(action: onMore) { numberChip }
-                    .buttonStyle(.plain)
-                    .frame(width: 36, height: Self.boxHeight)
-                    .contentShape(Rectangle())
-                    .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title). Options" } ?? "Set \(index). Options")
-            } else {
-                numberChip
-                    .frame(width: 36)
-                    .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title)" } ?? "Set \(index)")
-            }
+            // The chip opens the set's details (tag, note, target, RPE), including in read-only history, so
+            // a note can be read by tapping the set without entering Edit. Full row-height tap target so
+            // the chip is easy to hit mid-workout, not just the 28pt circle.
+            Button(action: onMore) { numberChip }
+                .buttonStyle(.plain)
+                .frame(width: 36, height: Self.boxHeight)
+                .contentShape(Rectangle())
+                .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title). Details" } ?? "Set \(index). Details")
 
             Text(previousText ?? "—")
                 .font(.forgeCaption)
@@ -816,10 +896,10 @@ private struct ActiveSetRow: View {
                 .frame(maxWidth: .infinity, alignment: .center)
 
             if isEditable {
-                setField($weightInput, keyboard: .decimalPad, width: 68, placeholder: weightPlaceholder, invalid: weightInvalid)
-                setField($repsInput, keyboard: .numberPad, width: 60, placeholder: targetRepsString ?? "", invalid: repsInvalid)
+                setField($weightInput, keyboard: .decimalPad, width: 68, placeholder: weightPlaceholder, invalid: weightInvalid, onCommit: commitWeight)
+                setField($repsInput, keyboard: .numberPad, width: 60, placeholder: targetRepsString ?? "", invalid: repsInvalid, onCommit: commitReps)
             } else {
-                readValue(workoutSet.weight == nil ? "—" : weightText, width: 68)
+                readValue(isBodyweight ? bodyweightReadText : (workoutSet.weight == nil ? "—" : weightText), width: 68)
                 readValue(workoutSet.repetitions == nil ? "—" : "\(workoutSet.repetitionsValue)", width: 60)
             }
 
@@ -840,8 +920,8 @@ private struct ActiveSetRow: View {
         .foregroundColor(workoutSet.isCompleted ? .forgeLabel : .forgeSecondaryLabel)
         .onAppear { syncInputsFromModel() }
         .onChange(of: isEditable) { _, editable in if editable { syncInputsFromModel() } }
-        .onChange(of: weightInput) { _, _ in commitWeight() }
-        .onChange(of: repsInput) { _, _ in commitReps() }
+        // The values commit when the field resigns focus (onCommit on each setField), not per keystroke, so
+        // typing a set does not write to Core Data on every character and re-render the whole live workout.
     }
 }
 

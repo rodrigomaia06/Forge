@@ -19,6 +19,23 @@ struct WorkoutRoutineView: View {
 
     @State private var showExerciseSelector = false
     @State private var noteEditorExercise: WorkoutRoutineExercise?
+    // The set-options sheet is presented once here, not per row (per-row presenters wedged UIKit).
+    @State private var optionsSet: WorkoutRoutineSet?
+    @State private var exerciseSheet: ExerciseSheet?
+
+    /// The exercise-level sheet reached from a card's "..." menu. One presenter, keyed by kind and exercise.
+    private enum ExerciseSheet: Identifiable {
+        case note(WorkoutRoutineExercise)
+        case info(WorkoutRoutineExercise)
+        case history(WorkoutRoutineExercise)
+        var id: String {
+            switch self {
+            case .note(let e): return "note-\(e.objectID)"
+            case .info(let e): return "info-\(e.objectID)"
+            case .history(let e): return "history-\(e.objectID)"
+            }
+        }
+    }
     
     @State private var workoutRoutineTitleInput: String? = nil
     private var workoutRoutineTitle: Binding<String> {
@@ -69,7 +86,108 @@ struct WorkoutRoutineView: View {
     private var workoutRoutineExercises: [WorkoutRoutineExercise] {
         workoutRoutine.workoutRoutineExercises?.array as? [WorkoutRoutineExercise] ?? []
     }
-    
+
+    private func routineSets(_ ex: WorkoutRoutineExercise) -> [WorkoutRoutineSet] {
+        ex.workoutRoutineSets?.array as? [WorkoutRoutineSet] ?? []
+    }
+
+    private func indexedRoutineSets(_ ex: WorkoutRoutineExercise) -> [(Int, WorkoutRoutineSet)] {
+        routineSets(ex).enumerated().map { ($0 + 1, $1) }
+    }
+
+    private func addRoutineSet(to ex: WorkoutRoutineExercise) {
+        let set = WorkoutRoutineSet.create(context: managedObjectContext)
+        set.workoutRoutineExercise = ex
+        managedObjectContext.saveOrCrash()
+    }
+
+    private func deleteRoutineSets(_ ex: WorkoutRoutineExercise, _ offsets: IndexSet) {
+        let sets = routineSets(ex)
+        for i in offsets {
+            let set = sets[i]
+            managedObjectContext.delete(set)
+            set.workoutRoutineExercise?.removeFromWorkoutRoutineSets(set)
+        }
+        managedObjectContext.saveOrCrash()
+    }
+
+    /// One exercise as a card in view mode: the name, a "..." menu with the rep-target and bodyweight
+    /// controls and the exercise actions (info, note, previous sessions, remove), and its set table. Nothing
+    /// navigates to open the exercise as its own screen; everything is edited here.
+    @ViewBuilder private func exerciseCard(_ ex: WorkoutRoutineExercise) -> some View {
+        Section {
+            HStack(spacing: Theme.Spacing.s) {
+                if let label = ex.supersetLabel {
+                    Text(label)
+                        .font(.forgeCaption.weight(.bold))
+                        .foregroundColor(.forgeSecondaryLabel)
+                        .frame(width: 20, height: 20)
+                        .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.forgeSeparator))
+                        .accessibilityLabel("Superset \(label)")
+                }
+                Text(ex.exercise(in: exerciseStore.exercises)?.title ?? "Unknown Exercise")
+                    .font(.forgeHeadline)
+                Spacer()
+                exerciseMenu(ex)
+            }
+            ForEach(indexedRoutineSets(ex), id: \.1.id) { (index, set) in
+                RoutineSetRow(workoutRoutineSet: set, index: index, singleTarget: ex.singleRepTargetValue, isEditable: true, onOpenOptions: { optionsSet = set })
+            }
+            .onDelete { deleteRoutineSets(ex, $0) }
+            Button { addRoutineSet(to: ex) } label: {
+                HStack { Image(systemName: "plus"); Text("Add set") }
+            }
+        }
+    }
+
+    private func exerciseMenu(_ ex: WorkoutRoutineExercise) -> some View {
+        Menu {
+            Menu {
+                Picker("Rep target", selection: Binding(
+                    get: { ex.singleRepTargetValue },
+                    set: { ex.singleRepTargetValue = $0; managedObjectContext.saveOrCrash() }
+                )) {
+                    Text("Rep range").tag(false)
+                    Text("Single rep target").tag(true)
+                }
+            } label: {
+                Label("Rep target", systemImage: "number")
+            }
+            if ex.exercise(in: exerciseStore.exercises)?.isBodyweight == true {
+                Menu {
+                    Picker("Weight", selection: Binding(
+                        get: { ex.assistedValue },
+                        set: { ex.assistedValue = $0; managedObjectContext.saveOrCrash() }
+                    )) {
+                        Text("Added weight").tag(false)
+                        Text("Assisted").tag(true)
+                    }
+                } label: {
+                    Label("Weight", systemImage: "scalemass")
+                }
+            }
+            Divider()
+            Button { exerciseSheet = .note(ex) } label: { Label("Note", systemImage: "square.and.pencil") }
+            Button { exerciseSheet = .info(ex) } label: { Label("Exercise info", systemImage: "info.circle") }
+            Button { exerciseSheet = .history(ex) } label: { Label("Previous sessions", systemImage: "clock.arrow.circlepath") }
+            Divider()
+            Button(role: .destructive) { removeExercise(ex) } label: { Label("Remove exercise", systemImage: "trash") }
+        } label: {
+            Image(systemName: "ellipsis")
+                .foregroundColor(.forgeSecondaryLabel)
+                .frame(width: 44, height: 30)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Exercise options")
+    }
+
+    private func removeExercise(_ ex: WorkoutRoutineExercise) {
+        managedObjectContext.delete(ex)
+        ex.workoutRoutine?.removeFromWorkoutRoutineExercises(ex)
+        workoutRoutine.normalizeSupersets()
+        managedObjectContext.saveOrCrash()
+    }
+
     private var exerciseSelectorSheet: some View {
         AddExercisesSheet(
             exercises: exerciseStore.shownExercises,
@@ -115,9 +233,13 @@ struct WorkoutRoutineView: View {
 
             CustomAttributesEditor(attributes: routineCustomAttributes, isEditable: editMode?.wrappedValue.isEditing == true)
 
+            // Edit mode uses the compact list for reordering, deleting, and superset notes. View mode shows
+            // each exercise as a card with its set table inline, like the live workout.
+            if editMode?.wrappedValue.isEditing == true {
             Section(header: Text("Exercises")) {
                 ForEach(workoutRoutineExercises) { workoutRoutineExercise in
-                    NavigationLink(destination: WorkoutRoutineExerciseView(workoutRoutineExercise: workoutRoutineExercise)) {
+                    // A plain row (no navigation): edit mode is only for reordering, deleting, and the
+                    // superset note/ungroup swipe. The exercise is never opened as its own screen.
                         HStack(spacing: Theme.Spacing.s) {
                             if let label = workoutRoutineExercise.supersetLabel {
                                 Text(label)
@@ -143,7 +265,6 @@ struct WorkoutRoutineView: View {
                                 }
                             }
                         }
-                    }
                     // Note and Ungroup live on the row, not in a per-exercise menu. Swipe from the leading
                     // edge; the exercises stay in the routine.
                     .swipeActions(edge: .leading) {
@@ -193,9 +314,38 @@ struct WorkoutRoutineView: View {
                     }
                 }
             }
+            } else {
+                ForEach(workoutRoutineExercises) { exerciseCard($0) }
+                Section {
+                    Button(action: { self.showExerciseSelector = true }) {
+                        HStack {
+                            Image(systemName: "plus")
+                            Text("Add exercises")
+                        }
+                    }
+                }
+            }
         }
         .listStyleCompat_InsetGroupedListStyle()
         .keyboardDoneToolbar()
+        .sheet(item: $optionsSet) { RoutineSetOptionsView(workoutRoutineSet: $0) }
+        .sheet(item: $exerciseSheet) { sheet in
+            switch sheet {
+            case .note(let ex):
+                RoutineExerciseNoteEditor(workoutRoutineExercise: ex)
+            case .info(let ex):
+                if let exercise = ex.exercise(in: exerciseStore.exercises) {
+                    NavigationStack { ExerciseDetailView(exercise: exercise) }
+                }
+            case .history(let ex):
+                if let exercise = ex.exercise(in: exerciseStore.exercises) {
+                    NavigationStack {
+                        ExerciseHistoryView(exercise: exercise)
+                            .navigationBarTitle("Previous sessions", displayMode: .inline)
+                    }
+                }
+            }
+        }
         // Commit the title and comment when Edit is turned off, so tapping Done saves even if the field
         // never lost focus (the text field's own onEditingChanged does not fire when it is removed).
         .onChange(of: editMode?.wrappedValue.isEditing) { isEditing in
@@ -241,6 +391,34 @@ private struct RoutineSupersetNoteEditor: View {
             anchor.setSupersetNote(draft)
             anchor.managedObjectContext?.saveOrCrash()
         }
+    }
+}
+
+/// A note for a specific routine exercise (not a set), opened from the card's "..." menu.
+private struct RoutineExerciseNoteEditor: View {
+    @ObservedObject var workoutRoutineExercise: WorkoutRoutineExercise
+    @Environment(\.managedObjectContext) private var managedObjectContext
+    @Environment(\.dismiss) private var dismiss
+    @State private var noteInput = ""
+
+    private func save() {
+        let trimmed = noteInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        workoutRoutineExercise.comment = trimmed.isEmpty ? nil : trimmed
+        managedObjectContext.saveOrCrash()
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section(header: Text("Note")) {
+                    ClearableTextField(titleKey: "Note", text: $noteInput, onCommit: save)
+                }
+            }
+            .navigationBarTitle("Note", displayMode: .inline)
+            .navigationBarItems(trailing: Button("Done") { save(); dismiss() }.fontWeight(.semibold))
+            .onAppear { noteInput = workoutRoutineExercise.comment ?? "" }
+        }
+        .presentationDetents([.medium])
     }
 }
 

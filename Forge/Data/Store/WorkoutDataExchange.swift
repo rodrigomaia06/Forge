@@ -82,6 +82,10 @@ enum WorkoutDataExchange {
         var supersetGroup: Int?
         // The group's shared note (repeated on each member, as it is stored).
         var supersetComment: String?
+        // For a bodyweight exercise, whether it is planned assisted; and whether its sets plan a single rep
+        // target rather than a range. Both default off on import when absent.
+        var assisted: Bool?
+        var singleRepTarget: Bool?
         var sets: [RoutineSetDTO]
     }
 
@@ -97,6 +101,8 @@ enum WorkoutDataExchange {
         var comment: String?
         var start: Date?
         var end: Date?
+        // The bodyweight frozen on the workout when it finished, used to weigh its bodyweight sets.
+        var bodyweight: Double?
         var attributes: [String: String]?
         var exercises: [WorkoutExerciseDTO]
         // Optional link to a routine (and its plan) imported in the same file. When set and no explicit
@@ -118,6 +124,8 @@ enum WorkoutDataExchange {
 
     struct WorkoutSetDTO: Codable {
         var weight: Double?
+        // The added or assisted weight for a bodyweight set (may be negative). Nil for a normal set.
+        var addedWeight: Double?
         var reps: Int16?
         var isCompleted: Bool
         var tag: String?
@@ -156,6 +164,7 @@ enum WorkoutDataExchange {
                 RoutineExerciseDTO(
                     exerciseUuid: exercise.exerciseUuid ?? UUID(),
                     comment: exercise.comment,
+                    assisted: exercise.assistedValue,
                     sets: orderedWorkoutSets(exercise).map { set in
                         RoutineSetDTO(
                             minReps: set.minTargetRepetitionsValue ?? set.repetitions?.int16Value,
@@ -186,6 +195,8 @@ enum WorkoutDataExchange {
                     comment: exercise.comment,
                     supersetGroup: exercise.supersetUUID.flatMap { groupNumbers[$0] },
                     supersetComment: exercise.supersetComment,
+                    assisted: exercise.assistedValue,
+                    singleRepTarget: exercise.singleRepTargetValue,
                     sets: orderedRoutineSets(exercise).map { set in
                         RoutineSetDTO(minReps: set.minRepetitionsValue, maxReps: set.maxRepetitionsValue, tag: set.tagValue?.rawValue, comment: set.comment)
                     }
@@ -213,6 +224,7 @@ enum WorkoutDataExchange {
             comment: workout.comment,
             start: workout.start,
             end: workout.end,
+            bodyweight: workout.bodyweightValue,
             attributes: workout.customAttributes.isEmpty ? nil : workout.customAttributes,
             exercises: exercises.map { exercise in
                 WorkoutExerciseDTO(
@@ -223,6 +235,7 @@ enum WorkoutDataExchange {
                     sets: orderedWorkoutSets(exercise).map { set in
                         WorkoutSetDTO(
                             weight: set.weight?.doubleValue,
+                            addedWeight: set.addedWeightValue,
                             reps: set.repetitions?.int16Value,
                             isCompleted: set.isCompleted,
                             tag: set.tagValue?.rawValue,
@@ -312,6 +325,8 @@ enum WorkoutDataExchange {
             exercise.exerciseUuid = exerciseDTO.exerciseUuid
             exercise.comment = exerciseDTO.comment
             exercise.supersetComment = exerciseDTO.supersetComment
+            exercise.assistedValue = exerciseDTO.assisted ?? false
+            exercise.singleRepTargetValue = exerciseDTO.singleRepTarget ?? false
             exercise.workoutRoutine = routine
             if let group = exerciseDTO.supersetGroup {
                 exercise.supersetUUID = groupIDs[group] ?? { let id = UUID(); groupIDs[group] = id; return id }()
@@ -340,6 +355,7 @@ enum WorkoutDataExchange {
         workout.start = dto.start ?? dto.end
         workout.end = dto.end ?? dto.start
         workout.isCurrentWorkout = false
+        workout.bodyweightValue = dto.bodyweight
         if let attributes = dto.attributes { workout.customAttributes = attributes }
         var groupIDs: [Int: UUID] = [:]
         for exerciseDTO in dto.exercises {
@@ -354,6 +370,7 @@ enum WorkoutDataExchange {
             for setDTO in exerciseDTO.sets {
                 let set = WorkoutSet.create(context: context)
                 if let weight = setDTO.weight { set.weightValue = weight }
+                set.addedWeightValue = setDTO.addedWeight
                 if let reps = setDTO.reps { set.repetitionsValue = reps }
                 set.isCompleted = setDTO.isCompleted
                 if let tag = setDTO.tag { set.tagValue = WorkoutSetTag(rawValue: tag) }

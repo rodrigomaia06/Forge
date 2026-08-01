@@ -168,7 +168,7 @@ struct BackupAndExportView: View {
                 }
                 url = try tempFile(data: try encoder.encode(workouts), name: "workout_data.json")
             } else {
-                let text = workouts.compactMap { $0.logText(in: exerciseStore.exercises, weightUnit: settingsStore.weightUnit) }.joined(separator: "\n\n\n\n\n")
+                let text = workouts.compactMap { $0.logText(in: exerciseStore.exercises, weightUnit: settingsStore.weightUnit, fallbackBodyweight: settingsStore.bodyweight) }.joined(separator: "\n\n\n\n\n")
                 url = try tempFile(data: Data(text.utf8), name: "workout_data.txt")
             }
             shareFile(url: url)

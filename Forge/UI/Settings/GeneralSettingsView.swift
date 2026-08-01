@@ -12,13 +12,40 @@ struct GeneralSettingsView: View {
     @EnvironmentObject var settingsStore: SettingsStore
     
     private var weightPickerSection: some View {
-        Section(header: Text("Units")) {
-            Picker("Weight unit", selection: $settingsStore.weightUnit) {
+        Section(header: Text("Weight"), footer: Text("Bodyweight weighs bodyweight exercises like pull-ups and dips in charts and totals. Log a per-set added or assisted amount for weighted or assisted reps. Leave it at 0 to count only the added weight.")) {
+            Picker("Unit", selection: $settingsStore.weightUnit) {
                 ForEach(WeightUnit.allCases, id: \.self) { weightUnit in
                     Text(weightUnit.title).tag(weightUnit)
                 }
             }
+            HStack {
+                Text("Bodyweight")
+                Spacer()
+                HStack(spacing: 0) {
+                    RightAlignedNumberField(text: bodyweightText, placeholder: "0", keyboardType: .decimalPad, alignment: .right, smallPlaceholder: false)
+                        .frame(width: 52, height: 28)
+                    Text(settingsStore.weightUnit.unit.symbol)
+                        .foregroundColor(.secondary)
+                }
+            }
         }
+    }
+
+    /// Bodyweight shown and edited in the user's unit; stored as kilograms. Empty or 0 clears it.
+    private var bodyweightText: Binding<String> {
+        Binding(
+            get: {
+                let kg = settingsStore.bodyweight
+                guard kg > 0 else { return "" }
+                let value = WeightUnit.convert(weight: kg, from: .metric, to: settingsStore.weightUnit)
+                return settingsStore.weightUnit.numberFormatter.string(from: value as NSNumber) ?? String(value)
+            },
+            set: { newValue in
+                let normalized = newValue.replacingOccurrences(of: ",", with: ".")
+                let value = Double(normalized) ?? 0
+                settingsStore.bodyweight = value > 0 ? WeightUnit.convert(weight: value, from: settingsStore.weightUnit, to: .metric) : 0
+            }
+        )
     }
 
     private var appearance: Binding<ForgeAppearance> {
@@ -111,12 +138,13 @@ struct GeneralSettingsView: View {
             appearanceSection
             weightPickerSection
             calendarSection
-            workoutNameSection
             restTimerSection
             restTimerAlertSection
             reminderSection
+            workoutNameSection
             recordsSection
         }
+        .keyboardDoneToolbar()
         .navigationBarTitle("General", displayMode: .inline)
     }
 }

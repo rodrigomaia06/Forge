@@ -16,8 +16,9 @@ struct WorkoutRoutineExerciseView: View {
     @EnvironmentObject var exerciseStore: ExerciseStore
     
     @ObservedObject var workoutRoutineExercise: WorkoutRoutineExercise
-    @State private var selectedWorkoutRoutineSet: WorkoutRoutineSet? = nil
-    
+    // The set-options sheet is presented once here, not per row (per-row presenters wedged UIKit).
+    @State private var optionsSet: WorkoutRoutineSet?
+
     @State private var workoutRoutineExerciseCommentInput: String? = nil
     private var workoutRoutineExerciseComment: Binding<String> {
         Binding(
@@ -44,36 +45,16 @@ struct WorkoutRoutineExerciseView: View {
         workoutRoutineSets(for: workoutRoutineExercise).enumerated().map { ($0 + 1, $1) }
     }
     
-    private func select(set: WorkoutRoutineSet?) {
-        // reset the temporary state of the set editor
-        editorRepetitionsMin = nil
-        editorRepetitionsMax = nil
-        
-        // only animate if we would show/hide the editor
-        if set == nil && selectedWorkoutRoutineSet != nil || set != nil && selectedWorkoutRoutineSet == nil {
-            withAnimation {
-                selectedWorkoutRoutineSet = set
-            }
-        } else {
-            selectedWorkoutRoutineSet = set
-        }
-    }
     
     private var workoutRoutineSets: some View {
         ForEach(indexedWorkoutRoutineSets(for: workoutRoutineExercise), id: \.1.id) { (index, workoutRoutineSet) in
-            WorkoutRoutineSetCell(workoutRoutineSet: workoutRoutineSet, index: index, isSelected: self.selectedWorkoutRoutineSet == workoutRoutineSet)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    guard self.editMode?.wrappedValue != .active else { return }
-                    if self.selectedWorkoutRoutineSet?.hasChanges ?? false {
-                        self.managedObjectContext.saveOrCrash()
-                    }
-                    if self.selectedWorkoutRoutineSet == workoutRoutineSet {
-                        self.select(set: nil)
-                    } else {
-                        self.select(set: workoutRoutineSet)
-                    }
-            }
+            RoutineSetRow(
+                workoutRoutineSet: workoutRoutineSet,
+                index: index,
+                singleTarget: workoutRoutineExercise.singleRepTargetValue,
+                isEditable: editMode?.wrappedValue != .active,
+                onOpenOptions: { optionsSet = workoutRoutineSet }
+            )
         }
         .onDelete { offsets in
             let workoutRoutineSets = self.workoutRoutineSets(for: self.workoutRoutineExercise)
@@ -107,50 +88,57 @@ struct WorkoutRoutineExerciseView: View {
         }
     }
     
-    @State private var editorRepetitionsMin: Int16?
-    @State private var editorRepetitionsMax: Int16?
-    private var workoutRoutineSetEditor: some View {
-        let sets = self.workoutRoutineSets(for: self.workoutRoutineExercise)
-        
-        return VStack(spacing: 0) {
-            Divider()
-            WorkoutRoutineSetEditor(
-                workoutRoutineSet: self.selectedWorkoutRoutineSet!,
-                overwriteRepetitionsMin: $editorRepetitionsMin,
-                overwriteRepetitionsMax: $editorRepetitionsMax,
-                showNext: self.selectedWorkoutRoutineSet! != sets.last,
-                onDone: {
-                    self.managedObjectContext.saveOrCrash()
-                    
-                    if let index = sets.firstIndex(of: self.selectedWorkoutRoutineSet!), index + 1 < sets.count {
-                        self.select(set: sets[index + 1])
-                    } else {
-                        self.select(set: nil)
-                    }
-            })
-            .background(Color(.systemFill).opacity(0.5))
-        }
-        .transition(AnyTransition.move(edge: .bottom))
+    private var isBodyweight: Bool {
+        workoutRoutineExercise.exercise(in: exerciseStore.exercises)?.isBodyweight ?? false
     }
-    
+
+    private var bodyweightModeSection: some View {
+        Section(footer: Text("A workout started from this routine logs added or assisted weight accordingly, without asking each time.")) {
+            Picker("Weight kind", selection: Binding(
+                get: { workoutRoutineExercise.assistedValue },
+                set: { workoutRoutineExercise.assistedValue = $0; managedObjectContext.saveOrCrash() }
+            )) {
+                Text("Added").tag(false)
+                Text("Assisted").tag(true)
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
+    private var repTargetSection: some View {
+        Section(footer: Text("Plan this exercise's sets as a rep range like 6-8, or a single rep count like 8.")) {
+            Picker("Rep target", selection: Binding(
+                get: { workoutRoutineExercise.singleRepTargetValue },
+                set: { newValue in
+                    // Only the display/entry mode changes here. The stored min and max are left intact, so
+                    // switching to single and back keeps the original range. A set collapses to min = max
+                    // only when its value is actually edited in single mode.
+                    workoutRoutineExercise.singleRepTargetValue = newValue
+                    managedObjectContext.saveOrCrash()
+                }
+            )) {
+                Text("Range").tag(false)
+                Text("Single").tag(true)
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             List {
+                if isBodyweight { bodyweightModeSection }
+                repTargetSection
                 Section {
                     ClearableTextField(titleKey: "Comment", text: workoutRoutineExerciseComment, onCommit: { self.adjustAndSaveWorkoutRoutineExerciseCommentInput() })
-                    
+
                     workoutRoutineSets
                     addSetButton
                 }
             }
             .listStyleCompat_InsetGroupedListStyle()
             .keyboardDoneToolbar()
-            
-            if selectedWorkoutRoutineSet != nil &&
-                (self.workoutRoutineExercise.workoutRoutineSets?.contains(self.selectedWorkoutRoutineSet!) ?? false) &&
-                editMode?.wrappedValue != .active {
-                workoutRoutineSetEditor
-            }
+            .sheet(item: $optionsSet) { RoutineSetOptionsView(workoutRoutineSet: $0) }
         }
         .navigationBarTitle(Text(workoutRoutineExercise.exercise(in: exerciseStore.exercises)?.title ?? ""), displayMode: .inline)
         .toolbar {
@@ -177,6 +165,142 @@ struct WorkoutRoutineExerciseView: View {
         } else {
             return nil
         }
+    }
+}
+
+/// An inline, editable routine set row: the set number and its rep target, entered in place like the live
+/// workout instead of a pushed dragger editor. A single-target style shows one reps field (min = max); a
+/// range style shows min and max. Values commit when a field resigns focus, not per keystroke.
+struct RoutineSetRow: View {
+    @ObservedObject var workoutRoutineSet: WorkoutRoutineSet
+    let index: Int
+    let singleTarget: Bool
+    let isEditable: Bool
+    /// Opens this set's type/note. The sheet is presented once at the container level (not per row), so
+    /// many rows don't each own a presenter, which wedged UIKit's presentation state machine.
+    var onOpenOptions: () -> Void = {}
+
+    @State private var minInput = ""
+    @State private var maxInput = ""
+
+    private static let boxHeight: CGFloat = 36
+
+    private func syncFromModel() {
+        minInput = workoutRoutineSet.minRepetitionsValue.map { "\($0)" } ?? ""
+        maxInput = workoutRoutineSet.maxRepetitionsValue.map { "\($0)" } ?? ""
+    }
+
+    private func commitMin() {
+        let value = Int16(minInput.trimmingCharacters(in: .whitespaces))
+        workoutRoutineSet.minRepetitionsValue = value
+        if singleTarget {
+            workoutRoutineSet.maxRepetitionsValue = value
+            maxInput = value.map { "\($0)" } ?? ""
+        }
+        workoutRoutineSet.managedObjectContext?.saveOrCrash()
+    }
+
+    private func commitMax() {
+        workoutRoutineSet.maxRepetitionsValue = Int16(maxInput.trimmingCharacters(in: .whitespaces))
+        workoutRoutineSet.managedObjectContext?.saveOrCrash()
+    }
+
+    private var readText: String {
+        WorkoutRoutineSetCell.repetitionIntervalString(
+            minRepetitions: workoutRoutineSet.minRepetitionsValue.map(Int.init),
+            maxRepetitions: workoutRoutineSet.maxRepetitionsValue.map(Int.init)
+        ) ?? "—"
+    }
+
+    private func field(_ text: Binding<String>, placeholder: String, onCommit: @escaping () -> Void) -> some View {
+        RightAlignedNumberField(text: text, placeholder: placeholder, keyboardType: .numberPad, alignment: .center, onCommit: onCommit)
+            .frame(width: 56, height: Self.boxHeight)
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
+    }
+
+    private var hasNote: Bool { !(workoutRoutineSet.comment ?? "").isEmpty }
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.s) {
+            // The chip opens the set's type and note, like the live workout's set chip.
+            Button { onOpenOptions() } label: {
+                let tint = workoutRoutineSet.tagValue?.color
+                Text("\(index)")
+                    .font(.forgeCaption)
+                    .foregroundColor(tint ?? .forgeSecondaryLabel)
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill((tint ?? .forgeSecondaryLabel).opacity(tint == nil ? 0.14 : 0.22)))
+                    .overlay(alignment: .topTrailing) {
+                        if hasNote {
+                            Circle().fill(Color.forgeAccent).frame(width: 7, height: 7)
+                        }
+                    }
+            }
+            .buttonStyle(.plain)
+            Spacer()
+            if isEditable {
+                if singleTarget {
+                    field($minInput, placeholder: "reps", onCommit: commitMin)
+                } else {
+                    field($minInput, placeholder: "min", onCommit: commitMin)
+                    Text("–").foregroundColor(.forgeSecondaryLabel)
+                    field($maxInput, placeholder: "max", onCommit: commitMax)
+                }
+            } else {
+                Text(readText).font(.forgeValue).foregroundColor(.forgeSecondaryLabel)
+            }
+            Text("reps").font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)
+        }
+        .onAppear { syncFromModel() }
+        // Re-read min/max when the mode flips, so the fields match the stored values either way.
+        .onChange(of: singleTarget) { _, _ in syncFromModel() }
+    }
+}
+
+/// The set type and note for a routine set, opened from its chip. The rep target is edited inline in the
+/// row, so this sheet is only the type and note.
+struct RoutineSetOptionsView: View {
+    @ObservedObject var workoutRoutineSet: WorkoutRoutineSet
+    @Environment(\.dismiss) private var dismiss
+    @State private var noteInput = ""
+
+    private func saveNote() {
+        let trimmed = noteInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        workoutRoutineSet.comment = trimmed.isEmpty ? nil : trimmed
+        workoutRoutineSet.managedObjectContext?.saveOrCrash()
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section(header: Text("Set type")) {
+                    ForEach(WorkoutSetTag.allCases, id: \.self) { tag in
+                        Button {
+                            workoutRoutineSet.tagValue = workoutRoutineSet.tagValue == tag ? nil : tag
+                            workoutRoutineSet.managedObjectContext?.saveOrCrash()
+                        } label: {
+                            HStack {
+                                Image(systemName: "circle.fill").imageScale(.small).foregroundColor(tag.color)
+                                Text(tag.title.capitalized).foregroundColor(.primary)
+                                Spacer()
+                                if workoutRoutineSet.tagValue == tag {
+                                    Image(systemName: "checkmark").foregroundColor(.secondary)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                Section(header: Text("Note")) {
+                    ClearableTextField(titleKey: "Note", text: $noteInput, onCommit: saveNote)
+                }
+            }
+            .navigationBarTitle("Set", displayMode: .inline)
+            .navigationBarItems(trailing: Button("Done") { saveNote(); dismiss() })
+            .onAppear { noteInput = workoutRoutineSet.comment ?? "" }
+        }
+        .presentationDetents([.medium])
     }
 }
 
