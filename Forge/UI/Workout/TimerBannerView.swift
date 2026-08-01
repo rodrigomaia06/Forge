@@ -76,33 +76,7 @@ struct TimerBannerView: View {
 
     var body: some View {
         HStack {
-            // The stopwatch is always tappable. In edit mode it opens the start/end editor; otherwise a
-            // tap shows a brief hint that the times can only be changed in edit mode.
-            Button(action: {
-                if isEditing {
-                    self.activeSheet = .editTime
-                } else {
-                    Haptics.impact(.light)
-                    withAnimation { showEditHint = true }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        withAnimation { showEditHint = false }
-                    }
-                }
-            }) {
-                stopwatchLabel
-            }
-            .buttonStyle(.plain)
-
-            if showEditHint {
-                Text("Editable in Edit mode")
-                    .font(.caption2)
-                    .foregroundColor(.forgeSecondaryLabel)
-                    .transition(.opacity)
-                    .allowsHitTesting(false)
-            }
-
-            Spacer()
-
+            // Rest timer on the left.
             Button(action: {
                 self.activeSheet = .restTimer
             }) {
@@ -117,6 +91,34 @@ struct TimerBannerView: View {
                 .foregroundColor(remainingTime ?? 0 < 0 ? .forgeDestructive : nil)
                 .padding()
             }
+
+            Spacer()
+
+            if showEditHint {
+                Text("Editable in Edit mode")
+                    .font(.caption2)
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
+
+            // The elapsed-workout stopwatch on the right, matching the Clock/iOS convention. Always
+            // tappable. In edit mode it opens the start/end editor; otherwise a tap shows a brief hint that
+            // the times can only be changed in edit mode.
+            Button(action: {
+                if isEditing {
+                    self.activeSheet = .editTime
+                } else {
+                    Haptics.impact(.light)
+                    withAnimation { showEditHint = true }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        withAnimation { showEditHint = false }
+                    }
+                }
+            }) {
+                stopwatchLabel
+            }
+            .buttonStyle(.plain)
         }
         // No fill: the timer row sits on the workout canvas so it reads as part of the header rather
         // than a separate colored band.
