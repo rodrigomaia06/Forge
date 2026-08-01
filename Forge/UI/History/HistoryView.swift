@@ -60,6 +60,16 @@ struct HistoryView : View {
         return formatter
     }()
 
+    /// A week section's header is the span of the days trained that week (e.g. "Jul 27 – 29, 2026"), which
+    /// collapses to a single date for one workout. Clearer than a "Week 5" number, which confuses because a
+    /// month spans 4 to 6 partial weeks depending on where the 1st lands.
+    private static let weekRangeFormatter: DateIntervalFormatter = {
+        let formatter = DateIntervalFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
+
     /// Workouts grouped into week sections within each month (newest first), so a busy month reads as a
     /// few small blocks rather than one long scroll. The week boundary follows the first-weekday setting.
     private var weekSections: [(id: String, title: String, workouts: [Workout])] {
@@ -71,11 +81,12 @@ struct HistoryView : View {
         return groups
             .map { components, workouts -> (id: String, title: String, workouts: [Workout], sort: Date) in
                 let sorted = workouts.sorted { ($0.start ?? .distantPast) > ($1.start ?? .distantPast) }
-                let monthDate = calendar.date(from: DateComponents(year: components.year, month: components.month)) ?? Date.distantPast
+                let newest = sorted.first?.start ?? Date.distantPast
+                let oldest = sorted.last?.start ?? newest
                 let week = components.weekOfMonth ?? 0
-                let title = "\(Self.monthFormatter.string(from: monthDate)) · Week \(week)"
-                // Sort by the newest workout in the group, so partial weeks order correctly.
-                return ("\(components.year ?? 0)-\(components.month ?? 0)-\(week)", title, sorted, sorted.first?.start ?? Date.distantPast)
+                // Label by the span of days trained that week; sort by the newest so partial weeks order right.
+                let title = Self.weekRangeFormatter.string(from: oldest, to: newest)
+                return ("\(components.year ?? 0)-\(components.month ?? 0)-\(week)", title, sorted, newest)
             }
             .sorted { $0.sort > $1.sort }
             .map { (id: $0.id, title: $0.title, workouts: $0.workouts) }
