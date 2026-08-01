@@ -12,10 +12,20 @@ struct GeneralSettingsView: View {
     @EnvironmentObject var settingsStore: SettingsStore
     
     private var weightPickerSection: some View {
-        Section(header: Text("Units")) {
-            Picker("Weight unit", selection: $settingsStore.weightUnit) {
+        Section(header: Text("Weight"), footer: Text("Bodyweight weighs bodyweight exercises like pull-ups and dips in charts and totals. Log a per-set added or assisted amount for weighted or assisted reps. Leave it at 0 to count only the added weight.")) {
+            Picker("Unit", selection: $settingsStore.weightUnit) {
                 ForEach(WeightUnit.allCases, id: \.self) { weightUnit in
                     Text(weightUnit.title).tag(weightUnit)
+                }
+            }
+            HStack {
+                Text("Bodyweight")
+                Spacer()
+                HStack(spacing: 0) {
+                    RightAlignedNumberField(text: bodyweightText, placeholder: "0", keyboardType: .decimalPad, alignment: .right, smallPlaceholder: false)
+                        .frame(width: 52, height: 28)
+                    Text(settingsStore.weightUnit.unit.symbol)
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -36,21 +46,6 @@ struct GeneralSettingsView: View {
                 settingsStore.bodyweight = value > 0 ? WeightUnit.convert(weight: value, from: settingsStore.weightUnit, to: .metric) : 0
             }
         )
-    }
-
-    private var bodyweightSection: some View {
-        Section(header: Text("Bodyweight"), footer: Text("Weighs bodyweight exercises like pull-ups and dips in charts and totals. Log a per-set added or assisted weight for weighted or assisted reps. Leave at 0 to count only the added weight.")) {
-            HStack {
-                Text("Bodyweight")
-                Spacer()
-                HStack(spacing: 0) {
-                    RightAlignedNumberField(text: bodyweightText, placeholder: "0", keyboardType: .decimalPad, alignment: .right, smallPlaceholder: false)
-                        .frame(width: 52, height: 28)
-                    Text(settingsStore.weightUnit.unit.symbol)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
     }
 
     private var appearance: Binding<ForgeAppearance> {
@@ -142,12 +137,11 @@ struct GeneralSettingsView: View {
         Form {
             appearanceSection
             weightPickerSection
-            bodyweightSection
             calendarSection
-            workoutNameSection
             restTimerSection
             restTimerAlertSection
             reminderSection
+            workoutNameSection
             recordsSection
         }
         .keyboardDoneToolbar()
