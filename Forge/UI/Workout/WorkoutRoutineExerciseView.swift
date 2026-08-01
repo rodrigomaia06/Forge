@@ -16,6 +16,8 @@ struct WorkoutRoutineExerciseView: View {
     @EnvironmentObject var exerciseStore: ExerciseStore
     
     @ObservedObject var workoutRoutineExercise: WorkoutRoutineExercise
+    // The set-options sheet is presented once here, not per row (per-row presenters wedged UIKit).
+    @State private var optionsSet: WorkoutRoutineSet?
 
     @State private var workoutRoutineExerciseCommentInput: String? = nil
     private var workoutRoutineExerciseComment: Binding<String> {
@@ -50,7 +52,8 @@ struct WorkoutRoutineExerciseView: View {
                 workoutRoutineSet: workoutRoutineSet,
                 index: index,
                 singleTarget: workoutRoutineExercise.singleRepTargetValue,
-                isEditable: editMode?.wrappedValue != .active
+                isEditable: editMode?.wrappedValue != .active,
+                onOpenOptions: { optionsSet = workoutRoutineSet }
             )
         }
         .onDelete { offsets in
@@ -135,6 +138,7 @@ struct WorkoutRoutineExerciseView: View {
             }
             .listStyleCompat_InsetGroupedListStyle()
             .keyboardDoneToolbar()
+            .sheet(item: $optionsSet) { RoutineSetOptionsView(workoutRoutineSet: $0) }
         }
         .navigationBarTitle(Text(workoutRoutineExercise.exercise(in: exerciseStore.exercises)?.title ?? ""), displayMode: .inline)
         .toolbar {
@@ -172,10 +176,12 @@ struct RoutineSetRow: View {
     let index: Int
     let singleTarget: Bool
     let isEditable: Bool
+    /// Opens this set's type/note. The sheet is presented once at the container level (not per row), so
+    /// many rows don't each own a presenter, which wedged UIKit's presentation state machine.
+    var onOpenOptions: () -> Void = {}
 
     @State private var minInput = ""
     @State private var maxInput = ""
-    @State private var showOptions = false
 
     private static let boxHeight: CGFloat = 36
 
@@ -217,7 +223,7 @@ struct RoutineSetRow: View {
     var body: some View {
         HStack(spacing: Theme.Spacing.s) {
             // The chip opens the set's type and note, like the live workout's set chip.
-            Button { showOptions = true } label: {
+            Button { onOpenOptions() } label: {
                 let tint = workoutRoutineSet.tagValue?.color
                 Text("\(index)")
                     .font(.forgeCaption)
@@ -231,7 +237,6 @@ struct RoutineSetRow: View {
                     }
             }
             .buttonStyle(.plain)
-            .sheet(isPresented: $showOptions) { RoutineSetOptionsView(workoutRoutineSet: workoutRoutineSet) }
             Spacer()
             if isEditable {
                 if singleTarget {
@@ -254,7 +259,7 @@ struct RoutineSetRow: View {
 
 /// The set type and note for a routine set, opened from its chip. The rep target is edited inline in the
 /// row, so this sheet is only the type and note.
-private struct RoutineSetOptionsView: View {
+struct RoutineSetOptionsView: View {
     @ObservedObject var workoutRoutineSet: WorkoutRoutineSet
     @Environment(\.dismiss) private var dismiss
     @State private var noteInput = ""

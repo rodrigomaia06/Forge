@@ -8,7 +8,7 @@
 
 import CoreData
 
-extension WorkoutRoutineSet {
+extension WorkoutRoutineSet: Identifiable {
     public var id: NSManagedObjectID { self.objectID }
 }
 

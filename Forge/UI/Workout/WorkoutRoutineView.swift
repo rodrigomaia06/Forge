@@ -19,6 +19,8 @@ struct WorkoutRoutineView: View {
 
     @State private var showExerciseSelector = false
     @State private var noteEditorExercise: WorkoutRoutineExercise?
+    // The set-options sheet is presented once here, not per row (per-row presenters wedged UIKit).
+    @State private var optionsSet: WorkoutRoutineSet?
     
     @State private var workoutRoutineTitleInput: String? = nil
     private var workoutRoutineTitle: Binding<String> {
@@ -132,7 +134,7 @@ struct WorkoutRoutineView: View {
             }
             .pickerStyle(.segmented)
             ForEach(indexedRoutineSets(ex), id: \.1.id) { (index, set) in
-                RoutineSetRow(workoutRoutineSet: set, index: index, singleTarget: ex.singleRepTargetValue, isEditable: true)
+                RoutineSetRow(workoutRoutineSet: set, index: index, singleTarget: ex.singleRepTargetValue, isEditable: true, onOpenOptions: { optionsSet = set })
             }
             .onDelete { deleteRoutineSets(ex, $0) }
             Button { addRoutineSet(to: ex) } label: {
@@ -281,6 +283,7 @@ struct WorkoutRoutineView: View {
         }
         .listStyleCompat_InsetGroupedListStyle()
         .keyboardDoneToolbar()
+        .sheet(item: $optionsSet) { RoutineSetOptionsView(workoutRoutineSet: $0) }
         // Commit the title and comment when Edit is turned off, so tapping Done saves even if the field
         // never lost focus (the text field's own onEditingChanged does not fire when it is removed).
         .onChange(of: editMode?.wrappedValue.isEditing) { isEditing in

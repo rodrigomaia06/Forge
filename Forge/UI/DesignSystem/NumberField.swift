@@ -75,6 +75,7 @@ struct RightAlignedNumberField: UIViewRepresentable {
 
     final class Coordinator: NSObject, UITextFieldDelegate {
         var parent: RightAlignedNumberField
+        private var isPinningCaret = false
         init(_ parent: RightAlignedNumberField) { self.parent = parent }
 
         @objc func editingChanged(_ field: UITextField) {
@@ -86,12 +87,17 @@ struct RightAlignedNumberField: UIViewRepresentable {
             parent.onCommit()
         }
 
-        /// Keep the caret at the end so the value is always edited from the right, never mid-number.
+        /// Keep the caret at the end so the value is always edited from the right, never mid-number. The
+        /// re-entrancy guard stops our pin and UIKit's own selection installation (tap-to-position, the
+        /// number-pad text interaction, updateUIView's text reset) from overwriting each other's selection
+        /// without end on the main thread, which can wedge when the field lives in a List row.
         func textFieldDidChangeSelection(_ field: UITextField) {
+            guard !isPinningCaret else { return }
             let end = field.endOfDocument
-            if let range = field.textRange(from: end, to: end), field.selectedTextRange != range {
-                field.selectedTextRange = range
-            }
+            guard let range = field.textRange(from: end, to: end), field.selectedTextRange != range else { return }
+            isPinningCaret = true
+            field.selectedTextRange = range
+            isPinningCaret = false
         }
     }
 }
