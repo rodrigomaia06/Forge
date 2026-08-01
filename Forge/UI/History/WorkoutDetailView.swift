@@ -21,6 +21,9 @@ struct WorkoutDetailView : View {
     // system EditButton rendered a "Done" checkmark overlapping the "Edit" label inside the nav glass.
     @State private var editMode: EditMode = .inactive
     @State private var showingExerciseSelectorSheet = false
+    // When on, every exercise is shown expanded with its set table inline (like the live workout), instead
+    // of a compact list you tap into. A read-only overview of the whole workout in one scroll.
+    @State private var expanded = false
 
     @State private var activityItems: [Any]?
 
@@ -160,6 +163,14 @@ struct WorkoutDetailView : View {
 
                 CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: editMode.isEditing)
 
+            if expanded && !editMode.isEditing {
+                // Each exercise as its own read-only card with the set table inline (previous, weight, reps),
+                // so the whole workout reads in one scroll without tapping into each exercise.
+                ForEach(workoutExercises) { workoutExercise in
+                    WorkoutExerciseDetailView(workoutExercise: workoutExercise, embedded: true)
+                        .environmentObject(self.settingsStore)
+                }
+            } else {
             Section {
                 ForEach(workoutExercises) { workoutExercise in
                     NavigationLink(destination: WorkoutExerciseDetailView(workoutExercise: workoutExercise).environmentObject(self.settingsStore)) {
@@ -195,6 +206,7 @@ struct WorkoutDetailView : View {
                         }
                     }
                 }
+            }
             }
         }
         .listStyleCompat_InsetGroupedListStyle()
@@ -242,6 +254,17 @@ struct WorkoutDetailView : View {
                 } label: {
                     Image(systemName: "ellipsis")
                         .imageScale(.large)
+                }
+                // Toggle the whole workout between a compact tap-in list and every exercise expanded with
+                // its set table. Hidden in edit mode, where the compact list is used for reordering.
+                if !editMode.isEditing {
+                    Button {
+                        Haptics.selection()
+                        withAnimation { expanded.toggle() }
+                    } label: {
+                        Image(systemName: expanded ? "list.bullet" : "rectangle.grid.1x2")
+                    }
+                    .accessibilityLabel(expanded ? "Compact view" : "Expanded view")
                 }
                 // A plain text button, not the system EditButton, whose "Done" checkmark overlapped the
                 // "Edit" label inside the nav glass group.
