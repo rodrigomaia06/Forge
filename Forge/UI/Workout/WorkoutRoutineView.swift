@@ -69,7 +69,59 @@ struct WorkoutRoutineView: View {
     private var workoutRoutineExercises: [WorkoutRoutineExercise] {
         workoutRoutine.workoutRoutineExercises?.array as? [WorkoutRoutineExercise] ?? []
     }
-    
+
+    private func routineSets(_ ex: WorkoutRoutineExercise) -> [WorkoutRoutineSet] {
+        ex.workoutRoutineSets?.array as? [WorkoutRoutineSet] ?? []
+    }
+
+    private func indexedRoutineSets(_ ex: WorkoutRoutineExercise) -> [(Int, WorkoutRoutineSet)] {
+        routineSets(ex).enumerated().map { ($0 + 1, $1) }
+    }
+
+    private func addRoutineSet(to ex: WorkoutRoutineExercise) {
+        let set = WorkoutRoutineSet.create(context: managedObjectContext)
+        set.workoutRoutineExercise = ex
+        managedObjectContext.saveOrCrash()
+    }
+
+    private func deleteRoutineSets(_ ex: WorkoutRoutineExercise, _ offsets: IndexSet) {
+        let sets = routineSets(ex)
+        for i in offsets {
+            let set = sets[i]
+            managedObjectContext.delete(set)
+            set.workoutRoutineExercise?.removeFromWorkoutRoutineSets(set)
+        }
+        managedObjectContext.saveOrCrash()
+    }
+
+    /// One exercise as a card in view mode: a tappable name row (opens the full exercise editor for its
+    /// comment, rep-target style, bodyweight mode, and superset note) with its set table inline below.
+    @ViewBuilder private func exerciseCard(_ ex: WorkoutRoutineExercise) -> some View {
+        Section {
+            NavigationLink(destination: WorkoutRoutineExerciseView(workoutRoutineExercise: ex)) {
+                HStack(spacing: Theme.Spacing.s) {
+                    if let label = ex.supersetLabel {
+                        Text(label)
+                            .font(.forgeCaption.weight(.bold))
+                            .foregroundColor(.forgeSecondaryLabel)
+                            .frame(width: 20, height: 20)
+                            .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.forgeSeparator))
+                            .accessibilityLabel("Superset \(label)")
+                    }
+                    Text(ex.exercise(in: exerciseStore.exercises)?.title ?? "Unknown Exercise")
+                        .font(.forgeHeadline)
+                }
+            }
+            ForEach(indexedRoutineSets(ex), id: \.1.id) { (index, set) in
+                RoutineSetRow(workoutRoutineSet: set, index: index, singleTarget: ex.singleRepTargetValue, isEditable: true)
+            }
+            .onDelete { deleteRoutineSets(ex, $0) }
+            Button { addRoutineSet(to: ex) } label: {
+                HStack { Image(systemName: "plus"); Text("Add set") }
+            }
+        }
+    }
+
     private var exerciseSelectorSheet: some View {
         AddExercisesSheet(
             exercises: exerciseStore.shownExercises,
@@ -115,6 +167,9 @@ struct WorkoutRoutineView: View {
 
             CustomAttributesEditor(attributes: routineCustomAttributes, isEditable: editMode?.wrappedValue.isEditing == true)
 
+            // Edit mode uses the compact list for reordering, deleting, and superset notes. View mode shows
+            // each exercise as a card with its set table inline, like the live workout.
+            if editMode?.wrappedValue.isEditing == true {
             Section(header: Text("Exercises")) {
                 ForEach(workoutRoutineExercises) { workoutRoutineExercise in
                     NavigationLink(destination: WorkoutRoutineExerciseView(workoutRoutineExercise: workoutRoutineExercise)) {
@@ -190,6 +245,17 @@ struct WorkoutRoutineView: View {
                     HStack {
                         Image(systemName: "plus")
                         Text("Add exercises")
+                    }
+                }
+            }
+            } else {
+                ForEach(workoutRoutineExercises) { exerciseCard($0) }
+                Section {
+                    Button(action: { self.showExerciseSelector = true }) {
+                        HStack {
+                            Image(systemName: "plus")
+                            Text("Add exercises")
+                        }
                     }
                 }
             }
