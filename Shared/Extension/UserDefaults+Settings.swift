@@ -27,6 +27,7 @@ extension UserDefaults {
         case appearance
         case showPlanInWorkoutTitle
         case bodyweight
+        case routineSingleRepTarget
     }
 
     /// Whether a workout started from a routine is named "Plan - Routine" (true) or just the routine
@@ -153,6 +154,13 @@ extension UserDefaults {
     var bodyweight: Double {
         set { self.set(newValue, forKey: SettingsKeys.bodyweight.rawValue) }
         get { self.value(forKey: SettingsKeys.bodyweight.rawValue) as? Double ?? 0 }
+    }
+
+    /// Whether a routine set plans a single rep target (e.g. 8) rather than a range (e.g. 6-8). Defaults to
+    /// a range. A single target stores the same value for min and max.
+    var routineSingleRepTarget: Bool {
+        set { self.set(newValue, forKey: SettingsKeys.routineSingleRepTarget.rawValue) }
+        get { self.value(forKey: SettingsKeys.routineSingleRepTarget.rawValue) as? Bool ?? false }
     }
 
     /// Calendar first weekday: 1 = Sunday, 2 = Monday. Defaults to the locale's.

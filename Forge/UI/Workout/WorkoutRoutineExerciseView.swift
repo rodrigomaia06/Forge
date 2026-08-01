@@ -16,8 +16,7 @@ struct WorkoutRoutineExerciseView: View {
     @EnvironmentObject var exerciseStore: ExerciseStore
     
     @ObservedObject var workoutRoutineExercise: WorkoutRoutineExercise
-    @State private var selectedWorkoutRoutineSet: WorkoutRoutineSet? = nil
-    
+
     @State private var workoutRoutineExerciseCommentInput: String? = nil
     private var workoutRoutineExerciseComment: Binding<String> {
         Binding(
@@ -44,36 +43,15 @@ struct WorkoutRoutineExerciseView: View {
         workoutRoutineSets(for: workoutRoutineExercise).enumerated().map { ($0 + 1, $1) }
     }
     
-    private func select(set: WorkoutRoutineSet?) {
-        // reset the temporary state of the set editor
-        editorRepetitionsMin = nil
-        editorRepetitionsMax = nil
-        
-        // only animate if we would show/hide the editor
-        if set == nil && selectedWorkoutRoutineSet != nil || set != nil && selectedWorkoutRoutineSet == nil {
-            withAnimation {
-                selectedWorkoutRoutineSet = set
-            }
-        } else {
-            selectedWorkoutRoutineSet = set
-        }
-    }
     
     private var workoutRoutineSets: some View {
         ForEach(indexedWorkoutRoutineSets(for: workoutRoutineExercise), id: \.1.id) { (index, workoutRoutineSet) in
-            WorkoutRoutineSetCell(workoutRoutineSet: workoutRoutineSet, index: index, isSelected: self.selectedWorkoutRoutineSet == workoutRoutineSet)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    guard self.editMode?.wrappedValue != .active else { return }
-                    if self.selectedWorkoutRoutineSet?.hasChanges ?? false {
-                        self.managedObjectContext.saveOrCrash()
-                    }
-                    if self.selectedWorkoutRoutineSet == workoutRoutineSet {
-                        self.select(set: nil)
-                    } else {
-                        self.select(set: workoutRoutineSet)
-                    }
-            }
+            RoutineSetRow(
+                workoutRoutineSet: workoutRoutineSet,
+                index: index,
+                singleTarget: settingsStore.routineSingleRepTarget,
+                isEditable: editMode?.wrappedValue != .active
+            )
         }
         .onDelete { offsets in
             let workoutRoutineSets = self.workoutRoutineSets(for: self.workoutRoutineExercise)
@@ -107,32 +85,6 @@ struct WorkoutRoutineExerciseView: View {
         }
     }
     
-    @State private var editorRepetitionsMin: Int16?
-    @State private var editorRepetitionsMax: Int16?
-    private var workoutRoutineSetEditor: some View {
-        let sets = self.workoutRoutineSets(for: self.workoutRoutineExercise)
-        
-        return VStack(spacing: 0) {
-            Divider()
-            WorkoutRoutineSetEditor(
-                workoutRoutineSet: self.selectedWorkoutRoutineSet!,
-                overwriteRepetitionsMin: $editorRepetitionsMin,
-                overwriteRepetitionsMax: $editorRepetitionsMax,
-                showNext: self.selectedWorkoutRoutineSet! != sets.last,
-                onDone: {
-                    self.managedObjectContext.saveOrCrash()
-                    
-                    if let index = sets.firstIndex(of: self.selectedWorkoutRoutineSet!), index + 1 < sets.count {
-                        self.select(set: sets[index + 1])
-                    } else {
-                        self.select(set: nil)
-                    }
-            })
-            .background(Color(.systemFill).opacity(0.5))
-        }
-        .transition(AnyTransition.move(edge: .bottom))
-    }
-    
     private var isBodyweight: Bool {
         workoutRoutineExercise.exercise(in: exerciseStore.exercises)?.isBodyweight ?? false
     }
@@ -163,12 +115,6 @@ struct WorkoutRoutineExerciseView: View {
             }
             .listStyleCompat_InsetGroupedListStyle()
             .keyboardDoneToolbar()
-            
-            if selectedWorkoutRoutineSet != nil &&
-                (self.workoutRoutineExercise.workoutRoutineSets?.contains(self.selectedWorkoutRoutineSet!) ?? false) &&
-                editMode?.wrappedValue != .active {
-                workoutRoutineSetEditor
-            }
         }
         .navigationBarTitle(Text(workoutRoutineExercise.exercise(in: exerciseStore.exercises)?.title ?? ""), displayMode: .inline)
         .toolbar {
@@ -195,6 +141,78 @@ struct WorkoutRoutineExerciseView: View {
         } else {
             return nil
         }
+    }
+}
+
+/// An inline, editable routine set row: the set number and its rep target, entered in place like the live
+/// workout instead of a pushed dragger editor. A single-target style shows one reps field (min = max); a
+/// range style shows min and max. Values commit when a field resigns focus, not per keystroke.
+private struct RoutineSetRow: View {
+    @ObservedObject var workoutRoutineSet: WorkoutRoutineSet
+    let index: Int
+    let singleTarget: Bool
+    let isEditable: Bool
+
+    @State private var minInput = ""
+    @State private var maxInput = ""
+
+    private static let boxHeight: CGFloat = 36
+
+    private func syncFromModel() {
+        minInput = workoutRoutineSet.minRepetitionsValue.map { "\($0)" } ?? ""
+        maxInput = workoutRoutineSet.maxRepetitionsValue.map { "\($0)" } ?? ""
+    }
+
+    private func commitMin() {
+        let value = Int16(minInput.trimmingCharacters(in: .whitespaces))
+        workoutRoutineSet.minRepetitionsValue = value
+        if singleTarget {
+            workoutRoutineSet.maxRepetitionsValue = value
+            maxInput = value.map { "\($0)" } ?? ""
+        }
+        workoutRoutineSet.managedObjectContext?.saveOrCrash()
+    }
+
+    private func commitMax() {
+        workoutRoutineSet.maxRepetitionsValue = Int16(maxInput.trimmingCharacters(in: .whitespaces))
+        workoutRoutineSet.managedObjectContext?.saveOrCrash()
+    }
+
+    private var readText: String {
+        WorkoutRoutineSetCell.repetitionIntervalString(
+            minRepetitions: workoutRoutineSet.minRepetitionsValue.map(Int.init),
+            maxRepetitions: workoutRoutineSet.maxRepetitionsValue.map(Int.init)
+        ) ?? "—"
+    }
+
+    private func field(_ text: Binding<String>, placeholder: String, onCommit: @escaping () -> Void) -> some View {
+        RightAlignedNumberField(text: text, placeholder: placeholder, keyboardType: .numberPad, alignment: .center, onCommit: onCommit)
+            .frame(width: 56, height: Self.boxHeight)
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
+    }
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.s) {
+            Text("\(index)")
+                .font(.forgeCaption)
+                .foregroundColor(.forgeSecondaryLabel)
+                .frame(width: 28, height: 28)
+                .background(Circle().fill(Color.forgeSecondaryLabel.opacity(0.14)))
+            Spacer()
+            if isEditable {
+                if singleTarget {
+                    field($minInput, placeholder: "reps", onCommit: commitMin)
+                } else {
+                    field($minInput, placeholder: "min", onCommit: commitMin)
+                    Text("–").foregroundColor(.forgeSecondaryLabel)
+                    field($maxInput, placeholder: "max", onCommit: commitMax)
+                }
+            } else {
+                Text(readText).font(.forgeValue).foregroundColor(.forgeSecondaryLabel)
+            }
+            Text("reps").font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)
+        }
+        .onAppear { syncFromModel() }
     }
 }
 
