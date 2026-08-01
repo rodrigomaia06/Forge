@@ -60,18 +60,22 @@ struct HistoryView : View {
         return formatter
     }()
 
-    /// Workouts grouped into month sections, newest month first and newest workout first within a month,
-    /// so a long history reads as organized blocks rather than one flat scroll.
-    private var monthSections: [(id: String, title: String, workouts: [Workout])] {
-        let calendar = Calendar.current
+    /// Workouts grouped into week sections within each month (newest first), so a busy month reads as a
+    /// few small blocks rather than one long scroll. The week boundary follows the first-weekday setting.
+    private var weekSections: [(id: String, title: String, workouts: [Workout])] {
+        var calendar = Calendar.current
+        calendar.firstWeekday = settingsStore.firstWeekday
         let groups = Dictionary(grouping: displayedWorkouts) { workout in
-            calendar.dateComponents([.year, .month], from: workout.start ?? Date.distantPast)
+            calendar.dateComponents([.year, .month, .weekOfMonth], from: workout.start ?? Date.distantPast)
         }
         return groups
             .map { components, workouts -> (id: String, title: String, workouts: [Workout], sort: Date) in
-                let date = calendar.date(from: components) ?? Date.distantPast
                 let sorted = workouts.sorted { ($0.start ?? .distantPast) > ($1.start ?? .distantPast) }
-                return ("\(components.year ?? 0)-\(components.month ?? 0)", Self.monthFormatter.string(from: date), sorted, date)
+                let monthDate = calendar.date(from: DateComponents(year: components.year, month: components.month)) ?? Date.distantPast
+                let week = components.weekOfMonth ?? 0
+                let title = "\(Self.monthFormatter.string(from: monthDate)) · Week \(week)"
+                // Sort by the newest workout in the group, so partial weeks order correctly.
+                return ("\(components.year ?? 0)-\(components.month ?? 0)-\(week)", title, sorted, sorted.first?.start ?? Date.distantPast)
             }
             .sorted { $0.sort > $1.sort }
             .map { (id: $0.id, title: $0.title, workouts: $0.workouts) }
@@ -116,7 +120,7 @@ struct HistoryView : View {
                         DatePicker("To", selection: $toDate, in: fromDate..., displayedComponents: .date)
                     }
                 }
-                ForEach(monthSections, id: \.id) { section in
+                ForEach(weekSections, id: \.id) { section in
                     Section(header: Text(section.title)) {
                         ForEach(section.workouts) { workout in
                             NavigationLink(value: workout) {
