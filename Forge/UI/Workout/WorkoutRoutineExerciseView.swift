@@ -107,13 +107,10 @@ struct WorkoutRoutineExerciseView: View {
             Picker("Rep target", selection: Binding(
                 get: { workoutRoutineExercise.singleRepTargetValue },
                 set: { newValue in
+                    // Only the display/entry mode changes here. The stored min and max are left intact, so
+                    // switching to single and back keeps the original range. A set collapses to min = max
+                    // only when its value is actually edited in single mode.
                     workoutRoutineExercise.singleRepTargetValue = newValue
-                    // Switching to single collapses each set onto its min so the two views agree.
-                    if newValue {
-                        for set in (workoutRoutineExercise.workoutRoutineSets?.array as? [WorkoutRoutineSet] ?? []) {
-                            set.maxRepetitionsValue = set.minRepetitionsValue
-                        }
-                    }
                     managedObjectContext.saveOrCrash()
                 }
             )) {
@@ -236,6 +233,8 @@ struct RoutineSetRow: View {
             Text("reps").font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)
         }
         .onAppear { syncFromModel() }
+        // Re-read min/max when the mode flips, so the fields match the stored values either way.
+        .onChange(of: singleTarget) { _, _ in syncFromModel() }
     }
 }
 
