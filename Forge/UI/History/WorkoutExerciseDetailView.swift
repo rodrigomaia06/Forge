@@ -873,20 +873,14 @@ private struct ActiveSetRow: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.s) {
-            // The chip opens the options sheet (tag, note, target, RPE) only when the set is editable.
-            // In read-only history, tapping a set does nothing until Edit is tapped.
-            if isEditable {
-                // Full row-height tap target so the chip is easy to hit mid-workout, not just the 28pt circle.
-                Button(action: onMore) { numberChip }
-                    .buttonStyle(.plain)
-                    .frame(width: 36, height: Self.boxHeight)
-                    .contentShape(Rectangle())
-                    .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title). Options" } ?? "Set \(index). Options")
-            } else {
-                numberChip
-                    .frame(width: 36)
-                    .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title)" } ?? "Set \(index)")
-            }
+            // The chip opens the set's details (tag, note, target, RPE), including in read-only history, so
+            // a note can be read by tapping the set without entering Edit. Full row-height tap target so
+            // the chip is easy to hit mid-workout, not just the 28pt circle.
+            Button(action: onMore) { numberChip }
+                .buttonStyle(.plain)
+                .frame(width: 36, height: Self.boxHeight)
+                .contentShape(Rectangle())
+                .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title). Details" } ?? "Set \(index). Details")
 
             Text(previousText ?? "—")
                 .font(.forgeCaption)
