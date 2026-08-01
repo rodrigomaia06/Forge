@@ -247,9 +247,15 @@ final class KeyboardDismissInstaller: NSObject, UIGestureRecognizerDelegate {
 }
 
 extension View {
-    /// Dismisses the keyboard when tapping outside a text field. Apply once at the root.
+    /// Previously installed a window-level tap gesture recognizer to dismiss the keyboard on a background
+    /// tap. That recognizer was set to recognize simultaneously with every UIKit gesture (the navigation
+    /// interactive pop, sheet-dismiss drag, scroll pan, the text system's own gestures), which can wedge
+    /// UIKit's gesture arbitration and leave the whole UI unresponsive to touch while timers keep running,
+    /// recoverable only by force-quit. The editor screens are Lists with `.scrollDismissesKeyboard`, so a
+    /// drag dismisses the keyboard natively; the only lost behavior is dismissing by tapping empty,
+    /// non-scrolling space. Kept as a no-op so existing call sites are unaffected.
     func dismissesKeyboardOnBackgroundTap() -> some View {
-        onAppear { KeyboardDismissInstaller.shared.install() }
+        self
     }
 
     /// A single "Done" above the keyboard that dismisses whatever field is focused (numbers or text).
