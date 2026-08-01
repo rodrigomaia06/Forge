@@ -82,6 +82,10 @@ enum WorkoutDataExchange {
         var supersetGroup: Int?
         // The group's shared note (repeated on each member, as it is stored).
         var supersetComment: String?
+        // For a bodyweight exercise, whether it is planned assisted; and whether its sets plan a single rep
+        // target rather than a range. Both default off on import when absent.
+        var assisted: Bool?
+        var singleRepTarget: Bool?
         var sets: [RoutineSetDTO]
     }
 
@@ -160,6 +164,7 @@ enum WorkoutDataExchange {
                 RoutineExerciseDTO(
                     exerciseUuid: exercise.exerciseUuid ?? UUID(),
                     comment: exercise.comment,
+                    assisted: exercise.assistedValue,
                     sets: orderedWorkoutSets(exercise).map { set in
                         RoutineSetDTO(
                             minReps: set.minTargetRepetitionsValue ?? set.repetitions?.int16Value,
@@ -190,6 +195,8 @@ enum WorkoutDataExchange {
                     comment: exercise.comment,
                     supersetGroup: exercise.supersetUUID.flatMap { groupNumbers[$0] },
                     supersetComment: exercise.supersetComment,
+                    assisted: exercise.assistedValue,
+                    singleRepTarget: exercise.singleRepTargetValue,
                     sets: orderedRoutineSets(exercise).map { set in
                         RoutineSetDTO(minReps: set.minRepetitionsValue, maxReps: set.maxRepetitionsValue, tag: set.tagValue?.rawValue, comment: set.comment)
                     }
@@ -318,6 +325,8 @@ enum WorkoutDataExchange {
             exercise.exerciseUuid = exerciseDTO.exerciseUuid
             exercise.comment = exerciseDTO.comment
             exercise.supersetComment = exerciseDTO.supersetComment
+            exercise.assistedValue = exerciseDTO.assisted ?? false
+            exercise.singleRepTargetValue = exerciseDTO.singleRepTarget ?? false
             exercise.workoutRoutine = routine
             if let group = exerciseDTO.supersetGroup {
                 exercise.supersetUUID = groupIDs[group] ?? { let id = UUID(); groupIDs[group] = id; return id }()

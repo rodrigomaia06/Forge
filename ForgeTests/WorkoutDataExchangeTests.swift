@@ -41,6 +41,8 @@ final class WorkoutDataExchangeTests: XCTestCase {
         let exerciseUuid = UUID()
         let exercise = WorkoutRoutineExercise.create(context: context)
         exercise.exerciseUuid = exerciseUuid
+        exercise.assistedValue = true
+        exercise.singleRepTargetValue = true
         exercise.workoutRoutine = routine
         let set = WorkoutRoutineSet.create(context: context)
         set.minRepetitionsValue = 6
@@ -73,6 +75,9 @@ final class WorkoutDataExchangeTests: XCTestCase {
         XCTAssertEqual(exercises.count, 1)
         // The exercise reference is a stable definition id and is preserved.
         XCTAssertEqual(exercises[0].exerciseUuid, exerciseUuid)
+        // The bodyweight-assisted and single-rep-target flags survive the round trip.
+        XCTAssertTrue(exercises[0].assistedValue)
+        XCTAssertTrue(exercises[0].singleRepTargetValue)
 
         let sets = exercises[0].workoutRoutineSets?.array as? [WorkoutRoutineSet] ?? []
         XCTAssertEqual(sets.count, 1)
