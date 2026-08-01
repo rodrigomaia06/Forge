@@ -231,6 +231,12 @@ struct WorkoutDetailView : View {
                 // reliably right under the control.
                 Menu {
                     Button {
+                        Haptics.selection()
+                        withAnimation { expanded.toggle() }
+                    } label: {
+                        Label(expanded ? "Compact view" : "Expanded view", systemImage: expanded ? "list.bullet" : "rectangle.grid.1x2")
+                    }
+                    Button {
                         guard let logText = self.workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit, fallbackBodyweight: self.settingsStore.bodyweight) else { return }
                         self.activityItems = [logText]
                     } label: {
@@ -254,17 +260,6 @@ struct WorkoutDetailView : View {
                 } label: {
                     Image(systemName: "ellipsis")
                         .imageScale(.large)
-                }
-                // Toggle the whole workout between a compact tap-in list and every exercise expanded with
-                // its set table. Hidden in edit mode, where the compact list is used for reordering.
-                if !editMode.isEditing {
-                    Button {
-                        Haptics.selection()
-                        withAnimation { expanded.toggle() }
-                    } label: {
-                        Image(systemName: expanded ? "list.bullet" : "rectangle.grid.1x2")
-                    }
-                    .accessibilityLabel(expanded ? "Compact view" : "Expanded view")
                 }
                 // A plain text button, not the system EditButton, whose "Done" checkmark overlapped the
                 // "Edit" label inside the nav glass group.
