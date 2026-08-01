@@ -230,13 +230,17 @@ struct WorkoutExerciseDetailView : View {
     }
 
     private var bodyweightModeRow: some View {
-        Picker("Weight kind", selection: Binding(get: { workoutExercise.assistedValue }, set: { applyBodyweightMode(assisted: $0) })) {
+        // The displayed value is inferred from existing set signs when the mode was never set, so showing
+        // the control never writes to the model (which would publish a change during the update pass). It
+        // only persists when the user actually toggles it.
+        Picker("Weight kind", selection: Binding(
+            get: { workoutExercise.assisted?.boolValue ?? exerciseSets.contains { ($0.addedWeightValue ?? 0) < 0 } },
+            set: { applyBodyweightMode(assisted: $0) }
+        )) {
             Text("Added").tag(false)
             Text("Assisted").tag(true)
         }
         .pickerStyle(.segmented)
-        // Seed the stored mode from existing set signs the first time, if it was never set.
-        .onAppear { if workoutExercise.assisted == nil { workoutExercise.assistedValue = exerciseSets.contains { ($0.addedWeightValue ?? 0) < 0 } } }
         .listRowInsets(EdgeInsets(top: 4, leading: Theme.Spacing.m, bottom: 6, trailing: Theme.Spacing.m))
     }
 
@@ -826,8 +830,8 @@ private struct ActiveSetRow: View {
     /// A value box, entered from the right. A planned rep range (when there is one) shows as the
     /// placeholder inside the box, so it disappears once a value is typed and never floats out of place.
     /// The field fills the box, so tapping anywhere in it opens the keyboard.
-    private func setField(_ text: Binding<String>, keyboard: UIKeyboardType, width: CGFloat, placeholder: String = "", invalid: Bool = false) -> some View {
-        RightAlignedNumberField(text: text, placeholder: placeholder, keyboardType: keyboard)
+    private func setField(_ text: Binding<String>, keyboard: UIKeyboardType, width: CGFloat, placeholder: String = "", invalid: Bool = false, onCommit: @escaping () -> Void = {}) -> some View {
+        RightAlignedNumberField(text: text, placeholder: placeholder, keyboardType: keyboard, onCommit: onCommit)
             .frame(width: width, height: Self.boxHeight)
             .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
             .overlay(
@@ -843,6 +847,9 @@ private struct ActiveSetRow: View {
             onToggleComplete()
             return
         }
+        // The field may still be focused (its onCommit hasn't fired), so persist the typed values first.
+        commitWeight()
+        commitReps()
         // A bodyweight set needs no weight entry (blank means a pure bodyweight rep); only reps are required.
         let hasWeight = isBodyweight || !weightInput.trimmingCharacters(in: .whitespaces).isEmpty
         let hasReps = (Int(repsInput.trimmingCharacters(in: .whitespaces)) ?? 0) > 0
@@ -889,8 +896,8 @@ private struct ActiveSetRow: View {
                 .frame(maxWidth: .infinity, alignment: .center)
 
             if isEditable {
-                setField($weightInput, keyboard: .decimalPad, width: 68, placeholder: weightPlaceholder, invalid: weightInvalid)
-                setField($repsInput, keyboard: .numberPad, width: 60, placeholder: targetRepsString ?? "", invalid: repsInvalid)
+                setField($weightInput, keyboard: .decimalPad, width: 68, placeholder: weightPlaceholder, invalid: weightInvalid, onCommit: commitWeight)
+                setField($repsInput, keyboard: .numberPad, width: 60, placeholder: targetRepsString ?? "", invalid: repsInvalid, onCommit: commitReps)
             } else {
                 readValue(isBodyweight ? bodyweightReadText : (workoutSet.weight == nil ? "—" : weightText), width: 68)
                 readValue(workoutSet.repetitions == nil ? "—" : "\(workoutSet.repetitionsValue)", width: 60)
@@ -913,8 +920,8 @@ private struct ActiveSetRow: View {
         .foregroundColor(workoutSet.isCompleted ? .forgeLabel : .forgeSecondaryLabel)
         .onAppear { syncInputsFromModel() }
         .onChange(of: isEditable) { _, editable in if editable { syncInputsFromModel() } }
-        .onChange(of: weightInput) { _, _ in commitWeight() }
-        .onChange(of: repsInput) { _, _ in commitReps() }
+        // The values commit when the field resigns focus (onCommit on each setField), not per keystroke, so
+        // typing a set does not write to Core Data on every character and re-render the whole live workout.
     }
 }
 

@@ -28,6 +28,9 @@ struct RightAlignedNumberField: UIViewRepresentable {
     /// The compact set boxes use a small placeholder (the rep-range hint); form rows use the full value
     /// size so a "0" placeholder isn't tiny.
     var smallPlaceholder: Bool = true
+    /// Called when editing ends (the field resigns focus). Lets a caller persist the value once per edit
+    /// instead of on every keystroke, which keeps a single character from churning the whole screen.
+    var onCommit: () -> Void = {}
 
     private static func valueFont() -> UIFont {
         // Matches `.forgeValue`: rounded, monospaced digits, at the body text size, scaled for Dynamic
@@ -76,6 +79,11 @@ struct RightAlignedNumberField: UIViewRepresentable {
 
         @objc func editingChanged(_ field: UITextField) {
             parent.text = field.text ?? ""
+        }
+
+        func textFieldDidEndEditing(_ field: UITextField) {
+            parent.text = field.text ?? ""
+            parent.onCommit()
         }
 
         /// Keep the caret at the end so the value is always edited from the right, never mid-number.
