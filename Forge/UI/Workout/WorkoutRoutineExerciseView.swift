@@ -175,6 +175,7 @@ struct RoutineSetRow: View {
 
     @State private var minInput = ""
     @State private var maxInput = ""
+    @State private var showOptions = false
 
     private static let boxHeight: CGFloat = 36
 
@@ -211,13 +212,26 @@ struct RoutineSetRow: View {
             .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
     }
 
+    private var hasNote: Bool { !(workoutRoutineSet.comment ?? "").isEmpty }
+
     var body: some View {
         HStack(spacing: Theme.Spacing.s) {
-            Text("\(index)")
-                .font(.forgeCaption)
-                .foregroundColor(.forgeSecondaryLabel)
-                .frame(width: 28, height: 28)
-                .background(Circle().fill(Color.forgeSecondaryLabel.opacity(0.14)))
+            // The chip opens the set's type and note, like the live workout's set chip.
+            Button { showOptions = true } label: {
+                let tint = workoutRoutineSet.tagValue?.color
+                Text("\(index)")
+                    .font(.forgeCaption)
+                    .foregroundColor(tint ?? .forgeSecondaryLabel)
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill((tint ?? .forgeSecondaryLabel).opacity(tint == nil ? 0.14 : 0.22)))
+                    .overlay(alignment: .topTrailing) {
+                        if hasNote {
+                            Circle().fill(Color.forgeAccent).frame(width: 7, height: 7)
+                        }
+                    }
+            }
+            .buttonStyle(.plain)
+            .sheet(isPresented: $showOptions) { RoutineSetOptionsView(workoutRoutineSet: workoutRoutineSet) }
             Spacer()
             if isEditable {
                 if singleTarget {
@@ -235,6 +249,53 @@ struct RoutineSetRow: View {
         .onAppear { syncFromModel() }
         // Re-read min/max when the mode flips, so the fields match the stored values either way.
         .onChange(of: singleTarget) { _, _ in syncFromModel() }
+    }
+}
+
+/// The set type and note for a routine set, opened from its chip. The rep target is edited inline in the
+/// row, so this sheet is only the type and note.
+private struct RoutineSetOptionsView: View {
+    @ObservedObject var workoutRoutineSet: WorkoutRoutineSet
+    @Environment(\.dismiss) private var dismiss
+    @State private var noteInput = ""
+
+    private func saveNote() {
+        let trimmed = noteInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        workoutRoutineSet.comment = trimmed.isEmpty ? nil : trimmed
+        workoutRoutineSet.managedObjectContext?.saveOrCrash()
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section(header: Text("Set type")) {
+                    ForEach(WorkoutSetTag.allCases, id: \.self) { tag in
+                        Button {
+                            workoutRoutineSet.tagValue = workoutRoutineSet.tagValue == tag ? nil : tag
+                            workoutRoutineSet.managedObjectContext?.saveOrCrash()
+                        } label: {
+                            HStack {
+                                Image(systemName: "circle.fill").imageScale(.small).foregroundColor(tag.color)
+                                Text(tag.title.capitalized).foregroundColor(.primary)
+                                Spacer()
+                                if workoutRoutineSet.tagValue == tag {
+                                    Image(systemName: "checkmark").foregroundColor(.secondary)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                Section(header: Text("Note")) {
+                    ClearableTextField(titleKey: "Note", text: $noteInput, onCommit: saveNote)
+                }
+            }
+            .navigationBarTitle("Set", displayMode: .inline)
+            .navigationBarItems(trailing: Button("Done") { saveNote(); dismiss() })
+            .onAppear { noteInput = workoutRoutineSet.comment ?? "" }
+        }
+        .presentationDetents([.medium])
     }
 }
 

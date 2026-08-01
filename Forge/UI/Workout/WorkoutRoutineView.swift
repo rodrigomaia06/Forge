@@ -94,8 +94,9 @@ struct WorkoutRoutineView: View {
         managedObjectContext.saveOrCrash()
     }
 
-    /// One exercise as a card in view mode: a tappable name row (opens the full exercise editor for its
-    /// comment, rep-target style, bodyweight mode, and superset note) with its set table inline below.
+    /// One exercise as a card in view mode: the name (tap to open the full editor for its comment, per-set
+    /// notes and set types, and superset note), the rep-target and bodyweight controls inline, and its set
+    /// table, so the common edits happen here without opening another screen.
     @ViewBuilder private func exerciseCard(_ ex: WorkoutRoutineExercise) -> some View {
         Section {
             NavigationLink(destination: WorkoutRoutineExerciseView(workoutRoutineExercise: ex)) {
@@ -112,6 +113,24 @@ struct WorkoutRoutineView: View {
                         .font(.forgeHeadline)
                 }
             }
+            if ex.exercise(in: exerciseStore.exercises)?.isBodyweight == true {
+                Picker("Weight kind", selection: Binding(
+                    get: { ex.assistedValue },
+                    set: { ex.assistedValue = $0; managedObjectContext.saveOrCrash() }
+                )) {
+                    Text("Added").tag(false)
+                    Text("Assisted").tag(true)
+                }
+                .pickerStyle(.segmented)
+            }
+            Picker("Rep target", selection: Binding(
+                get: { ex.singleRepTargetValue },
+                set: { ex.singleRepTargetValue = $0; managedObjectContext.saveOrCrash() }
+            )) {
+                Text("Range").tag(false)
+                Text("Single").tag(true)
+            }
+            .pickerStyle(.segmented)
             ForEach(indexedRoutineSets(ex), id: \.1.id) { (index, set) in
                 RoutineSetRow(workoutRoutineSet: set, index: index, singleTarget: ex.singleRepTargetValue, isEditable: true)
             }
