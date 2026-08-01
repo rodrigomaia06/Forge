@@ -35,11 +35,17 @@ extension View {
     func listStyleCompat_InsetGroupedListStyle() -> some View {
         if #available(iOS 16.0, *) {
             // Hide the system grouped background and use the dashboard canvas, so every screen shares
-            // the same near-black instead of the system's pure-black grouped background. Dragging the
-            // list down dismisses the keyboard everywhere these lists are used.
+            // the same near-black instead of the system's pure-black grouped background. Scrolling
+            // dismisses the keyboard everywhere these lists are used.
+            //
+            // .immediately, not .interactively: the interactive mode installs a pan gesture that
+            // coordinates keyboard dismissal with the scroll, and on a list that hosts a UITextField
+            // (RightAlignedNumberField) that gesture can wedge UIKit's gesture arbitration into a hard
+            // freeze (touch dead, timers running, force-quit only) on scroll. This list style is shared by
+            // every screen, so the safer mode is applied app-wide.
             listStyle(.insetGrouped)
                 .scrollContentBackground(.hidden)
-                .scrollDismissesKeyboard(.interactively)
+                .scrollDismissesKeyboard(.immediately)
                 .background(Color.forgeBackground.ignoresSafeArea())
         } else if #available(iOS 14.0, *) {
             listStyle(InsetGroupedListStyle())

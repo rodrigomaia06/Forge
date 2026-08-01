@@ -142,20 +142,28 @@ struct WorkoutRoutineView: View {
 
     private func exerciseMenu(_ ex: WorkoutRoutineExercise) -> some View {
         Menu {
-            Picker("Rep target", selection: Binding(
-                get: { ex.singleRepTargetValue },
-                set: { ex.singleRepTargetValue = $0; managedObjectContext.saveOrCrash() }
-            )) {
-                Text("Rep range").tag(false)
-                Text("Single rep target").tag(true)
+            Menu {
+                Picker("Rep target", selection: Binding(
+                    get: { ex.singleRepTargetValue },
+                    set: { ex.singleRepTargetValue = $0; managedObjectContext.saveOrCrash() }
+                )) {
+                    Text("Rep range").tag(false)
+                    Text("Single rep target").tag(true)
+                }
+            } label: {
+                Label("Rep target", systemImage: "number")
             }
             if ex.exercise(in: exerciseStore.exercises)?.isBodyweight == true {
-                Picker("Weight", selection: Binding(
-                    get: { ex.assistedValue },
-                    set: { ex.assistedValue = $0; managedObjectContext.saveOrCrash() }
-                )) {
-                    Text("Added weight").tag(false)
-                    Text("Assisted").tag(true)
+                Menu {
+                    Picker("Weight", selection: Binding(
+                        get: { ex.assistedValue },
+                        set: { ex.assistedValue = $0; managedObjectContext.saveOrCrash() }
+                    )) {
+                        Text("Added weight").tag(false)
+                        Text("Assisted").tag(true)
+                    }
+                } label: {
+                    Label("Weight", systemImage: "scalemass")
                 }
             }
             Divider()
