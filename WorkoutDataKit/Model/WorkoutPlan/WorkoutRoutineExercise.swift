@@ -67,6 +67,13 @@ public class WorkoutRoutineExercise: NSManagedObject, Codable {
         set { assisted = newValue as NSNumber }
     }
 
+    /// Whether this exercise's sets plan a single rep target (e.g. 8) rather than a range (e.g. 6-8). A
+    /// single target stores the same value for min and max. Defaults to a range.
+    public var singleRepTargetValue: Bool {
+        get { singleRepTarget?.boolValue ?? false }
+        set { singleRepTarget = newValue as NSNumber }
+    }
+
     // MARK: - Codable
     private enum CodingKeys: String, CodingKey {
         case uuid

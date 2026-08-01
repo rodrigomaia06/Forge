@@ -52,6 +52,7 @@
     <entity name="WorkoutRoutineExercise" representedClassName=".WorkoutRoutineExercise" syncable="YES" codeGenerationType="category">
         <attribute name="assisted" optional="YES" attributeType="Boolean" usesScalarValueType="NO"/>
         <attribute name="comment" optional="YES" attributeType="String"/>
+        <attribute name="singleRepTarget" optional="YES" attributeType="Boolean" usesScalarValueType="NO"/>
         <attribute name="exerciseUuid" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="supersetComment" optional="YES" attributeType="String"/>
         <attribute name="supersetUUID" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>

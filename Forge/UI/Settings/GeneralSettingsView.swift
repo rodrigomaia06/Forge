@@ -133,19 +133,6 @@ struct GeneralSettingsView: View {
         }
     }
 
-    private var routinesSection: some View {
-        Section(header: Text("Routines"), footer: Text("Plan each routine set as a rep range like 6-8, or a single rep target like 8.")) {
-            Picker("Rep target", selection: Binding(
-                get: { settingsStore.routineSingleRepTarget },
-                set: { settingsStore.routineSingleRepTarget = $0 }
-            )) {
-                Text("Range").tag(false)
-                Text("Single").tag(true)
-            }
-            .pickerStyle(.segmented)
-        }
-    }
-
     var body: some View {
         Form {
             appearanceSection
@@ -155,7 +142,6 @@ struct GeneralSettingsView: View {
             restTimerAlertSection
             reminderSection
             workoutNameSection
-            routinesSection
             recordsSection
         }
         .keyboardDoneToolbar()

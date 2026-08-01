@@ -49,7 +49,7 @@ struct WorkoutRoutineExerciseView: View {
             RoutineSetRow(
                 workoutRoutineSet: workoutRoutineSet,
                 index: index,
-                singleTarget: settingsStore.routineSingleRepTarget,
+                singleTarget: workoutRoutineExercise.singleRepTargetValue,
                 isEditable: editMode?.wrappedValue != .active
             )
         }
@@ -102,10 +102,33 @@ struct WorkoutRoutineExerciseView: View {
         }
     }
 
+    private var repTargetSection: some View {
+        Section(footer: Text("Plan this exercise's sets as a rep range like 6-8, or a single rep count like 8.")) {
+            Picker("Rep target", selection: Binding(
+                get: { workoutRoutineExercise.singleRepTargetValue },
+                set: { newValue in
+                    workoutRoutineExercise.singleRepTargetValue = newValue
+                    // Switching to single collapses each set onto its min so the two views agree.
+                    if newValue {
+                        for set in (workoutRoutineExercise.workoutRoutineSets?.array as? [WorkoutRoutineSet] ?? []) {
+                            set.maxRepetitionsValue = set.minRepetitionsValue
+                        }
+                    }
+                    managedObjectContext.saveOrCrash()
+                }
+            )) {
+                Text("Range").tag(false)
+                Text("Single").tag(true)
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             List {
                 if isBodyweight { bodyweightModeSection }
+                repTargetSection
                 Section {
                     ClearableTextField(titleKey: "Comment", text: workoutRoutineExerciseComment, onCommit: { self.adjustAndSaveWorkoutRoutineExerciseCommentInput() })
 
@@ -147,7 +170,7 @@ struct WorkoutRoutineExerciseView: View {
 /// An inline, editable routine set row: the set number and its rep target, entered in place like the live
 /// workout instead of a pushed dragger editor. A single-target style shows one reps field (min = max); a
 /// range style shows min and max. Values commit when a field resigns focus, not per keystroke.
-private struct RoutineSetRow: View {
+struct RoutineSetRow: View {
     @ObservedObject var workoutRoutineSet: WorkoutRoutineSet
     let index: Int
     let singleTarget: Bool

@@ -100,17 +100,6 @@ final class SettingsStore: ObservableObject {
         }
     }
 
-    /// Whether routine sets plan a single rep target instead of a range. Defaults to a range.
-    var routineSingleRepTarget: Bool {
-        get {
-            userDefaults.routineSingleRepTarget
-        }
-        set {
-            self.objectWillChange.send()
-            userDefaults.routineSingleRepTarget = newValue
-        }
-    }
-    
     var autoBackup: Bool {
         get {
             userDefaults.autoBackup
