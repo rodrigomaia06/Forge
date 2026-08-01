@@ -76,35 +76,9 @@ struct TimerBannerView: View {
 
     var body: some View {
         HStack {
-            // Rest timer on the left.
-            Button(action: {
-                self.activeSheet = .restTimer
-            }) {
-                let remainingTime = restTimerStore.restTimerRemainingTime
-                HStack {
-                    Image(systemName: "timer")
-                    if let remainingTime = remainingTime {
-                        Text(restTimerDurationFormatter.string(from: abs(remainingTime.rounded(.up))) ?? "")
-                            .font(Font.body.monospacedDigit())
-                    }
-                }
-                .foregroundColor(remainingTime ?? 0 < 0 ? .forgeDestructive : nil)
-                .padding()
-            }
-
-            Spacer()
-
-            if showEditHint {
-                Text("Editable in Edit mode")
-                    .font(.caption2)
-                    .foregroundColor(.forgeSecondaryLabel)
-                    .transition(.opacity)
-                    .allowsHitTesting(false)
-            }
-
-            // The elapsed-workout stopwatch on the right, matching the Clock/iOS convention. Always
-            // tappable. In edit mode it opens the start/end editor; otherwise a tap shows a brief hint that
-            // the times can only be changed in edit mode.
+            // The elapsed-workout stopwatch on the left. Always tappable. In edit mode it opens the
+            // start/end editor; otherwise a tap shows a brief hint that the times can only be changed in
+            // edit mode.
             Button(action: {
                 if isEditing {
                     self.activeSheet = .editTime
@@ -119,6 +93,32 @@ struct TimerBannerView: View {
                 stopwatchLabel
             }
             .buttonStyle(.plain)
+
+            if showEditHint {
+                Text("Editable in Edit mode")
+                    .font(.caption2)
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
+
+            Spacer()
+
+            // Rest timer on the right.
+            Button(action: {
+                self.activeSheet = .restTimer
+            }) {
+                let remainingTime = restTimerStore.restTimerRemainingTime
+                HStack {
+                    Image(systemName: "timer")
+                    if let remainingTime = remainingTime {
+                        Text(restTimerDurationFormatter.string(from: abs(remainingTime.rounded(.up))) ?? "")
+                            .font(Font.body.monospacedDigit())
+                    }
+                }
+                .foregroundColor(remainingTime ?? 0 < 0 ? .forgeDestructive : nil)
+                .padding()
+            }
         }
         // No fill: the timer row sits on the workout canvas so it reads as part of the header rather
         // than a separate colored band.
