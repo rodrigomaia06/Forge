@@ -176,25 +176,37 @@ final class ScreenshotUITests: XCTestCase {
         // iOS orders last. Matching on the label has failed four runs running,
         // and the hierarchy captured at the last failure showed no alert at
         // all, so position is the surer handle than text.
+        // By coordinate, which is the only handle that works on this one.
+        //
+        // The alert is photographed happily, so it is on screen. Five seconds
+        // later the accessibility hierarchy rooted at the app contains no
+        // alert, no Discard, and nothing that was not already behind it: iOS 26
+        // presents it in a window these queries do not reach. Five runs went
+        // looking for it by label, by role, and by position in app.alerts.
+        //
+        // The offset comes off the capture: the Discard pill centres at
+        // (0.668, 0.552) of the screen.
         let alert = app.alerts.firstMatch
-        if alert.waitForExistence(timeout: 5) {
-            let buttons = alert.buttons
-            let last = buttons.element(boundBy: max(buttons.count - 1, 0))
-            attach(alert.debugDescription, named: "alert-hierarchy")
-            last.tap()
-        } else if !tapAnything(in: app, labelled: "discard") {
-            attach(app.debugDescription, named: "no-alert-hierarchy")
-            XCTFail("Could not dismiss the discard alert")
+        if alert.waitForExistence(timeout: 3) {
+            alert.buttons.element(boundBy: max(alert.buttons.count - 1, 0)).tap()
+        } else {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.668, dy: 0.552))
+                .tap()
+        }
+
+        // Whether that worked is decided by what is on screen next, not by
+        // whether the tap landed.
+        let plansAppeared = app.navigationBars.buttons.element(boundBy: 0)
+            .waitForExistence(timeout: 8)
+        if !plansAppeared || app.buttons["Cancel"].exists {
+            attach(app.debugDescription, named: "still-in-workout-hierarchy")
+            XCTFail("The discard alert did not dismiss")
             return
         }
         capture(named: "workout-plans", after: 2.5)
 
         // Now the plus is really the plus.
         let plus = app.navigationBars.buttons.element(boundBy: 0)
-        guard plus.waitForExistence(timeout: 10) else {
-            XCTFail("No plus on the plans screen")
-            return
-        }
         plus.tap()
         capture(named: "workout-add-menu", after: 1.5)
 
