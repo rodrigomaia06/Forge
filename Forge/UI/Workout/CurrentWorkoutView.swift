@@ -437,7 +437,7 @@ private struct SupersetCard: View {
     var body: some View {
         Section {
             supersetHeader
-            ForEach(Array(exercises.enumerated()), id: \.element.objectID) { index, exercise in
+            ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
                 WorkoutExerciseDetailView(
                     workoutExercise: exercise,
                     embedded: true,

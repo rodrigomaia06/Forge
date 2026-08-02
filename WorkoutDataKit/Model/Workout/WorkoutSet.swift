@@ -11,7 +11,14 @@ import Combine
 
 extension WorkoutSet {
     // WorkoutSet already conforms to Identifiable via Core Data's generated properties.
-    public var id: NSManagedObjectID { self.objectID }
+    /// Identity for SwiftUI, from the uuid rather than the objectID.
+    ///
+    /// A newly inserted object has a temporary objectID that Core Data replaces with a permanent one the
+    /// next time the context saves. Keyed on that, every save gave a set or exercise created during the
+    /// workout a brand new identity: SwiftUI tore the row down and built a fresh one, and a text field
+    /// being edited inside it was destroyed while it was still first responder. That leaves the keyboard
+    /// up with nothing behind it. The uuid is assigned at creation and never changes.
+    public var id: String { uuid?.uuidString ?? objectID.uriRepresentation().absoluteString }
 }
 
 public class WorkoutSet: NSManagedObject, Codable {

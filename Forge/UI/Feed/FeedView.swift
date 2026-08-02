@@ -407,7 +407,7 @@ struct FeedView: View {
                     .font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)
                     .padding(.vertical, Theme.Spacing.m)
             } else {
-                ForEach(list, id: \.objectID) { workout in
+                ForEach(list, id: \.id) { workout in
                     workoutCard(workout)
                 }
             }

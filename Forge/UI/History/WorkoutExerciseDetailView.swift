@@ -362,7 +362,7 @@ struct WorkoutExerciseDetailView : View {
     @ViewBuilder private var historyWorkoutSets: some View {
         // Each past session is its own card so different days read as clearly separate, not one merged
         // list. The date header opens that whole workout in the History tab.
-        ForEach(Array(displayedHistory.enumerated()), id: \.element.objectID) { offset, pastWorkoutExercise in
+        ForEach(Array(displayedHistory.enumerated()), id: \.element.id) { offset, pastWorkoutExercise in
             let name = sessionTitle(for: pastWorkoutExercise.workout)
             let dateText = Workout.dateFormatter.string(from: pastWorkoutExercise.workout?.start, fallback: "Unknown date")
             Section {

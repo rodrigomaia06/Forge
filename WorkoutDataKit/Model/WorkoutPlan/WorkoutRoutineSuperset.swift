@@ -69,10 +69,11 @@ extension WorkoutRoutine {
         case single(WorkoutRoutineExercise)
         case superset(id: UUID, exercises: [WorkoutRoutineExercise])
 
-        public var id: NSManagedObjectID {
+        public var id: String {
             switch self {
-            case .single(let exercise): return exercise.objectID
-            case .superset(_, let exercises): return exercises[0].objectID
+            case .single(let exercise): return exercise.id
+            // A superset always has at least two members, so first is present.
+            case .superset(_, let exercises): return exercises[0].id
             }
         }
 

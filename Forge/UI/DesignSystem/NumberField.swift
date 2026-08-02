@@ -116,6 +116,16 @@ struct RightAlignedNumberField: UIViewRepresentable {
         }
     }
 
+    /// Resigns before the field goes away.
+    ///
+    /// A UITextField removed from the window while it is still first responder leaves UIKit holding a
+    /// keyboard with nothing behind it: it stays up, its frame is recalculated over and over, and taps
+    /// land nowhere. SwiftUI tears a representable down whenever the row's identity changes, so this is
+    /// the backstop for any identity churn that is left.
+    static func dismantleUIView(_ field: UITextField, coordinator: Coordinator) {
+        if field.isFirstResponder { field.resignFirstResponder() }
+    }
+
     /// What the field's placeholder was last built from, so it is only rebuilt when one of them moves.
     struct PlaceholderStyle: Equatable {
         let text: String
