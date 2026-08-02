@@ -126,48 +126,57 @@ final class ScreenshotUITests: XCTestCase {
         }
     }
 
-    /// Starting a workout, then what is reachable inside one: the exercise
-    /// picker, an exercise's own menu, and the discard confirmation.
+    /// The sample data has a workout already running, so the Workout tab opens
+    /// into it rather than into the plans list. That is the order these come
+    /// in: the running workout, the discard confirmation over it, and only
+    /// then, once it is gone, the plans list and the add menu.
+    ///
+    /// The first attempt assumed the tab opened on plans and tapped what it
+    /// thought was a plus. It was the Cancel button, and the capture named
+    /// "add menu" was the discard alert.
     func testCaptureRunningWorkout() throws {
         let app = launch()
         app.tabBars.buttons["Workout"].tap()
 
+        let cancel = app.buttons["Cancel"].firstMatch
+        guard cancel.waitForExistence(timeout: 10) else {
+            XCTFail("No running workout, so the sample data changed shape")
+            return
+        }
+        capture(named: "workout-running", after: 1.5)
+
+        // An exercise's own menu, behind the ellipsis on its card.
+        if let ellipsis = app.buttons.allElementsBoundByIndex.first(where: {
+            $0.isHittable && ($0.label.contains("…") || $0.label.lowercased().contains("more"))
+        }) {
+            ellipsis.tap()
+            capture(named: "exercise-menu", after: 1.5)
+            app.tap()
+        }
+
+        // Editing mode, which changes what every row offers.
+        let edit = app.buttons["Edit"].firstMatch
+        if edit.exists && edit.isHittable {
+            edit.tap()
+            capture(named: "workout-running-editing", after: 1.5)
+            let done = app.buttons["Done"].firstMatch
+            if done.exists && done.isHittable { done.tap() }
+        }
+
+        cancel.tap()
+        capture(named: "workout-discard-alert", after: 1)
+
+        // Through it, to what the tab looks like with nothing running.
+        let discard = app.buttons["Discard"].firstMatch
+        guard discard.waitForExistence(timeout: 5) else { return }
+        discard.tap()
+        capture(named: "workout-plans", after: 2)
+
+        // Now the plus is really the plus.
         let plus = app.navigationBars.buttons.element(boundBy: 0)
         guard plus.waitForExistence(timeout: 10) else { return }
         plus.tap()
-        capture(named: "workout-add-menu-open", after: 1)
-
-        // The menu's first item starts an empty workout.
-        let startEmpty = app.buttons.allElementsBoundByIndex.first {
-            $0.isHittable && $0.label.localizedCaseInsensitiveContains("workout")
-        }
-        guard let startEmpty else { return }
-        startEmpty.tap()
-        capture(named: "workout-running-empty", after: 2)
-
-        // The exercise picker.
-        if let add = app.buttons.allElementsBoundByIndex.first(where: {
-            $0.isHittable && $0.label.localizedCaseInsensitiveContains("exercise")
-        }) {
-            add.tap()
-            capture(named: "exercise-picker", after: 2)
-
-            // A muscle group, then the exercises under it.
-            if tapRow(in: app, at: 1) {
-                capture(named: "exercise-picker-group", after: 1.5)
-            }
-            dismissSheet(app)
-        }
-
-        capture(named: "workout-running", after: 1)
-
-        // The discard confirmation, which is a distinct control worth having.
-        if let cancel = app.buttons.allElementsBoundByIndex.first(where: {
-            $0.isHittable && $0.label.localizedCaseInsensitiveContains("cancel")
-        }) {
-            cancel.tap()
-            capture(named: "workout-discard-alert", after: 1)
-        }
+        capture(named: "workout-add-menu", after: 1.5)
     }
 
     /// Long-pressing a row, which is how the context menus are reached.
