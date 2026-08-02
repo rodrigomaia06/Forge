@@ -75,9 +75,29 @@ final class RestTimerStore: ObservableObject {
         }
     }
     
+    /// Brings the Live Activity and the end-of-rest notification back in line with the timer, or takes
+    /// them down when the rest timer is switched off.
+    ///
+    /// Switching it off hides the timer, it does not stop it. The start and the duration are left alone,
+    /// so the rest is still running underneath and comes back where it should the moment it is switched
+    /// on again. Only the two surfaces go: the activity above the camera, and the alert that would have
+    /// fired.
     private func updateNotification() {
+        guard SettingsStore.shared.showRestTimer else {
+            NotificationManager.shared.removePendingNotificationRequests(withIdentifiers: [.restTimerUp])
+            NotificationManager.shared.removeDeliveredNotification(withIdentifiers: [.restTimerUp])
+            RestTimerLiveActivityController.shared.stop()
+            return
+        }
         NotificationManager.shared.updateRestTimerUpNotificationRequest(remainingTime: self.restTimerRemainingTime, totalTime: self.restTimerDuration)
         RestTimerLiveActivityController.shared.sync(start: self.restTimerStart, end: self.restTimerEnd)
+    }
+
+    /// Re-applies the surfaces after the rest timer is switched on or off, so the change reaches a rest
+    /// that is already running instead of waiting for the next one.
+    func refreshSurfaces() {
+        objectWillChange.send()
+        updateNotification()
     }
 }
 

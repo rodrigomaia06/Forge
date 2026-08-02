@@ -76,6 +76,10 @@ struct GeneralSettingsView: View {
         Section(header: Text("Rest timer"), footer: Text(restTimerFooter)) {
             Toggle("Rest timer", isOn: $settingsStore.showRestTimer)
                 .tint(.forgeSuccess)
+                // Reaches a rest that is already running, rather than waiting for the next one.
+                .onChange(of: settingsStore.showRestTimer) { _, _ in
+                    RestTimerStore.shared.refreshSurfaces()
+                }
             if settingsStore.showRestTimer {
                 Picker("Default rest time", selection: $settingsStore.defaultRestTime) {
                     ForEach(restTimerCustomTimes, id: \.self) { time in
@@ -95,7 +99,7 @@ struct GeneralSettingsView: View {
     private var restTimerFooter: String {
         settingsStore.showRestTimer
             ? "The default is used for exercises without their own rest time (set that on the exercise's page). Keeping the timer running shows the time exceeded in red."
-            : "Off, the timer is not shown during a workout, finishing a set does not start one, and no rest alert arrives."
+            : "Off, the rest timer is hidden: no countdown in the workout, nothing above the camera, and no alert when it ends. It keeps running underneath, so switching it back on picks up where the rest actually is."
     }
 
     @ViewBuilder private var restTimerAlertSection: some View {
