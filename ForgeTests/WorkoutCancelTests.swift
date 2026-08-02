@@ -65,6 +65,18 @@ final class WorkoutCancelTests: XCTestCase {
         XCTAssertEqual(try context.count(for: Workout.currentWorkoutFetchRequest), 0, "\(message): a current workout is still on file")
     }
 
+    /// The sample data must be valid and already saved once it is built.
+    ///
+    /// This is what actually broke discarding in sample-data mode. The fixture was never saved, so
+    /// every sample object stayed a pending insert, and the first save the app performed validated the
+    /// whole fixture and reported any problem in it as a failure of whatever the user had just done.
+    /// A capture run photographed "Couldn't discard workout" for exactly that reason.
+    func testSampleDataIsValidAndSaved() {
+        let context = MockWorkoutData.metric.context
+        XCTAssertNoThrow(try context.save(), "The sample data does not pass validation")
+        XCTAssertFalse(context.hasChanges, "The sample data was left unsaved after being built")
+    }
+
     /// The delete and the save on their own, without the app layer around them. cancel() also cancels
     /// the rest timer and schedules notification work, so if this passes and the cancel() tests fail,
     /// the fault is up there rather than in the model's validation and delete rules.

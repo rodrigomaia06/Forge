@@ -413,20 +413,27 @@ final class ScreenshotUITests: XCTestCase {
     /// The value boxes and the number pad. Typing needs the software keyboard, which is not up on
     /// every runner, so the entry itself is optional while the raised-keyboard shot is not.
     private func captureValueEntry() {
-        let fields = app.textFields.allElementsBoundByIndex.filter(\.isHittable)
-        guard let weight = fields.first else {
+        // Queried fresh at each use, never held across a tap. A bound element captured before the tap
+        // stops resolving once the keyboard changes the hierarchy, and touching a stale one raises
+        // "Failed to get matching snapshot", which ends the test method the same way a failed type does.
+        guard app.textFields.firstMatch.waitForExistence(timeout: 4) else {
             skipped("the set's value fields")
+            return
+        }
+        let weight = app.textFields.element(boundBy: 0)
+        guard weight.exists, weight.isHittable else {
+            skipped("a hittable weight field")
             return
         }
         weight.tap()
         shot("value-field-focused", settle: 1.2)
-        typeIfPossible(into: weight, "60")
+        typeIfPossible(into: app.textFields.element(boundBy: 0), "60")
         shot("value-typed", settle: 0.8)
 
-        if fields.count > 1 {
-            let reps = fields[1]
+        let reps = app.textFields.element(boundBy: 1)
+        if reps.exists, reps.isHittable {
             reps.tap()
-            typeIfPossible(into: reps, "8")
+            typeIfPossible(into: app.textFields.element(boundBy: 1), "8")
             shot("reps-typed", settle: 0.8)
         }
         // Scrolling dismisses the keyboard everywhere in the app.
@@ -737,6 +744,12 @@ final class ScreenshotUITests: XCTestCase {
     private func typeIfPossible(into element: XCUIElement, _ text: String) {
         guard app.keyboards.firstMatch.waitForExistence(timeout: 3) else {
             note("No software keyboard, so \"\(text)\" was not typed.")
+            return
+        }
+        // Resolving an element that no longer matches raises, so existence is checked before anything
+        // else is asked of it.
+        guard element.exists else {
+            note("The field went away before \"\(text)\" could be typed.")
             return
         }
         guard (element.value(forKey: "hasKeyboardFocus") as? Bool) == true else {

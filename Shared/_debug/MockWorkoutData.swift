@@ -10,6 +10,7 @@
 #if DEBUG
 import CoreData
 import WorkoutDataKit
+import os.log
 
 struct MockWorkoutData {
     static let metric = MockWorkoutData(unit: .metric, random: false)
@@ -30,6 +31,26 @@ struct MockWorkoutData {
             currentWorkout = Self.createCurrentWorkout(context: persistentContainer.viewContext, unit: unit)
         }
         Self.createWorkoutPlanStrongLifts(context: context, unit: unit)
+        Self.saveFixture(context: context)
+    }
+
+    /// Saves the sample data as soon as it is built.
+    ///
+    /// Left unsaved, every sample object stays a pending insert, so the first save the app performs
+    /// validates the entire fixture and blames whatever the user just did. Discarding a workout in
+    /// sample-data mode failed exactly that way: the discard itself was fine, but its save validated
+    /// the rest of the sample data and the app reported "Couldn't discard workout".
+    ///
+    /// A failure is logged rather than raised. This is debug-only sample data, and a fixture problem
+    /// should not take the app down on launch; WorkoutCancelTests asserts that it saves cleanly.
+    private static func saveFixture(context: NSManagedObjectContext) {
+        guard context.hasChanges else { return }
+        do {
+            try context.save()
+        } catch {
+            os_log("Sample data did not save: %@", type: .error,
+                   NSManagedObjectContext.descriptionWithDetailedErrors(error: error as NSError))
+        }
     }
     
     var context: NSManagedObjectContext {
