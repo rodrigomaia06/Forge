@@ -18,6 +18,8 @@
 
 import XCTest
 import SwiftUI
+// ExerciseStore and the rest of the model live here, not in the app target.
+import WorkoutDataKit
 @testable import Forge
 
 @MainActor
