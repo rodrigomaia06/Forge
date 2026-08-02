@@ -8,6 +8,19 @@
 
 import SwiftUI
 
+/// The same one-physical-pixel separator used by a native List. Explicit cards use this instead of a
+/// default Divider, whose proposed thickness can differ when it is hosted by a plain VStack.
+struct ForgeListSeparator: View {
+    @Environment(\.displayScale) private var displayScale
+
+    var body: some View {
+        Rectangle()
+            .fill(Color(uiColor: .separator))
+            .frame(height: 1 / displayScale)
+            .accessibilityHidden(true)
+    }
+}
+
 /// Filled accent button for a screen's primary action (e.g. "Start workout").
 struct ForgePrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {

@@ -209,7 +209,7 @@ struct CurrentWorkoutView: View {
                             .padding(.vertical, Theme.Spacing.s)
                     }
                     if !hasWorkoutName, !trimmedWorkoutComment.isEmpty {
-                        Divider().padding(.horizontal, Theme.Spacing.m)
+                        ForgeListSeparator().padding(.horizontal, Theme.Spacing.m)
                     }
                     if !trimmedWorkoutComment.isEmpty {
                         Text(trimmedWorkoutComment)
@@ -603,7 +603,7 @@ private struct SupersetCard: View {
                 supersetHeader
                     .padding(.horizontal, Theme.Spacing.m)
                     .padding(.vertical, Theme.Spacing.s)
-                Divider().padding(.horizontal, Theme.Spacing.m)
+                ForgeListSeparator().padding(.horizontal, Theme.Spacing.m)
                 members
             }
             .forgeCard()

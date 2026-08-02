@@ -78,20 +78,8 @@ struct TimerBannerView: View {
     var body: some View {
         let _ = HangMonitor.note("TimerBannerView.body")
         HStack {
-            // Preserve the original live-workout blueprint: both time readouts are grouped on the right,
-            // with the elapsed-workout stopwatch leading the rest timer.
-            if showEditHint {
-                Text("Editable in Edit mode")
-                    .font(.caption2)
-                    .foregroundColor(.forgeSecondaryLabel)
-                    .transition(.opacity)
-                    .allowsHitTesting(false)
-            }
-
-            Spacer()
-
-            // In edit mode the stopwatch opens the start/end editor; otherwise a tap shows a brief hint
-            // that the times can only be changed in edit mode.
+            // The elapsed-workout stopwatch on the left. In edit mode it opens the start/end editor;
+            // otherwise a tap shows a brief hint that the times can only be changed in edit mode.
             Button(action: {
                 if isEditing {
                     self.activeSheet = .editTime
@@ -106,6 +94,16 @@ struct TimerBannerView: View {
                 stopwatchLabel
             }
             .buttonStyle(.plain)
+
+            if showEditHint {
+                Text("Editable in Edit mode")
+                    .font(.caption2)
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
+
+            Spacer()
 
             // Rest timer on the right, unless it has been turned off in Settings.
             if settingsStore.showRestTimer {

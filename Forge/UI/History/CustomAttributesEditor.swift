@@ -65,7 +65,7 @@ struct CustomAttributesEditor: View {
                     .padding(.horizontal, Theme.Spacing.m)
                     .padding(.vertical, Theme.Spacing.s)
                     .overlay(alignment: .bottom) {
-                        Divider().padding(.horizontal, Theme.Spacing.m)
+                        ForgeListSeparator().padding(.horizontal, Theme.Spacing.m)
                     }
             }
         }

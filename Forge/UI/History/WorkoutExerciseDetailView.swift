@@ -352,7 +352,7 @@ struct WorkoutExerciseDetailView : View {
                     .padding(.horizontal, Theme.Spacing.m)
                     .padding(.vertical, 3)
                     .overlay(alignment: .bottom) {
-                        Divider().padding(.horizontal, Theme.Spacing.m)
+                        ForgeListSeparator().padding(.horizontal, Theme.Spacing.m)
                     }
             } else {
                 row
@@ -509,17 +509,17 @@ struct WorkoutExerciseDetailView : View {
             exerciseHeaderRow
                 .padding(.horizontal, Theme.Spacing.m)
                 .padding(.vertical, Theme.Spacing.s)
-            Divider().padding(.horizontal, Theme.Spacing.m)
+            ForgeListSeparator().padding(.horizontal, Theme.Spacing.m)
             if exerciseIsBodyweight && setsEditable && isAdHocWorkout {
                 bodyweightModeRow
                     .padding(.horizontal, Theme.Spacing.m)
                     .padding(.vertical, Theme.Spacing.xs)
-                Divider().padding(.horizontal, Theme.Spacing.m)
+                ForgeListSeparator().padding(.horizontal, Theme.Spacing.m)
             }
             setsHeader
                 .padding(.horizontal, Theme.Spacing.m)
                 .padding(.vertical, Theme.Spacing.xs)
-            Divider().padding(.horizontal, Theme.Spacing.m)
+            ForgeListSeparator().padding(.horizontal, Theme.Spacing.m)
             currentWorkoutSets
             if setsEditable {
                 addSetButton
