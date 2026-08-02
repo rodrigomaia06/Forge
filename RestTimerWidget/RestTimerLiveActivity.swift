@@ -94,15 +94,20 @@ struct RestTimerLiveActivity: Widget {
                 Image(systemName: "timer")
                     .foregroundStyle(context.isOverrun ? Color.red : Color.white)
             } compactTrailing: {
-                // A fixed width (not maxWidth) keeps the count from collapsing to nothing in the
-                // compact region, while still fitting up to "59:59".
+                // A fixed width (not maxWidth) keeps the count from collapsing to nothing in the space
+                // beside the camera. Two minute digits do not fit at full size, so the text shrinks
+                // rather than being cut off; anything up to 9:59 is unaffected.
                 RestCount(state: context.state, isOverrun: context.isOverrun)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 48)
             } minimal: {
                 RestCount(state: context.state, isOverrun: context.isOverrun)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                     .frame(width: 32)
             }
         }
