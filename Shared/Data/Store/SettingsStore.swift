@@ -181,6 +181,16 @@ final class SettingsStore: ObservableObject {
         }
     }
 
+    var showWorkoutTimer: Bool {
+        get {
+            userDefaults.showWorkoutTimer
+        }
+        set {
+            self.objectWillChange.send()
+            userDefaults.showWorkoutTimer = newValue
+        }
+    }
+
     /// App appearance preference: "system", "light", or "dark".
     var appearance: String {
         get {

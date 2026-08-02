@@ -77,6 +77,16 @@ struct GeneralSettingsView: View {
         }
     }
 
+    private var liveWorkoutSection: some View {
+        Section(
+            header: Text("Live workout"),
+            footer: Text("The elapsed-time counter in the workout header. Turning it off hides it while you train. The workout still records when it started and ended, and you can edit those times through Edit or afterwards in History.")
+        ) {
+            Toggle("Show elapsed time", isOn: $settingsStore.showWorkoutTimer)
+                .tint(.forgeSuccess)
+        }
+    }
+
     private var restTimerSection: some View {
         Section(header: Text("Rest timer"), footer: Text("The default is used for exercises without their own rest time (set that on the exercise's page). Keeping the timer running shows the time exceeded in red.")) {
             Picker("Default rest time", selection: $settingsStore.defaultRestTime) {
@@ -138,6 +148,7 @@ struct GeneralSettingsView: View {
             appearanceSection
             weightPickerSection
             calendarSection
+            liveWorkoutSection
             restTimerSection
             restTimerAlertSection
             reminderSection

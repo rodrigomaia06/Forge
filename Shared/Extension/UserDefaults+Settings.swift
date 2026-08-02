@@ -24,6 +24,7 @@ extension UserDefaults {
         case showRPE
         case restTimerSound
         case restTimerHaptic
+        case showWorkoutTimer
         case appearance
         case showPlanInWorkoutTitle
         case bodyweight
@@ -52,6 +53,13 @@ extension UserDefaults {
     var restTimerHaptic: Bool {
         set { self.set(newValue, forKey: SettingsKeys.restTimerHaptic.rawValue) }
         get { self.value(forKey: SettingsKeys.restTimerHaptic.rawValue) as? Bool ?? true }
+    }
+
+    /// Whether the live workout shows its elapsed-time counter. On by default. The workout records its
+    /// real start and end either way; this only decides whether the running count is on screen.
+    var showWorkoutTimer: Bool {
+        set { self.set(newValue, forKey: SettingsKeys.showWorkoutTimer.rawValue) }
+        get { self.value(forKey: SettingsKeys.showWorkoutTimer.rawValue) as? Bool ?? true }
     }
 
     /// Whether to show the personal-record (estimated 1RM) trophy on qualifying sets.
