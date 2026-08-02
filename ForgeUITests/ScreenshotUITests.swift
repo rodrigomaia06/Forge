@@ -167,16 +167,34 @@ final class ScreenshotUITests: XCTestCase {
         capture(named: "workout-discard-alert", after: 1)
 
         // Through it, to what the tab looks like with nothing running.
-        let discard = app.buttons["Discard"].firstMatch
-        guard discard.waitForExistence(timeout: 5) else { return }
-        discard.tap()
-        capture(named: "workout-plans", after: 2)
+        //
+        // An exact "Discard" lookup found nothing and the run stopped here
+        // three times, filing the alert under every later name. The alert is
+        // not built from plain buttons, so this searches whatever is hittable
+        // for the label instead.
+        guard tapAnything(in: app, labelled: "discard") else {
+            XCTFail("Could not dismiss the discard alert")
+            return
+        }
+        capture(named: "workout-plans", after: 2.5)
 
         // Now the plus is really the plus.
         let plus = app.navigationBars.buttons.element(boundBy: 0)
-        guard plus.waitForExistence(timeout: 10) else { return }
+        guard plus.waitForExistence(timeout: 10) else {
+            XCTFail("No plus on the plans screen")
+            return
+        }
         plus.tap()
         capture(named: "workout-add-menu", after: 1.5)
+
+        // Each item's own screen, which is where routines and plans are made.
+        for item in ["routine", "plan"] {
+            guard tapAnything(in: app, labelled: item) else { continue }
+            capture(named: "new-\(item)", after: 2)
+            dismissSheet(app)
+            let reopen = app.navigationBars.buttons.element(boundBy: 0)
+            if reopen.waitForExistence(timeout: 5) { reopen.tap() }
+        }
     }
 
     /// Long-pressing a row, which is how the context menus are reached.
@@ -196,6 +214,27 @@ final class ScreenshotUITests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// Taps the first hittable element whose label contains [text].
+    ///
+    /// Exact lookups keep missing here: a menu item or an alert button is not
+    /// always a plain button, and the label carries extra text as often as not.
+    private func tapAnything(in app: XCUIApplication, labelled text: String) -> Bool {
+        let queries: [XCUIElementQuery] = [
+            app.buttons, app.staticTexts, app.cells, app.otherElements,
+        ]
+        for query in queries {
+            _ = query.firstMatch.waitForExistence(timeout: 3)
+            let match = query.allElementsBoundByIndex.first {
+                $0.isHittable && $0.label.localizedCaseInsensitiveContains(text)
+            }
+            if let match {
+                match.tap()
+                return true
+            }
+        }
+        return false
+    }
 
     /// Swipes a sheet away, or taps a Done or Cancel if one is offered.
     private func dismissSheet(_ app: XCUIApplication) {
