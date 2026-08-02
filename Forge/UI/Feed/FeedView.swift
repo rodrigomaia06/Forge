@@ -31,10 +31,54 @@ struct FeedView: View {
 
     private struct MonthRef: Equatable { let year: Int; let month: Int }
 
+    /// Calendar.current copies the whole calendar on each access, so this is read once per render
+    /// (into `body`) and passed down, never from inside a loop over the workouts.
     private var cal: Calendar {
         var c = Calendar.current
         c.firstWeekday = settingsStore.firstWeekday
         return c
+    }
+
+    /// One pass over the fetched workouts, so the dashboard walks the history once per render rather
+    /// than once per stat tile, once per month grid (twelve times over with the year open), once more
+    /// for the accessibility labels, and again for the list. With `fetchBatchSize = 20`, each of those
+    /// passes was also a SQL round trip every twenty rows, so the cost grew with the user's history.
+    private struct ActivityIndex {
+        /// Days of the month that have a workout, keyed by `year * 12 + month`.
+        private(set) var daysByMonth: [Int: Set<Int>] = [:]
+        /// Number of workouts in each month, keyed the same way.
+        private(set) var countsByMonth: [Int: Int] = [:]
+        private(set) var thisWeek = 0
+        private(set) var thisMonth = 0
+
+        static func key(year: Int, month: Int) -> Int { year * 12 + month }
+
+        init(workouts: FetchedResults<Workout>, calendar: Calendar, now: Date) {
+            for workout in workouts {
+                guard let start = workout.start else { continue }
+                let parts = calendar.dateComponents([.year, .month, .day], from: start)
+                guard let year = parts.year, let month = parts.month, let day = parts.day else { continue }
+                let key = Self.key(year: year, month: month)
+                daysByMonth[key, default: []].insert(day)
+                countsByMonth[key, default: 0] += 1
+                if calendar.isDate(start, equalTo: now, toGranularity: .weekOfYear) { thisWeek += 1 }
+                if calendar.isDate(start, equalTo: now, toGranularity: .month) { thisMonth += 1 }
+            }
+        }
+
+        func days(inMonthOf date: Date, calendar: Calendar) -> Set<Int> {
+            let parts = calendar.dateComponents([.year, .month], from: date)
+            guard let year = parts.year, let month = parts.month else { return [] }
+            return daysByMonth[Self.key(year: year, month: month)] ?? []
+        }
+
+        func count(year: Int, month: Int) -> Int {
+            countsByMonth[Self.key(year: year, month: month)] ?? 0
+        }
+
+        func days(year: Int, month: Int) -> Set<Int> {
+            daysByMonth[Self.key(year: year, month: month)] ?? []
+        }
     }
 
     init() {
@@ -60,13 +104,15 @@ struct FeedView: View {
     }()
 
     var body: some View {
-        NavigationStack {
+        let calendar = cal
+        let index = ActivityIndex(workouts: workouts, calendar: calendar, now: Date())
+        return NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                     header
-                    statsRow
-                    activitySection
-                    recent
+                    statsRow(index)
+                    activitySection(index, calendar: calendar)
+                    recent(calendar: calendar)
                 }
                 .padding(.horizontal, Theme.Spacing.l)
                 .padding(.top, Theme.Spacing.xxl)
@@ -108,10 +154,10 @@ struct FeedView: View {
 
     // MARK: Quick stats
 
-    private var statsRow: some View {
+    private func statsRow(_ index: ActivityIndex) -> some View {
         HStack(spacing: Theme.Spacing.m) {
-            statTile("\(count(in: .weekOfYear))", "This week")
-            statTile("\(count(in: .month))", "This month")
+            statTile("\(index.thisWeek)", "This week")
+            statTile("\(index.thisMonth)", "This month")
         }
     }
 
@@ -125,13 +171,6 @@ struct FeedView: View {
         .forgeCard(radius: Theme.Radius.medium)
     }
 
-    private func count(in unit: Calendar.Component) -> Int {
-        workouts.filter { w in
-            guard let s = w.start else { return false }
-            return cal.isDate(s, equalTo: Date(), toGranularity: unit)
-        }.count
-    }
-
     // MARK: Activity calendar (month <-> year)
 
     private func toggle(_ f: ActivityFilter) {
@@ -141,16 +180,16 @@ struct FeedView: View {
         }
     }
 
-    private var activitySection: some View {
+    private func activitySection(_ index: ActivityIndex, calendar: Calendar) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             activityHeader
 
             if let zoom = zoomedMonth {
-                monthGrid(firstOfMonth: firstOf(year: zoom.year, month: zoom.month))
+                monthGrid(firstOfMonth: firstOf(year: zoom.year, month: zoom.month), index: index, calendar: calendar)
             } else if calendarExpanded {
-                yearCalendar
+                yearCalendar(index, calendar: calendar)
             } else {
-                monthGrid(firstOfMonth: currentFirstOfMonth)
+                monthGrid(firstOfMonth: currentFirstOfMonth, index: index, calendar: calendar)
             }
         }
     }
@@ -210,21 +249,21 @@ struct FeedView: View {
 
     private var yearString: String { String(cal.component(.year, from: Date())) }
 
-    private var weekdaySymbols: [String] {
-        let syms = cal.veryShortStandaloneWeekdaySymbols
-        let start = cal.firstWeekday - 1
+    private func weekdaySymbols(_ calendar: Calendar) -> [String] {
+        let syms = calendar.veryShortStandaloneWeekdaySymbols
+        let start = calendar.firstWeekday - 1
         return Array(syms[start...] + syms[..<start])
     }
 
-    private func monthGrid(firstOfMonth: Date) -> some View {
-        let firstWeekday = (cal.component(.weekday, from: firstOfMonth) - cal.firstWeekday + 7) % 7
-        let daysInMonth = cal.range(of: .day, in: .month, for: firstOfMonth)?.count ?? 30
-        let active = activeDays(inSameMonthAs: firstOfMonth)
+    private func monthGrid(firstOfMonth: Date, index: ActivityIndex, calendar: Calendar) -> some View {
+        let firstWeekday = (calendar.component(.weekday, from: firstOfMonth) - calendar.firstWeekday + 7) % 7
+        let daysInMonth = calendar.range(of: .day, in: .month, for: firstOfMonth)?.count ?? 30
+        let active = index.days(inMonthOf: firstOfMonth, calendar: calendar)
         let rows = Int(ceil(Double(firstWeekday + daysInMonth) / 7.0))
 
         return VStack(spacing: Theme.Spacing.xs) {
             HStack(spacing: 0) {
-                ForEach(weekdaySymbols, id: \.self) { s in
+                ForEach(weekdaySymbols(calendar), id: \.self) { s in
                     Text(s).font(.system(size: 10, weight: .medium)).foregroundColor(.forgeSecondaryLabel).frame(maxWidth: .infinity)
                 }
             }
@@ -232,7 +271,7 @@ struct FeedView: View {
                 HStack(spacing: 0) {
                     ForEach(0..<7, id: \.self) { col in
                         let day = row * 7 + col - firstWeekday + 1
-                        dayCell(day: day, valid: day >= 1 && day <= daysInMonth, active: active.contains(day), firstOfMonth: firstOfMonth)
+                        dayCell(day: day, valid: day >= 1 && day <= daysInMonth, active: active.contains(day), firstOfMonth: firstOfMonth, calendar: calendar)
                     }
                 }
             }
@@ -240,8 +279,8 @@ struct FeedView: View {
     }
 
     @ViewBuilder
-    private func dayCell(day: Int, valid: Bool, active: Bool, firstOfMonth: Date) -> some View {
-        if valid, let date = cal.date(byAdding: .day, value: day - 1, to: firstOfMonth) {
+    private func dayCell(day: Int, valid: Bool, active: Bool, firstOfMonth: Date, calendar: Calendar) -> some View {
+        if valid, let date = calendar.date(byAdding: .day, value: day - 1, to: firstOfMonth) {
             let isSelected = filter == .day(date)
             Button {
                 toggle(.day(date))
@@ -268,8 +307,8 @@ struct FeedView: View {
     }
 
     // The full year as smaller, tappable month grids (4 per row).
-    private var yearCalendar: some View {
-        let year = cal.component(.year, from: Date())
+    private func yearCalendar(_ index: ActivityIndex, calendar: Calendar) -> some View {
+        let year = calendar.component(.year, from: Date())
         let columns = Array(repeating: GridItem(.flexible(), spacing: Theme.Spacing.m), count: 4)
         return LazyVGrid(columns: columns, alignment: .leading, spacing: Theme.Spacing.l) {
             ForEach(1...12, id: \.self) { month in
@@ -280,36 +319,30 @@ struct FeedView: View {
                         filter = .month(year: year, month: month)
                     }
                 } label: {
-                    miniMonth(year: year, month: month, selected: filter == .month(year: year, month: month))
+                    miniMonth(year: year, month: month, selected: filter == .month(year: year, month: month), index: index, calendar: calendar)
                 }
                 .buttonStyle(.plain)
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(monthAccessibilityLabel(year: year, month: month))
+                .accessibilityLabel(monthAccessibilityLabel(year: year, month: month, index: index, calendar: calendar))
             }
         }
     }
 
-    private func monthAccessibilityLabel(year: Int, month: Int) -> String {
-        let name = cal.standaloneMonthSymbols[month - 1]
-        let count = workouts.filter { w in
-            guard let s = w.start else { return false }
-            return cal.component(.year, from: s) == year && cal.component(.month, from: s) == month
-        }.count
+    private func monthAccessibilityLabel(year: Int, month: Int, index: ActivityIndex, calendar: Calendar) -> String {
+        let name = calendar.standaloneMonthSymbols[month - 1]
+        let count = index.count(year: year, month: month)
         let workoutText = count == 1 ? "1 workout" : "\(count) workouts"
         return "\(name) \(year), \(workoutText)"
     }
 
-    private func miniMonth(year: Int, month: Int, selected: Bool) -> some View {
-        let firstOfMonth = cal.date(from: DateComponents(year: year, month: month, day: 1)) ?? Date()
-        let firstWeekday = (cal.component(.weekday, from: firstOfMonth) - cal.firstWeekday + 7) % 7
-        let daysInMonth = cal.range(of: .day, in: .month, for: firstOfMonth)?.count ?? 30
-        let active: Set<Int> = Set(workouts.compactMap { w in
-            guard let s = w.start, cal.component(.year, from: s) == year, cal.component(.month, from: s) == month else { return nil }
-            return cal.component(.day, from: s)
-        })
+    private func miniMonth(year: Int, month: Int, selected: Bool, index: ActivityIndex, calendar: Calendar) -> some View {
+        let firstOfMonth = calendar.date(from: DateComponents(year: year, month: month, day: 1)) ?? Date()
+        let firstWeekday = (calendar.component(.weekday, from: firstOfMonth) - calendar.firstWeekday + 7) % 7
+        let daysInMonth = calendar.range(of: .day, in: .month, for: firstOfMonth)?.count ?? 30
+        let active = index.days(year: year, month: month)
         let rows = Int(ceil(Double(firstWeekday + daysInMonth) / 7.0))
         return VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            Text(cal.shortStandaloneMonthSymbols[month - 1].uppercased())
+            Text(calendar.shortStandaloneMonthSymbols[month - 1].uppercased())
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(selected ? .forgeLabel : .forgeSecondaryLabel)
             VStack(spacing: 1.5) {
@@ -332,33 +365,28 @@ struct FeedView: View {
             .strokeBorder(selected ? Color.forgeAccent : Color.clear, lineWidth: 1))
     }
 
-    private func activeDays(inSameMonthAs date: Date) -> Set<Int> {
-        Set(workouts.compactMap { w in
-            guard let s = w.start, cal.isDate(s, equalTo: date, toGranularity: .month) else { return nil }
-            return cal.component(.day, from: s)
-        })
-    }
-
     // MARK: Recent workouts (filtered by the selected day / month)
 
-    private var filteredWorkouts: [Workout] {
+    private func filteredWorkouts(calendar: Calendar) -> [Workout] {
         switch filter {
         case .day(let d):
             return workouts.filter { w in
                 guard let s = w.start else { return false }
-                return cal.isDate(s, inSameDayAs: d)
+                return calendar.isDate(s, inSameDayAs: d)
             }
         case .month(let year, let month):
             return workouts.filter { w in
                 guard let s = w.start else { return false }
-                return cal.component(.year, from: s) == year && cal.component(.month, from: s) == month
+                let parts = calendar.dateComponents([.year, .month], from: s)
+                return parts.year == year && parts.month == month
             }
         case nil:
+            // Unfiltered, the list shows only the most recent few, so it never walks the history.
             return Array(workouts.prefix(5))
         }
     }
 
-    private var recent: some View {
+    private func recent(calendar: Calendar) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             HStack {
                 Text(recentTitle).font(.forgeSectionLabel).tracking(2).foregroundColor(.forgeSecondaryLabel)
@@ -373,7 +401,7 @@ struct FeedView: View {
                     .accessibilityLabel("Clear filter")
                 }
             }
-            let list = filteredWorkouts
+            let list = filteredWorkouts(calendar: calendar)
             if list.isEmpty {
                 Text(filter == nil ? "No workouts yet." : "No workouts in this period.")
                     .font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)

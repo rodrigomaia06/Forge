@@ -21,19 +21,28 @@ public class ExerciseStore: ObservableObject {
 
     public let builtInExercises: [Exercise]
 
-    @Published private(set) public var customExercises: [Exercise]
-
-    public var exercises: [Exercise] {
-        builtInExercises + customExercises
+    @Published private(set) public var customExercises: [Exercise] {
+        didSet { rebuildLists() }
     }
 
-    public var shownExercises: [Exercise] {
-        exercises.filter { !isHidden(exercise: $0) }
-    }
+    // These four are stored rather than computed. `exercises` used to be `builtInExercises +
+    // customExercises`, which allocated and copied the whole 217-entry catalog on every read, and
+    // `shownExercises` ran isHidden over all of it. They are read from view bodies and from per-row
+    // helpers at around fifty call sites, several of them once per exercise per render, so the
+    // copying dominated the cost of drawing the dashboard and the live workout. The catalog only
+    // changes when a custom exercise or a per-exercise setting changes, so it is rebuilt there.
 
-    public var hiddenExercises: [Exercise] {
-        exercises.filter { isHidden(exercise: $0) }
-    }
+    /// Every exercise, built-in and custom.
+    public private(set) var exercises: [Exercise] = []
+
+    /// Exercises the user has not hidden.
+    public private(set) var shownExercises: [Exercise] = []
+
+    /// Exercises the user has hidden.
+    public private(set) var hiddenExercises: [Exercise] = []
+
+    /// `exercises` indexed by UUID, for the lookups that happen per row.
+    private var exercisesByUuid: [UUID: Exercise] = [:]
 
     /// Core Data context backing custom exercises. Custom exercises now live in the workout
     /// database (the CustomExercise entity), so a plain database export/import carries them.
@@ -43,7 +52,9 @@ public class ExerciseStore: ObservableObject {
 
     /// Cached per-exercise settings (rest time + hidden) keyed by exercise UUID, so the
     /// frequently-called isHidden/restTime reads don't fetch from Core Data per exercise.
-    private var exerciseSettings: [UUID: (restTime: TimeInterval?, hidden: Bool)]
+    private var exerciseSettings: [UUID: (restTime: TimeInterval?, hidden: Bool)] {
+        didSet { rebuildLists() }
+    }
 
     public init(builtInExercisesURL: URL = ExerciseStore.defaultBuiltInExercisesURL, context: NSManagedObjectContext? = nil) {
         self.context = context
@@ -51,6 +62,24 @@ public class ExerciseStore: ObservableObject {
         customExercises = Self.loadCustomExercises(context: context)
         exerciseSettings = Self.loadExerciseSettings(context: context)
         assert(!customExercises.contains { !$0.isCustom }, "Loaded custom exercise that is not custom.")
+        // A property observer does not fire during init, so the first build is explicit.
+        rebuildLists()
+    }
+
+    private func rebuildLists() {
+        exercises = builtInExercises + customExercises
+        exercisesByUuid = Dictionary(exercises.map { ($0.uuid, $0) }, uniquingKeysWith: { _, latest in latest })
+        var shown = [Exercise]()
+        var hidden = [Exercise]()
+        for exercise in exercises {
+            if exerciseSettings[exercise.uuid]?.hidden ?? false {
+                hidden.append(exercise)
+            } else {
+                shown.append(exercise)
+            }
+        }
+        shownExercises = shown
+        hiddenExercises = hidden
     }
 
     private static func loadBuiltInExercises(builtInExercisesURL: URL?) -> [Exercise] {
@@ -160,7 +189,7 @@ extension ExerciseStore {
 // MARK: - Find
 extension ExerciseStore {
     public func find(with uuid: UUID) -> Exercise? {
-        Self.find(in: exercises, with: uuid)
+        exercisesByUuid[uuid]
     }
 
     public static func find(in exercises: [Exercise], with uuid: UUID?) -> Exercise? {
