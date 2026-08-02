@@ -411,6 +411,7 @@ struct CurrentWorkoutView: View {
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .onTapGesture {
+                        HangMonitor.note("workout canvas keyboard dismissed")
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     }
             )

@@ -37,15 +37,18 @@ extension View {
             // Hide the system grouped background and use the dashboard canvas, so every screen shares
             // the same near-black instead of the system's pure-black grouped background.
             //
-            // Scrolling dismisses the keyboard again. This was turned off while the freeze was being
-            // chased, on the theory that resigning the first responder mid-scroll was wedging UIKit. The
-            // cause turned out to be elsewhere: a set's SwiftUI identity came from its Core Data
-            // objectID, which changes the first time a newly created object is saved, so the row holding
-            // the focused field was destroyed under it. Scrolling was never the problem, and without it
-            // the only way out of a number pad was the Done bar.
+            // Do not make a List pan resign its focused field. All three available modes have now been
+            // tested on device: `.interactively` froze, `.immediately` still produced two keyboard-hide
+            // transitions about 17ms apart and then permanently blocked the main thread, and `.never`
+            // removes that responder transition from the scroll gesture entirely. This persists with a
+            // native SwiftUI TextField, stable row identity, and no Core Data change after focus ends, so
+            // it is independent of the field wrapper and persistence path.
+            //
+            // Number pads still have the screen-level Done toolbar, and the live workout can dismiss one
+            // with an explicit canvas tap. Scrolling itself only scrolls.
             listStyle(.insetGrouped)
                 .scrollContentBackground(.hidden)
-                .scrollDismissesKeyboard(.immediately)
+                .scrollDismissesKeyboard(.never)
                 .background(Color.forgeBackground.ignoresSafeArea())
         } else if #available(iOS 14.0, *) {
             listStyle(InsetGroupedListStyle())
@@ -257,9 +260,8 @@ extension View {
     /// tap. That recognizer was set to recognize simultaneously with every UIKit gesture (the navigation
     /// interactive pop, sheet-dismiss drag, scroll pan, the text system's own gestures), which can wedge
     /// UIKit's gesture arbitration and leave the whole UI unresponsive to touch while timers keep running,
-    /// recoverable only by force-quit. The editor screens are Lists with `.scrollDismissesKeyboard`, so a
-    /// drag dismisses the keyboard natively; the only lost behavior is dismissing by tapping empty,
-    /// non-scrolling space. Kept as a no-op so existing call sites are unaffected.
+    /// recoverable only by force-quit. Kept as a no-op so existing call sites are unaffected; screens that
+    /// need background-tap dismissal install it on their own canvas rather than on the window.
     func dismissesKeyboardOnBackgroundTap() -> some View {
         self
     }
