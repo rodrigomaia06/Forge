@@ -5,6 +5,11 @@
 # the shared framework (WorkoutDataKit). No paid entitlements (App Group / HealthKit /
 # iCloud / Siri) are declared. The Apple Watch app, Siri-intent extensions, and old widget
 # have been removed. A rest-timer Live Activity may be added later as the one extension.
+#
+# The one entitlement declared is Time Sensitive Notifications, which Apple lists as available to
+# free Apple Account holders as well as paid program members. It lets the rest-timer alert arrive
+# during a Focus, and only when the user turns that on in Settings. If a signing setup drops it, iOS
+# delivers the alert at the normal level rather than failing.
 
 name: Forge
 
@@ -58,6 +63,10 @@ targets:
         INFOPLIST_FILE: Forge/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: "YES"
+    entitlements:
+      path: Forge/Forge.entitlements
+      properties:
+        com.apple.developer.usernotifications.time-sensitive: true
     sources:
       - path: Forge
         excludes:

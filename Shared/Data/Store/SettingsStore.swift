@@ -181,6 +181,16 @@ final class SettingsStore: ObservableObject {
         }
     }
 
+    var restTimerBreaksThroughFocus: Bool {
+        get {
+            userDefaults.restTimerBreaksThroughFocus
+        }
+        set {
+            self.objectWillChange.send()
+            userDefaults.restTimerBreaksThroughFocus = newValue
+        }
+    }
+
     /// App appearance preference: "system", "light", or "dark".
     var appearance: String {
         get {
