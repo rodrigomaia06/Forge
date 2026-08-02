@@ -15,6 +15,10 @@ import os.log
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Watches the main thread so a freeze leaves a record behind. A force-quit kills the process
+        // without a crash report, so there is otherwise nothing to read afterwards.
+        HangMonitor.shared.start()
+
         // disable the transparent tab bar in iOS 15, there is a bug and it doesn't work correctly with the TimerBannerView for now
         if #available(iOS 15.0, *) {
             if #unavailable(iOS 16.0) { // fixed in iOS 16

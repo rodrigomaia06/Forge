@@ -247,6 +247,7 @@ struct CurrentWorkoutView: View {
                 adjustAndSaveWorkoutTitleInput()
                 adjustAndSaveWorkoutCommentInput()
             }
+            HangMonitor.note("workout edit mode toggled")
             withAnimation { editMode = editMode == .active ? .inactive : .active }
         }
     }
@@ -360,6 +361,7 @@ struct CurrentWorkoutView: View {
 
                     Section {
                         Button(action: {
+                            HangMonitor.note("add exercise sheet opened")
                             self.activeSheet = .exerciseSelector
                         }) {
                             HStack {

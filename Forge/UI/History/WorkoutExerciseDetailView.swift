@@ -305,8 +305,14 @@ struct WorkoutExerciseDetailView : View {
                 previousText: previousPerformance(atZeroBased: index - 1),
                 weightPlaceholder: targetWeightHint(atZeroBased: index - 1) ?? "",
                 isEditable: setsEditable,
-                onToggleComplete: { toggleComplete(workoutSet) },
-                onMore: { moreSheetSet = workoutSet }
+                onToggleComplete: {
+                    HangMonitor.note("set completion toggled")
+                    toggleComplete(workoutSet)
+                },
+                onMore: {
+                    HangMonitor.note("set options opened")
+                    moreSheetSet = workoutSet
+                }
             )
             // Tighter vertical insets so the set rows sit closer together, less separation between sets.
             .listRowInsets(EdgeInsets(top: 3, leading: Theme.Spacing.m, bottom: 3, trailing: Theme.Spacing.m))
@@ -515,10 +521,16 @@ struct WorkoutExerciseDetailView : View {
     }
 
     @ViewBuilder private var exerciseMenuItems: some View {
-        Button { showExerciseNote = true } label: {
+        Button {
+            HangMonitor.note("exercise note opened")
+            showExerciseNote = true
+        } label: {
             Label(hasExerciseNote ? "Change note" : "Add note", systemImage: "square.and.pencil")
         }
-        Button { showHistory = true } label: {
+        Button {
+            HangMonitor.note("previous sessions opened")
+            showHistory = true
+        } label: {
             Label("Previous sessions", systemImage: "clock.arrow.circlepath")
         }
         if isCurrentWorkout {

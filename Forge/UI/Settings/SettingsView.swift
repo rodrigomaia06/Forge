@@ -29,6 +29,10 @@ struct SettingsView : View {
     
     private var aboutSection: some View {
         Section {
+            NavigationLink(destination: DiagnosticsView()) {
+                Text("Logs")
+            }
+
             NavigationLink(destination: AboutView()) {
                 Text("About")
             }
