@@ -25,6 +25,8 @@ final class RestTimerLiveActivityController {
 
     /// Only touched on `queue`.
     private var activity: Activity<RestTimerAttributes>?
+    /// Fires at the end of the rest to push the overrun. Only touched on `queue`.
+    private var overrunTask: Task<Void, Never>?
 
     /// Match the Live Activity to the current rest timer. Ends it when there is no active timer.
     func sync(start: Date?, end: Date?) {
@@ -47,10 +49,10 @@ final class RestTimerLiveActivityController {
             return
         }
 
-        let state = RestTimerAttributes.ContentState(startDate: start, endDate: endDate)
-        // Stale exactly at the end. The activity stays on screen; the widget reads `isStale` to show the
-        // overrun in red, the same way the app does once the rest time is exceeded. A widget cannot change
-        // its own colour at a future instant, and this is the one signal the system flips for it.
+        let state = RestTimerAttributes.ContentState(startDate: start, endDate: endDate, isOverrun: false)
+        // Stale at the end as a backstop, for when the app is suspended and cannot push anything. On its
+        // own it arrived late: the system re-renders a stale activity on its own schedule, so the switch
+        // to counting up in red could take a while to appear. The push below is what makes it prompt.
         let content = ActivityContent(state: state, staleDate: endDate)
 
         // Adopt an activity this process did not start. `activity` is only set when we create one, so
@@ -74,9 +76,34 @@ final class RestTimerLiveActivityController {
                 os_log("Could not start rest-timer Live Activity: %{public}@", type: .error, error.localizedDescription)
             }
         }
+
+        scheduleOverrun(start: start, endDate: endDate)
+    }
+
+    /// Pushes the overrun the moment the rest ends, so the count flips to red without waiting on the
+    /// system to notice the content has gone stale. Replaced whenever the timer changes, and cancelled
+    /// when it stops, so only the current rest is ever waiting.
+    private func scheduleOverrun(start: Date, endDate: Date) {
+        overrunTask?.cancel()
+        overrunTask = Task { [weak self] in
+            let delay = endDate.timeIntervalSinceNow
+            if delay > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            }
+            guard !Task.isCancelled else { return }
+            self?.queue.async { self?.pushOverrun(start: start, endDate: endDate) }
+        }
+    }
+
+    private func pushOverrun(start: Date, endDate: Date) {
+        guard let activity = activity else { return }
+        let state = RestTimerAttributes.ContentState(startDate: start, endDate: endDate, isOverrun: true)
+        Task { await activity.update(ActivityContent(state: state, staleDate: endDate)) }
     }
 
     private func end() {
+        overrunTask?.cancel()
+        overrunTask = nil
         activity = nil
         for activity in Activity<RestTimerAttributes>.activities {
             Task { await activity.end(nil, dismissalPolicy: .immediate) }

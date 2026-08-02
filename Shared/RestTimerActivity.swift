@@ -16,5 +16,12 @@ struct RestTimerAttributes: ActivityAttributes {
         var startDate: Date
         /// When the rest timer reaches zero.
         var endDate: Date
+        /// Whether the rest time has been passed, so the widget counts upwards in red.
+        ///
+        /// The app pushes this the moment the rest ends, because leaving it to the content's staleness
+        /// date meant waiting on the system's own refresh schedule and the change arrived late. Staleness
+        /// is still set, as a backstop for when the app is suspended and cannot push anything. Defaults
+        /// to false so a state encoded before this existed still decodes.
+        var isOverrun: Bool = false
     }
 }
