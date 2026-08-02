@@ -105,29 +105,40 @@ struct RightAlignedNumberField: UIViewRepresentable {
     final class Coordinator: NSObject, UITextFieldDelegate {
         var parent: RightAlignedNumberField
         var appliedPlaceholder: PlaceholderStyle?
-        private var isPinningCaret = false
         init(_ parent: RightAlignedNumberField) { self.parent = parent }
 
         @objc func editingChanged(_ field: UITextField) {
             parent.text = field.text ?? ""
+            moveCaretToEnd(field)
+        }
+
+        func textFieldDidBeginEditing(_ field: UITextField) {
+            HangMonitor.note("value field focused")
+            moveCaretToEnd(field)
         }
 
         func textFieldDidEndEditing(_ field: UITextField) {
+            HangMonitor.note("value field ended editing")
             parent.text = field.text ?? ""
             parent.onCommit()
         }
 
-        /// Keep the caret at the end so the value is always edited from the right, never mid-number. The
-        /// re-entrancy guard stops our pin and UIKit's own selection installation (tap-to-position, the
-        /// number-pad text interaction, updateUIView's text reset) from overwriting each other's selection
-        /// without end on the main thread, which can wedge when the field lives in a List row.
-        func textFieldDidChangeSelection(_ field: UITextField) {
-            guard !isPinningCaret else { return }
+        /// Keeps the caret at the end, so a value is edited from the right like a calculator.
+        ///
+        /// Driven only by our own edits: focus arriving, and text changing. It used to hook
+        /// `textFieldDidChangeSelection`, which observes UIKit's selection changes and moved the caret
+        /// back in response to them. The re-entrancy guard there only covered a synchronous callback,
+        /// and UIKit re-establishes selection on a later turn of the run loop, by which time the guard
+        /// was down again. The two could then trade selection changes without end and wedge the main
+        /// thread, which is what a recorded freeze looks like: the keyboard resigning, a value
+        /// committing, and then nothing.
+        ///
+        /// The trade-off is that tapping into the middle of an already-focused value now leaves the
+        /// caret where it was put, instead of snapping back to the end.
+        private func moveCaretToEnd(_ field: UITextField) {
             let end = field.endOfDocument
             guard let range = field.textRange(from: end, to: end), field.selectedTextRange != range else { return }
-            isPinningCaret = true
             field.selectedTextRange = range
-            isPinningCaret = false
         }
     }
 }

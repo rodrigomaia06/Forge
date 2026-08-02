@@ -26,7 +26,11 @@ extension WorkoutDataStorage {
         workoutDataStorage.persistentContainer.viewContext.publisher
             .receive(on: RunLoop.main)
             .sink { changes in
+                // Bracketed so a freeze log says whether the main thread died inside this fan-out. A
+                // trail ending on "begin" with no "end" means it never came back out.
+                HangMonitor.note("core data fan-out begin")
                 WorkoutDataStorage.sendObjectsWillChange(changes: changes)
+                HangMonitor.note("core data fan-out end")
             }
             .store(in: &cancellables)
 
