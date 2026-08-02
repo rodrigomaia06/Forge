@@ -42,9 +42,28 @@ struct RightAlignedNumberField: UIViewRepresentable {
         return UIFontMetrics(forTextStyle: .body).scaledFont(for: font)
     }
 
+    /// A Done bar above the keyboard, built here in UIKit rather than with SwiftUI's `.keyboard` toolbar
+    /// placement.
+    ///
+    /// SwiftUI only shows a keyboard toolbar for a field it owns and tracks focus for. This is a
+    /// UITextField behind a UIViewRepresentable, so SwiftUI never knows it is first responder and the
+    /// toolbar never appeared. With the lists no longer dismissing the keyboard when scrolled, that left
+    /// a number pad with no way out at all: it has no return key. An input accessory view belongs to the
+    /// field itself, so it always shows.
+    private static func doneBar(target: Coordinator) -> UIToolbar {
+        let toolbar = UIToolbar()
+        toolbar.items = [
+            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
+            UIBarButtonItem(title: "Done", style: .done, target: target, action: #selector(Coordinator.dismissKeyboard)),
+        ]
+        toolbar.sizeToFit()
+        return toolbar
+    }
+
     func makeUIView(context: Context) -> UITextField {
         let field = PaddedTextField()
         field.delegate = context.coordinator
+        field.inputAccessoryView = Self.doneBar(target: context.coordinator)
         field.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged(_:)), for: .editingChanged)
         field.textAlignment = alignment
         field.font = Self.valueFont()
@@ -110,6 +129,11 @@ struct RightAlignedNumberField: UIViewRepresentable {
         @objc func editingChanged(_ field: UITextField) {
             parent.text = field.text ?? ""
             moveCaretToEnd(field)
+        }
+
+        @objc func dismissKeyboard() {
+            HangMonitor.note("keyboard done tapped")
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
 
         func textFieldDidBeginEditing(_ field: UITextField) {
