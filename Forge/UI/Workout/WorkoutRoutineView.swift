@@ -374,6 +374,137 @@ struct WorkoutRoutineView: View {
     }
 }
 
+/// An inline routine-set row. A single-target exercise shows one reps field; a range shows min and max.
+/// Values commit when a field resigns focus, matching value entry in the live workout.
+private struct RoutineSetRow: View {
+    @ObservedObject var workoutRoutineSet: WorkoutRoutineSet
+    let index: Int
+    let singleTarget: Bool
+    let isEditable: Bool
+    /// Opens this set's type and note from the routine-level sheet presenter.
+    var onOpenOptions: () -> Void = {}
+
+    @State private var minInput = ""
+    @State private var maxInput = ""
+
+    private static let boxHeight: CGFloat = 36
+
+    private func syncFromModel() {
+        minInput = workoutRoutineSet.minRepetitionsValue.map { "\($0)" } ?? ""
+        maxInput = workoutRoutineSet.maxRepetitionsValue.map { "\($0)" } ?? ""
+    }
+
+    private func commitMin() {
+        let value = Int16(minInput.trimmingCharacters(in: .whitespaces))
+        workoutRoutineSet.minRepetitionsValue = value
+        if singleTarget {
+            workoutRoutineSet.maxRepetitionsValue = value
+            maxInput = value.map { "\($0)" } ?? ""
+        }
+        workoutRoutineSet.managedObjectContext?.saveOrCrash()
+    }
+
+    private func commitMax() {
+        workoutRoutineSet.maxRepetitionsValue = Int16(maxInput.trimmingCharacters(in: .whitespaces))
+        workoutRoutineSet.managedObjectContext?.saveOrCrash()
+    }
+
+    private var readText: String {
+        WorkoutRoutineSetCell.repetitionIntervalString(
+            minRepetitions: workoutRoutineSet.minRepetitionsValue.map(Int.init),
+            maxRepetitions: workoutRoutineSet.maxRepetitionsValue.map(Int.init)
+        ) ?? "—"
+    }
+
+    private func field(_ text: Binding<String>, placeholder: String, onCommit: @escaping () -> Void) -> some View {
+        RightAlignedNumberField(text: text, placeholder: placeholder, keyboardType: .numberPad, alignment: .center, onCommit: onCommit)
+            .frame(width: 56, height: Self.boxHeight)
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
+    }
+
+    private var hasNote: Bool { !(workoutRoutineSet.comment ?? "").isEmpty }
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.s) {
+            Button(action: onOpenOptions) {
+                let tint = workoutRoutineSet.tagValue?.color
+                Text("\(index)")
+                    .font(.forgeCaption)
+                    .foregroundColor(tint ?? .forgeSecondaryLabel)
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill((tint ?? .forgeSecondaryLabel).opacity(tint == nil ? 0.14 : 0.22)))
+                    .overlay(alignment: .topTrailing) {
+                        if hasNote {
+                            Circle().fill(Color.forgeAccent).frame(width: 7, height: 7)
+                        }
+                    }
+            }
+            .buttonStyle(.plain)
+            Spacer()
+            if isEditable {
+                if singleTarget {
+                    field($minInput, placeholder: "reps", onCommit: commitMin)
+                } else {
+                    field($minInput, placeholder: "min", onCommit: commitMin)
+                    Text("–").foregroundColor(.forgeSecondaryLabel)
+                    field($maxInput, placeholder: "max", onCommit: commitMax)
+                }
+            } else {
+                Text(readText).font(.forgeValue).foregroundColor(.forgeSecondaryLabel)
+            }
+            Text("reps").font(.forgeCaption).foregroundColor(.forgeSecondaryLabel)
+        }
+        .onAppear { syncFromModel() }
+        .onChange(of: singleTarget) { _, _ in syncFromModel() }
+    }
+}
+
+/// The type and note editor for a routine set. Rep targets remain editable inline in `RoutineSetRow`.
+private struct RoutineSetOptionsView: View {
+    @ObservedObject var workoutRoutineSet: WorkoutRoutineSet
+    @Environment(\.dismiss) private var dismiss
+    @State private var noteInput = ""
+
+    private func saveNote() {
+        let trimmed = noteInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        workoutRoutineSet.comment = trimmed.isEmpty ? nil : trimmed
+        workoutRoutineSet.managedObjectContext?.saveOrCrash()
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section(header: Text("Set type")) {
+                    ForEach(WorkoutSetTag.allCases, id: \.self) { tag in
+                        Button {
+                            workoutRoutineSet.tagValue = workoutRoutineSet.tagValue == tag ? nil : tag
+                            workoutRoutineSet.managedObjectContext?.saveOrCrash()
+                        } label: {
+                            HStack {
+                                Image(systemName: "circle.fill").imageScale(.small).foregroundColor(tag.color)
+                                Text(tag.title.capitalized).foregroundColor(.primary)
+                                Spacer()
+                                if workoutRoutineSet.tagValue == tag {
+                                    Image(systemName: "checkmark").foregroundColor(.secondary)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                Section(header: Text("Note")) {
+                    ClearableTextField(titleKey: "Note", text: $noteInput, onCommit: saveNote)
+                }
+            }
+            .navigationBarTitle("Set", displayMode: .inline)
+            .navigationBarItems(trailing: Button("Done") { saveNote(); dismiss() })
+            .onAppear { noteInput = workoutRoutineSet.comment ?? "" }
+        }
+        .presentationDetents([.medium])
+    }
+}
+
 /// Edits a routine superset's shared note, writing it to every member of the group.
 private struct RoutineSupersetNoteEditor: View {
     @ObservedObject var anchor: WorkoutRoutineExercise
