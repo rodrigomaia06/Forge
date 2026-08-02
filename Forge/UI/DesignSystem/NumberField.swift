@@ -43,7 +43,7 @@ struct RightAlignedNumberField: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> UITextField {
-        HangMonitor.note("NumberField.makeUIView begin")
+        HangMonitor.note(.numberFieldMakeBegin)
         let field = PaddedTextField()
         field.delegate = context.coordinator
         field.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged(_:)), for: .editingChanged)
@@ -54,7 +54,7 @@ struct RightAlignedNumberField: UIViewRepresentable {
         field.tintColor = .label
         field.setContentHuggingPriority(.defaultLow, for: .horizontal)
         field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        HangMonitor.note("NumberField.makeUIView end")
+        HangMonitor.note(.numberFieldMakeEnd)
         return field
     }
 
@@ -71,7 +71,7 @@ struct RightAlignedNumberField: UIViewRepresentable {
     /// Rebuilding `attributedPlaceholder` every time also allocated a new attributed string and
     /// re-laid out the field for a value that almost never changes.
     func updateUIView(_ field: UITextField, context: Context) {
-        if field.isFirstResponder { HangMonitor.note("NumberField.updateUIView focused begin") }
+        if field.isFirstResponder { HangMonitor.note(.numberFieldFocusedUpdateBegin) }
         context.coordinator.parent = self
         if field.text != text { field.text = text }
         if field.keyboardType != keyboardType { field.keyboardType = keyboardType }
@@ -94,7 +94,7 @@ struct RightAlignedNumberField: UIViewRepresentable {
                 ]
             )
         }
-        if field.isFirstResponder { HangMonitor.note("NumberField.updateUIView focused end") }
+        if field.isFirstResponder { HangMonitor.note(.numberFieldFocusedUpdateEnd) }
     }
 
     /// Resigns before the field goes away.
@@ -104,13 +104,13 @@ struct RightAlignedNumberField: UIViewRepresentable {
     /// land nowhere. SwiftUI tears a representable down whenever the row's identity changes, so this is
     /// the backstop for any identity churn that is left.
     static func dismantleUIView(_ field: UITextField, coordinator: Coordinator) {
-        HangMonitor.note("NumberField.dismantleUIView begin")
+        HangMonitor.note(.numberFieldDismantleBegin)
         if field.isFirstResponder {
-            HangMonitor.note("NumberField.dismantleUIView resign begin")
+            HangMonitor.note(.numberFieldDismantleResignBegin)
             field.resignFirstResponder()
-            HangMonitor.note("NumberField.dismantleUIView resign end")
+            HangMonitor.note(.numberFieldDismantleResignEnd)
         }
-        HangMonitor.note("NumberField.dismantleUIView end")
+        HangMonitor.note(.numberFieldDismantleEnd)
     }
 
     /// What the field's placeholder was last built from, so it is only rebuilt when one of them moves.
@@ -128,26 +128,26 @@ struct RightAlignedNumberField: UIViewRepresentable {
         init(_ parent: RightAlignedNumberField) { self.parent = parent }
 
         @objc func editingChanged(_ field: UITextField) {
-            HangMonitor.note("NumberField.editingChanged begin")
+            HangMonitor.note(.numberFieldEditingChangedBegin)
             parent.text = field.text ?? ""
             moveCaretToEnd(field)
-            HangMonitor.note("NumberField.editingChanged end")
+            HangMonitor.note(.numberFieldEditingChangedEnd)
         }
 
         func textFieldDidBeginEditing(_ field: UITextField) {
-            HangMonitor.note("NumberField.didBeginEditing begin")
-            HangMonitor.note("value field focused")
+            HangMonitor.note(.numberFieldDidBeginEditingBegin)
+            HangMonitor.note(.valueFieldFocused)
             moveCaretToEnd(field)
-            HangMonitor.note("NumberField.didBeginEditing end")
+            HangMonitor.note(.numberFieldDidBeginEditingEnd)
         }
 
         func textFieldDidEndEditing(_ field: UITextField) {
-            HangMonitor.note("NumberField.didEndEditing begin")
-            HangMonitor.note("value field ended editing")
+            HangMonitor.note(.numberFieldDidEndEditingBegin)
+            HangMonitor.note(.valueFieldEndedEditing)
             parent.text = field.text ?? ""
             parent.onCommit()
-            HangMonitor.note("value field commit finished")
-            HangMonitor.note("NumberField.didEndEditing end")
+            HangMonitor.note(.valueFieldCommitFinished)
+            HangMonitor.note(.numberFieldDidEndEditingEnd)
         }
 
         /// Keeps the caret at the end, so a value is edited from the right like a calculator.

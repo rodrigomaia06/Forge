@@ -57,7 +57,7 @@ struct CurrentWorkoutView: View {
     }
 
     private func present(_ route: WorkoutExerciseSheetRoute) {
-        HangMonitor.note("workout sheet requested")
+        HangMonitor.note(.workoutSheetRequested)
         activeSheet = .workoutExercise(route)
     }
 
@@ -241,7 +241,7 @@ struct CurrentWorkoutView: View {
 
     private var addExerciseScrollButton: some View {
         Button(action: {
-            HangMonitor.note("add exercise sheet opened")
+            HangMonitor.note(.addExerciseSheetOpened)
             self.activeSheet = .exerciseSelector
         }) {
             HStack {
@@ -297,6 +297,8 @@ struct CurrentWorkoutView: View {
         }
         .scrollDismissesKeyboard(.immediately)
         .background(Color.forgeBackground.ignoresSafeArea())
+        .onAppear { HangMonitor.note(.liveWorkoutScrollAppeared) }
+        .onDisappear { HangMonitor.note(.liveWorkoutScrollDisappeared) }
     }
 
 
@@ -377,7 +379,7 @@ struct CurrentWorkoutView: View {
                 adjustAndSaveWorkoutTitleInput()
                 adjustAndSaveWorkoutCommentInput()
             }
-            HangMonitor.note("workout edit mode toggled")
+            HangMonitor.note(.workoutEditModeToggled)
             withAnimation { editMode = editMode == .active ? .inactive : .active }
         }
     }
@@ -394,10 +396,10 @@ struct CurrentWorkoutView: View {
     var body: some View {
         // Diagnostic, to be removed once the freeze is found: a runaway re-render of this screen is the
         // main thing a freeze log cannot currently see, and it would show here as an unbroken run.
-        let _ = HangMonitor.note("live workout rendered")
+        let _ = HangMonitor.note(.liveWorkoutRendered)
         return NavigationStack {
             VStack(spacing: 0) {
-                let _ = HangMonitor.note("CurrentWorkoutView.header build")
+                let _ = HangMonitor.note(.currentWorkoutHeaderBuilt)
                 // A prominent title header, matching the Workout tab's greeting but a little smaller, so
                 // the active workout reads consistently with the rest of that tab.
                 HStack {
@@ -418,7 +420,7 @@ struct CurrentWorkoutView: View {
                 Divider()
                 if editMode == .active {
                 List {
-                    let _ = HangMonitor.note("CurrentWorkoutView.list build")
+                    let _ = HangMonitor.note(.currentWorkoutListBuilt)
                     // Characteristics. Edit mode always exposes the name and comment. Otherwise a blank
                     // workout shows a single empty name field, editable directly for quick naming, while
                     // a workout that already has a name (its own, or a routine's) shows only the comment
@@ -507,7 +509,7 @@ struct CurrentWorkoutView: View {
 
                     Section {
                         Button(action: {
-                            HangMonitor.note("add exercise sheet opened")
+                            HangMonitor.note(.addExerciseSheetOpened)
                             self.activeSheet = .exerciseSelector
                         }) {
                             HStack {
@@ -535,9 +537,11 @@ struct CurrentWorkoutView: View {
         }
         .sheet(item: $activeSheet) { type in
             self.sheetView(type: type)
-                .onAppear { HangMonitor.note("workout sheet presented") }
-                .onDisappear { HangMonitor.note("workout sheet dismissed") }
+                .onAppear { HangMonitor.note(.workoutSheetPresented) }
+                .onDisappear { HangMonitor.note(.workoutSheetDismissed) }
         }
+        .onAppear { HangMonitor.note(.liveWorkoutAppeared) }
+        .onDisappear { HangMonitor.note(.liveWorkoutDisappeared) }
         .alert("Discard workout?", isPresented: $showingCancelActionSheet) {
             Button("Discard", role: .destructive) { self.cancelWorkout() }
             Button("Keep going", role: .cancel) { }

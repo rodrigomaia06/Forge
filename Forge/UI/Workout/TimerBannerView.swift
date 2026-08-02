@@ -76,7 +76,7 @@ struct TimerBannerView: View {
     }
 
     var body: some View {
-        let _ = HangMonitor.note("TimerBannerView.body")
+        let _ = HangMonitor.note(.timerBody)
         HStack {
             // The elapsed-workout stopwatch on the left. In edit mode it opens the start/end editor;
             // otherwise a tap shows a brief hint that the times can only be changed in edit mode.
@@ -133,9 +133,9 @@ struct TimerBannerView: View {
             }
         }
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
-            HangMonitor.note("TimerBannerView.tick begin")
+            HangMonitor.note(.timerTickBegin)
             self.refresher.refresh()
-            HangMonitor.note("TimerBannerView.tick end")
+            HangMonitor.note(.timerTickEnd)
         }
     }
 }

@@ -88,7 +88,7 @@ struct WorkoutExerciseDetailView : View {
         _historyEditMode = State(initialValue: initialEditMode)
         // Diagnostic: this is where each card's history fetch is built, and a freeze log ended inside a
         // live-workout render with no way to tell which card it had reached.
-        HangMonitor.note("exercise card built")
+        HangMonitor.note(.exerciseCardBuilt)
         _workoutExerciseHistory = FetchRequest(fetchRequest: workoutExercise.historyFetchRequest)
     }
 
@@ -137,8 +137,8 @@ struct WorkoutExerciseDetailView : View {
     }
 
     private func completeSet(_ set: WorkoutSet) {
-        HangMonitor.note("WorkoutExercise.completeSet begin")
-        defer { HangMonitor.note("WorkoutExercise.completeSet end") }
+        HangMonitor.note(.completeSetBegin)
+        defer { HangMonitor.note(.completeSetEnd) }
         guard isCurrentWorkout else { return }
         guard set.weightValue >= 0, set.repetitionsValue >= 0 else { return }
         set.isCompleted = true
@@ -150,10 +150,10 @@ struct WorkoutExerciseDetailView : View {
         // Inside a superset the rest timer holds until the last exercise of the round; other exercises
         // start it on completion as before.
         if workoutExercise.startsRestTimerOnSetCompletion {
-            HangMonitor.note("WorkoutExercise.restTimer update begin")
+            HangMonitor.note(.restTimerUpdateBegin)
             restTimerStore.restTimerDuration = restTimerDuration
             restTimerStore.restTimerStart = Date() // start the rest timer
-            HangMonitor.note("WorkoutExercise.restTimer update end")
+            HangMonitor.note(.restTimerUpdateEnd)
         }
         managedObjectContext.saveOrCrash()
     }
@@ -339,11 +339,11 @@ struct WorkoutExerciseDetailView : View {
                 weightPlaceholder: targetWeightHint(atZeroBased: index - 1) ?? "",
                 isEditable: setsEditable,
                 onToggleComplete: {
-                    HangMonitor.note("set completion toggled")
+                    HangMonitor.note(.setCompletionToggled)
                     toggleComplete(workoutSet)
                 },
                 onMore: {
-                    HangMonitor.note("set options opened")
+                    HangMonitor.note(.setOptionsOpened)
                     present(.setOptions(workoutSet))
                 }
             )
@@ -454,13 +454,13 @@ struct WorkoutExerciseDetailView : View {
 
     @ViewBuilder private var exerciseMenuItems: some View {
         Button {
-            HangMonitor.note("exercise note opened")
+            HangMonitor.note(.exerciseNoteOpened)
             present(.exerciseNote(workoutExercise))
         } label: {
             Label(hasExerciseNote ? "Change note" : "Add note", systemImage: "square.and.pencil")
         }
         Button {
-            HangMonitor.note("previous sessions opened")
+            HangMonitor.note(.previousSessionsOpened)
             present(.history(workoutExercise))
         } label: {
             Label("Previous sessions", systemImage: "clock.arrow.circlepath")
@@ -578,23 +578,27 @@ struct WorkoutExerciseDetailView : View {
     }
 
     var body: some View {
-        if embedded {
-            if scrollCard {
-                if supersetMember != nil {
-                    scrollRows
+        Group {
+            if embedded {
+                if scrollCard {
+                    if supersetMember != nil {
+                        scrollRows
+                    } else {
+                        scrollCardBody
+                    }
+                } else if supersetMember != nil {
+                    // The superset card provides the section and the shared header, so a member contributes
+                    // only its rows.
+                    embeddedContent
                 } else {
-                    scrollCardBody
+                    embeddedBody
                 }
-            } else if supersetMember != nil {
-                // The superset card provides the section and the shared header, so a member contributes
-                // only its rows.
-                embeddedContent
             } else {
-                embeddedBody
+                standaloneBody
             }
-        } else {
-            standaloneBody
         }
+        .onAppear { HangMonitor.note(.exerciseCardAppeared) }
+        .onDisappear { HangMonitor.note(.exerciseCardDisappeared) }
     }
     
     // kind of a hack
@@ -957,7 +961,7 @@ private struct ActiveSetRow: View {
     }
 
     private func commitWeight() {
-        HangMonitor.note("weight committed")
+        HangMonitor.note(.weightCommitted)
         let trimmed = weightInput.trimmingCharacters(in: .whitespaces)
         if isBodyweight {
             // Blank means a pure bodyweight set (added 0), not a normal set: keep addedWeight non-nil so it
@@ -978,7 +982,7 @@ private struct ActiveSetRow: View {
     }
 
     private func commitReps() {
-        HangMonitor.note("reps committed")
+        HangMonitor.note(.repsCommitted)
         let trimmed = repsInput.trimmingCharacters(in: .whitespaces)
         if trimmed.isEmpty {
             workoutSet.repetitions = nil
@@ -1034,8 +1038,8 @@ private struct ActiveSetRow: View {
     /// A set needs a weight and reps before it can be completed. Bodyweight sets can enter 0 for weight;
     /// what is blocked is completing an empty field.
     private func attemptComplete() {
-        HangMonitor.note("ActiveSetRow.attemptComplete begin")
-        defer { HangMonitor.note("ActiveSetRow.attemptComplete end") }
+        HangMonitor.note(.attemptCompleteBegin)
+        defer { HangMonitor.note(.attemptCompleteEnd) }
         if workoutSet.isCompleted {
             onToggleComplete()
             return
@@ -1047,7 +1051,7 @@ private struct ActiveSetRow: View {
         let hasWeight = isBodyweight || !weightInput.trimmingCharacters(in: .whitespaces).isEmpty
         let hasReps = (Int(repsInput.trimmingCharacters(in: .whitespaces)) ?? 0) > 0
         guard hasWeight, hasReps else {
-            HangMonitor.note("complete refused")
+            HangMonitor.note(.completeRefused)
             Haptics.error()
             withAnimation(.easeInOut(duration: 0.15)) {
                 weightInvalid = !hasWeight
@@ -1112,7 +1116,11 @@ private struct ActiveSetRow: View {
             }
         }
         .foregroundColor(workoutSet.isCompleted ? .forgeLabel : .forgeSecondaryLabel)
-        .onAppear { syncInputsFromModel() }
+        .onAppear {
+            HangMonitor.note(.setRowAppeared)
+            syncInputsFromModel()
+        }
+        .onDisappear { HangMonitor.note(.setRowDisappeared) }
         .onChange(of: isEditable) { _, editable in if editable { syncInputsFromModel() } }
         // The values commit when the field resigns focus (onCommit on each setField), not per keystroke, so
         // typing a set does not write to Core Data on every character and re-render the whole live workout.

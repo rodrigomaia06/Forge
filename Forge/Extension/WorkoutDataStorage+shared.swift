@@ -28,9 +28,9 @@ extension WorkoutDataStorage {
             .sink { changes in
                 // Bracketed so a freeze log says whether the main thread died inside this fan-out. A
                 // trail ending on "begin" with no "end" means it never came back out.
-                HangMonitor.note("core data fan-out begin")
+                HangMonitor.note(.coreDataFanOutBegin)
                 WorkoutDataStorage.sendObjectsWillChange(changes: changes)
-                HangMonitor.note("core data fan-out end")
+                HangMonitor.note(.coreDataFanOutEnd)
             }
             .store(in: &cancellables)
 

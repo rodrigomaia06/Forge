@@ -13,8 +13,8 @@ import os.log
 extension NSManagedObjectContext {
     func saveOrCrash () {
         if hasChanges {
-            HangMonitor.note("NSManagedObjectContext.save begin")
-            defer { HangMonitor.note("NSManagedObjectContext.save end") }
+            HangMonitor.note(.contextSaveBegin)
+            defer { HangMonitor.note(.contextSaveEnd) }
             do {
                 try save()
             } catch {

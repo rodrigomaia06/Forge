@@ -126,6 +126,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func sceneWillEnterForeground(_ scene: UIScene) {
+        HangMonitor.note(.sceneWillEnterForeground)
         OSLog.default.trace()
         // Called as the scene transitions from the background to the foreground.
         // Use this method to undo the changes made on entering the background.
@@ -135,6 +136,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func sceneDidEnterBackground(_ scene: UIScene) {
+        HangMonitor.note(.sceneDidEnterBackground)
         // Called as the scene transitions from the foreground to the background.
         // Use this method to save data, release shared resources, and store enough scene-specific state information
         // to restore the scene back to its current state.
@@ -160,7 +162,7 @@ class SceneState: ObservableObject {
     @Published var selectedTabNumber: Int = UserDefaults.standard.object(forKey: SceneState.selectedTabKey) as? Int ?? Tab.workout.rawValue {
         didSet {
             UserDefaults.standard.set(selectedTabNumber, forKey: SceneState.selectedTabKey)
-            HangMonitor.note("tab changed")
+            HangMonitor.note(.tabChanged)
         }
     }
 
