@@ -48,8 +48,18 @@ final class RestTimerLiveActivityController {
         }
 
         let state = RestTimerAttributes.ContentState(startDate: start, endDate: endDate)
-        // Stay valid a little past the end so a just-finished timer still reads 0 rather than vanishing.
-        let content = ActivityContent(state: state, staleDate: endDate.addingTimeInterval(60))
+        // Stale exactly at the end. The activity stays on screen; the widget reads `isStale` to show the
+        // overrun in red, the same way the app does once the rest time is exceeded. A widget cannot change
+        // its own colour at a future instant, and this is the one signal the system flips for it.
+        let content = ActivityContent(state: state, staleDate: endDate)
+
+        // Adopt an activity this process did not start. `activity` is only set when we create one, so
+        // after a relaunch it is nil while a Live Activity from the previous session is still running.
+        // Without this, changing the rest time started a second activity instead of updating the one on
+        // screen, so the adjustment appeared not to apply.
+        if activity == nil {
+            activity = Activity<RestTimerAttributes>.activities.first
+        }
 
         if let activity = activity {
             Task { await activity.update(content) }
