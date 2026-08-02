@@ -83,20 +83,18 @@ final class ScreenshotUITests: XCTestCase {
         let app = launch()
         app.tabBars.buttons["History"].tap()
 
-        let workout = app.cells.element(boundBy: 0)
-        guard workout.waitForExistence(timeout: 10) else {
-            XCTFail("History is empty, so the sample data did not load")
+        // Not app.cells: these rows are not List cells, and querying for one
+        // found nothing, so the taps went nowhere and the detail capture came
+        // back as a second copy of the list.
+        guard tapRow(in: app, at: 0) else {
+            XCTFail("Nothing tappable in History, so the sample data did not load")
             return
         }
-        workout.tap()
-        capture(named: "workout-detail", after: 1)
+        capture(named: "workout-detail", after: 1.5)
 
-        // Tapping a set opens the editor, which is the densest screen in the
-        // app and the one worth having exactly.
-        let set = app.cells.element(boundBy: 2)
-        if set.waitForExistence(timeout: 5) {
-            set.tap()
-            capture(named: "set-editor", after: 1)
+        // A set opens the editor, the densest screen in the app.
+        if tapRow(in: app, at: 1) {
+            capture(named: "set-editor", after: 1.5)
         }
     }
 
@@ -121,7 +119,7 @@ final class ScreenshotUITests: XCTestCase {
     func testCaptureHistoryEditing() throws {
         let app = launch()
         app.tabBars.buttons["History"].tap()
-        let edit = app.navigationBars.buttons["Edit"]
+        let edit = app.buttons["Edit"].firstMatch
         if edit.waitForExistence(timeout: 10) {
             edit.tap()
             capture(named: "history-editing", after: 1)
@@ -129,6 +127,28 @@ final class ScreenshotUITests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// Taps the nth row of whatever the screen is built from.
+    ///
+    /// Which element type a row is depends on how the screen was written, and
+    /// these screens are not uniform. Rather than guess per screen, try each
+    /// kind and take the first that has enough hittable elements.
+    @discardableResult
+    private func tapRow(in app: XCUIApplication, at index: Int) -> Bool {
+        let queries = [app.cells, app.buttons, app.otherElements.matching(
+            NSPredicate(format: "elementType == %d", XCUIElement.ElementType.cell.rawValue)
+        )]
+        for query in queries {
+            _ = query.firstMatch.waitForExistence(timeout: 5)
+            let hittable = (0..<query.count)
+                .map { query.element(boundBy: $0) }
+                .filter(\.isHittable)
+            guard index < hittable.count else { continue }
+            hittable[index].tap()
+            return true
+        }
+        return false
+    }
 
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
