@@ -37,6 +37,11 @@ public class WorkoutExercise: NSManagedObject, Codable {
         // Fault the past sessions in lazily, so opening a workout with several exercises does not
         // materialize every past instance of each exercise up front on the main thread.
         request.fetchBatchSize = 20
+        // Only a handful is ever read: the card shows three past sessions before "Show more", and the
+        // previous-performance column reads the first. Without a limit each exercise in a live workout
+        // holds a controller over that exercise's entire history, and every one of them is rebuilt and
+        // re-run when the tab is returned to.
+        request.fetchLimit = 20
         return request
     }
     

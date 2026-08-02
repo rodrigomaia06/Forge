@@ -68,6 +68,9 @@ struct WorkoutExerciseDetailView : View {
         self.sectionHeader = sectionHeader
         self.supersetMember = supersetMember
         _historyEditMode = State(initialValue: initialEditMode)
+        // Diagnostic: this is where each card's history fetch is built, and a freeze log ended inside a
+        // live-workout render with no way to tell which card it had reached.
+        HangMonitor.note("exercise card built")
         _workoutExerciseHistory = FetchRequest(fetchRequest: workoutExercise.historyFetchRequest)
     }
 

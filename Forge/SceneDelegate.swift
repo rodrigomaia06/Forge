@@ -158,7 +158,10 @@ class SceneState: ObservableObject {
 
     // Persisted so a relaunch (including after the app is killed mid-workout) returns to the same tab.
     @Published var selectedTabNumber: Int = UserDefaults.standard.object(forKey: SceneState.selectedTabKey) as? Int ?? Tab.workout.rawValue {
-        didSet { UserDefaults.standard.set(selectedTabNumber, forKey: SceneState.selectedTabKey) }
+        didSet {
+            UserDefaults.standard.set(selectedTabNumber, forKey: SceneState.selectedTabKey)
+            HangMonitor.note("tab changed")
+        }
     }
 
     /// A finished workout the History tab should open. Set this together with `selectedTab = .history`
