@@ -38,14 +38,20 @@ extension View {
             // the same near-black instead of the system's pure-black grouped background. Scrolling
             // dismisses the keyboard everywhere these lists are used.
             //
-            // .immediately, not .interactively: the interactive mode installs a pan gesture that
-            // coordinates keyboard dismissal with the scroll, and on a list that hosts a UITextField
-            // (RightAlignedNumberField) that gesture can wedge UIKit's gesture arbitration into a hard
-            // freeze (touch dead, timers running, force-quit only) on scroll. This list style is shared by
-            // every screen, so the safer mode is applied app-wide.
+            // .never, after .interactively and then .immediately both left the app freezing.
+            //
+            // Every recorded freeze is preceded by two keyboardWillHide about fifteen milliseconds
+            // apart: the focused field resigning, and the scroll dismissing the keyboard, landing in the
+            // same turn of the run loop. The hang starts in the update that follows. Both earlier modes
+            // install machinery that resigns the first responder out from under a list that hosts a
+            // UITextField, and this is the third freeze in a row that ends the same way.
+            //
+            // Scrolling no longer dismisses the keyboard, so `keyboardDoneToolbar()` now puts a real Done
+            // above it. A number pad has no return key, so that button is the way out; a visible control
+            // is also a better answer than a gesture nothing on screen advertises.
             listStyle(.insetGrouped)
                 .scrollContentBackground(.hidden)
-                .scrollDismissesKeyboard(.immediately)
+                .scrollDismissesKeyboard(.never)
                 .background(Color.forgeBackground.ignoresSafeArea())
         } else if #available(iOS 14.0, *) {
             listStyle(InsetGroupedListStyle())
@@ -266,10 +272,19 @@ extension View {
 
     /// A single "Done" above the keyboard that dismisses whatever field is focused (numbers or text).
     /// Apply once per screen, not per field, or several Done buttons stack up.
+    ///
+    /// This is now the way out of a number pad, which has no return key of its own: the lists no longer
+    /// dismiss the keyboard when scrolled, because that is where the freezes were starting.
     func keyboardDoneToolbar() -> some View {
-        // No keyboard toolbar button: the number pads are dismissed by scrolling the list (the lists use
-        // scrollDismissesKeyboard) or tapping away. Kept as a modifier so call sites stay put if a button
-        // is ever reintroduced.
-        self
+        toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    HangMonitor.note("keyboard done tapped")
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+                .fontWeight(.semibold)
+            }
+        }
     }
 }

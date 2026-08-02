@@ -872,6 +872,7 @@ private struct ActiveSetRow: View {
         let hasWeight = isBodyweight || !weightInput.trimmingCharacters(in: .whitespaces).isEmpty
         let hasReps = (Int(repsInput.trimmingCharacters(in: .whitespaces)) ?? 0) > 0
         guard hasWeight, hasReps else {
+            HangMonitor.note("complete refused")
             Haptics.error()
             withAnimation(.easeInOut(duration: 0.15)) {
                 weightInvalid = !hasWeight
