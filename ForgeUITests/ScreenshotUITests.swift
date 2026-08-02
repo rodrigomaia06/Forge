@@ -126,7 +126,79 @@ final class ScreenshotUITests: XCTestCase {
         }
     }
 
+    /// Starting a workout, then what is reachable inside one: the exercise
+    /// picker, an exercise's own menu, and the discard confirmation.
+    func testCaptureRunningWorkout() throws {
+        let app = launch()
+        app.tabBars.buttons["Workout"].tap()
+
+        let plus = app.navigationBars.buttons.element(boundBy: 0)
+        guard plus.waitForExistence(timeout: 10) else { return }
+        plus.tap()
+        capture(named: "workout-add-menu-open", after: 1)
+
+        // The menu's first item starts an empty workout.
+        let startEmpty = app.buttons.allElementsBoundByIndex.first {
+            $0.isHittable && $0.label.localizedCaseInsensitiveContains("workout")
+        }
+        guard let startEmpty else { return }
+        startEmpty.tap()
+        capture(named: "workout-running-empty", after: 2)
+
+        // The exercise picker.
+        if let add = app.buttons.allElementsBoundByIndex.first(where: {
+            $0.isHittable && $0.label.localizedCaseInsensitiveContains("exercise")
+        }) {
+            add.tap()
+            capture(named: "exercise-picker", after: 2)
+
+            // A muscle group, then the exercises under it.
+            if tapRow(in: app, at: 1) {
+                capture(named: "exercise-picker-group", after: 1.5)
+            }
+            dismissSheet(app)
+        }
+
+        capture(named: "workout-running", after: 1)
+
+        // The discard confirmation, which is a distinct control worth having.
+        if let cancel = app.buttons.allElementsBoundByIndex.first(where: {
+            $0.isHittable && $0.label.localizedCaseInsensitiveContains("cancel")
+        }) {
+            cancel.tap()
+            capture(named: "workout-discard-alert", after: 1)
+        }
+    }
+
+    /// Long-pressing a row, which is how the context menus are reached.
+    func testCaptureContextMenus() throws {
+        let app = launch()
+        app.tabBars.buttons["History"].tap()
+
+        let queries = [app.cells, app.buttons]
+        for query in queries {
+            _ = query.firstMatch.waitForExistence(timeout: 5)
+            guard let row = query.allElementsBoundByIndex.first(where: \.isHittable)
+            else { continue }
+            row.press(forDuration: 1.2)
+            capture(named: "history-context-menu", after: 1.5)
+            break
+        }
+    }
+
     // MARK: - Helpers
+
+    /// Swipes a sheet away, or taps a Done or Cancel if one is offered.
+    private func dismissSheet(_ app: XCUIApplication) {
+        for label in ["Done", "Cancel", "Close"] {
+            let button = app.buttons[label].firstMatch
+            if button.exists && button.isHittable {
+                button.tap()
+                return
+            }
+        }
+        app.swipeDown(velocity: .fast)
+    }
 
     /// Taps the nth row of whatever the screen is built from.
     ///
