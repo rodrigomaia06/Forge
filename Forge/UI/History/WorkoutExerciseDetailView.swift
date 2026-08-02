@@ -902,17 +902,19 @@ private struct ActiveSetRow: View {
             // Blank means a pure bodyweight set (added 0), not a normal set: keep addedWeight non-nil so it
             // stays bodyweight. The sign comes from the exercise's added/assisted mode.
             if trimmed.isEmpty {
-                workoutSet.addedWeightValue = 0
+                if workoutSet.addedWeightValue != 0 { workoutSet.addedWeightValue = 0 }
             } else if let number = Self.weightFormatter.number(from: trimmed) {
                 let magnitude = max(0, min(WeightUnit.convert(weight: number.doubleValue, from: weightUnit, to: .metric), WorkoutSet.MAX_WEIGHT))
-                workoutSet.addedWeightValue = assisted ? -magnitude : magnitude
+                let value = assisted ? -magnitude : magnitude
+                if workoutSet.addedWeightValue != value { workoutSet.addedWeightValue = value }
             }
             return
         }
         if trimmed.isEmpty {
-            workoutSet.weight = nil
+            if workoutSet.weight != nil { workoutSet.weight = nil }
         } else if let number = Self.weightFormatter.number(from: trimmed) {
-            workoutSet.weightValue = max(0, min(WeightUnit.convert(weight: number.doubleValue, from: weightUnit, to: .metric), WorkoutSet.MAX_WEIGHT))
+            let value = max(0, min(WeightUnit.convert(weight: number.doubleValue, from: weightUnit, to: .metric), WorkoutSet.MAX_WEIGHT))
+            if workoutSet.weightValue != value { workoutSet.weightValue = value }
         }
     }
 
@@ -920,9 +922,10 @@ private struct ActiveSetRow: View {
         HangMonitor.note("reps committed")
         let trimmed = repsInput.trimmingCharacters(in: .whitespaces)
         if trimmed.isEmpty {
-            workoutSet.repetitions = nil
+            if workoutSet.repetitions != nil { workoutSet.repetitions = nil }
         } else if let value = Int(trimmed) {
-            workoutSet.repetitionsValue = Int16(max(0, min(value, Int(WorkoutSet.MAX_REPETITIONS))))
+            let repetitions = Int16(max(0, min(value, Int(WorkoutSet.MAX_REPETITIONS))))
+            if workoutSet.repetitionsValue != repetitions { workoutSet.repetitionsValue = repetitions }
         }
     }
 

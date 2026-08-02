@@ -278,6 +278,45 @@ final class ScreenshotUITests: XCTestCase {
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 3))
     }
 
+    /// Reproduces the current-device trace: complete a set while a value field owns the keyboard, then
+    /// resign it. The old UIKit-backed field could wedge the main thread shortly after its delegate
+    /// callback returned, so wait beyond the in-app monitor's three-second threshold before proving that
+    /// another field can still take focus.
+    func testValueFieldTeardownSurvivesSetCompletion() throws {
+        continueAfterFailure = false
+        launch("value-field-teardown")
+        selectTab("Workout")
+
+        XCTAssertTrue(app.buttons["Cancel"].firstMatch.waitForExistence(timeout: 10))
+        let firstField = app.textFields.firstMatch
+        XCTAssertTrue(firstField.waitForExistence(timeout: 5))
+        firstField.tap()
+        guard app.keyboards.firstMatch.waitForExistence(timeout: 3) else {
+            throw XCTSkip("The simulator did not show a software keyboard.")
+        }
+
+        let complete = app.buttons["Complete set"].firstMatch
+        XCTAssertTrue(complete.waitForExistence(timeout: 5))
+        XCTAssertTrue(complete.isHittable)
+        complete.tap()
+
+        let done = app.buttons["Done"].firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 3))
+        done.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 3))
+
+        let stayedResponsive = expectation(description: "Main thread stays responsive past hang threshold")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { stayedResponsive.fulfill() }
+        wait(for: [stayedResponsive], timeout: 5)
+
+        let fields = app.textFields
+        XCTAssertGreaterThan(fields.count, 1)
+        let secondField = fields.element(boundBy: 1)
+        XCTAssertTrue(secondField.waitForExistence(timeout: 3))
+        secondField.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 3))
+    }
+
     /// The Workout tab with nothing running: the plans list, the add menu, and the routine and plan
     /// editors reached from it.
     func testWorkoutPlans() throws {

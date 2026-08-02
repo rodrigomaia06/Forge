@@ -2,28 +2,18 @@
 //  NumberField.swift
 //  Forge
 //
-//  A numeric entry field that is always edited from the right, like a calculator: the value is
-//  right-aligned and the caret is pinned to the end so digits can only be added or removed at the
-//  right. The whole box is the tap target (a UITextField fills its frame), and the placeholder (used
-//  for a planned rep range) shows inside the box when it is empty.
+//  A native numeric entry field that keeps raw text while it is being edited. The whole box is the
+//  tap target, and the placeholder (used for a planned rep range) shows inside it when it is empty.
 //
 
 import SwiftUI
 import UIKit
 
-private final class PaddedTextField: UITextField {
-    private let inset = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
-    override func textRect(forBounds bounds: CGRect) -> CGRect { bounds.inset(by: inset) }
-    override func editingRect(forBounds bounds: CGRect) -> CGRect { bounds.inset(by: inset) }
-    override func placeholderRect(forBounds bounds: CGRect) -> CGRect { bounds.inset(by: inset) }
-}
-
-struct RightAlignedNumberField: UIViewRepresentable {
+struct RightAlignedNumberField: View {
     @Binding var text: String
     var placeholder: String = ""
     var keyboardType: UIKeyboardType = .decimalPad
-    /// Centered in the compact set boxes; trailing in labeled form rows. The caret is pinned to the end
-    /// either way, so the value is always edited from the right.
+    /// Centered in the compact set boxes; trailing in labeled form rows.
     var alignment: NSTextAlignment = .center
     /// The compact set boxes use a small placeholder (the rep-range hint); form rows use the full value
     /// size so a "0" placeholder isn't tiny.
@@ -32,164 +22,92 @@ struct RightAlignedNumberField: UIViewRepresentable {
     /// instead of on every keystroke, which keeps a single character from churning the whole screen.
     var onCommit: () -> Void = {}
 
-    private static func valueFont() -> UIFont {
+    @FocusState private var isFocused: Bool
+    @State private var committedCurrentFocus = false
+
+    private static func valueFont() -> Font {
         // Matches `.forgeValue`: rounded, monospaced digits, at the body text size, scaled for Dynamic
-        // Type (with adjustsFontForContentSizeCategory the field keeps up with the current size).
+        // Type.
         var font = UIFont.monospacedDigitSystemFont(ofSize: 17, weight: .regular)
         if let descriptor = font.fontDescriptor.withDesign(.rounded) {
             font = UIFont(descriptor: descriptor, size: 17)
         }
-        return UIFontMetrics(forTextStyle: .body).scaledFont(for: font)
+        return Font(UIFontMetrics(forTextStyle: .body).scaledFont(for: font))
     }
 
-    /// A Done bar above the keyboard, built here in UIKit rather than with SwiftUI's `.keyboard` toolbar
-    /// placement.
-    ///
-    /// SwiftUI only shows a keyboard toolbar for a field it owns and tracks focus for. This is a
-    /// UITextField behind a UIViewRepresentable, so SwiftUI never knows it is first responder and the
-    /// toolbar never appeared. With the lists no longer dismissing the keyboard when scrolled, that left
-    /// a number pad with no way out at all: it has no return key. An input accessory view belongs to the
-    /// field itself, so it always shows.
-    private static func doneBar(target: Coordinator) -> UIToolbar {
-        // An explicit frame, not a bare UIToolbar() plus sizeToFit(). Sized from nothing, the bar has no
-        // settled height, and UIKit recalculates the keyboard frame each time it tries: a freeze log
-        // caught keyboardWillShow firing three and four times within a few milliseconds, with no hide
-        // and no focus change between them.
-        let toolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 44))
-        toolbar.autoresizingMask = .flexibleWidth
-        // A bar of its own, rather than a control floating on the content. Without a configured
-        // appearance the bar draws nothing, so the button sat over the list with no separation from the
-        // keyboard beneath it.
-        let appearance = UIToolbarAppearance()
-        appearance.configureWithDefaultBackground()
-        toolbar.standardAppearance = appearance
-        toolbar.compactAppearance = appearance
-        // Plain and in the label colour. The .done style renders as a filled tinted capsule, which came
-        // out as a blue pill: the wrong weight for this, and the only blue in an otherwise monochrome app.
-        toolbar.tintColor = .label
-        toolbar.items = [
-            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
-            UIBarButtonItem(title: "Done", style: .plain, target: target, action: #selector(Coordinator.dismissKeyboard)),
-        ]
-        return toolbar
+    private var textAlignment: TextAlignment {
+        switch alignment {
+        case .left, .natural, .justified: return .leading
+        case .right: return .trailing
+        default: return .center
+        }
     }
 
-    func makeUIView(context: Context) -> UITextField {
-        let field = PaddedTextField()
-        field.delegate = context.coordinator
-        field.inputAccessoryView = Self.doneBar(target: context.coordinator)
-        field.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged(_:)), for: .editingChanged)
-        field.textAlignment = alignment
-        field.font = Self.valueFont()
-        field.adjustsFontForContentSizeCategory = true
-        field.textColor = .label
-        field.tintColor = .label
-        field.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        return field
+    private func commitFocusIfNeeded() {
+        guard !committedCurrentFocus else { return }
+        committedCurrentFocus = true
+        HangMonitor.note("value field ended editing")
+        let commit = onCommit
+        // Focus changes arrive from the text system. Persist on the next main-queue turn so a Core Data
+        // publication cannot re-evaluate the List while the keyboard is still finishing responder
+        // teardown.
+        DispatchQueue.main.async {
+            commit()
+            HangMonitor.note("value field commit finished")
+        }
     }
 
-    /// Assigns only what actually changed.
-    ///
-    /// Both of these used to be written on every SwiftUI update, and an update here is not rare:
-    /// committing a value in one set row publishes a Core Data change that fans out across the whole
-    /// workout, so every field in every row is updated, the focused one included. Assigning
-    /// `keyboardType` to a field that is first responder makes UIKit reload its input views, which
-    /// posts a keyboard notification, which drives another update. A recorded freeze caught the shape
-    /// of it: three keyboardWillShow in a row with no hide between them, two hides 18ms apart, and
-    /// then the main thread stopped answering.
-    ///
-    /// Rebuilding `attributedPlaceholder` every time also allocated a new attributed string and
-    /// re-laid out the field for a value that almost never changes.
-    func updateUIView(_ field: UITextField, context: Context) {
-        context.coordinator.parent = self
-        if field.text != text { field.text = text }
-        if field.keyboardType != keyboardType { field.keyboardType = keyboardType }
-
-        // The placeholder (a planned rep range like "8-12") is smaller than the value so it fits the
-        // narrow box and reads as a hint rather than an entered number. The content size category is
-        // part of the identity so it still follows Dynamic Type.
-        let wanted = PlaceholderStyle(
-            text: placeholder,
-            small: smallPlaceholder,
-            contentSize: field.traitCollection.preferredContentSizeCategory
+    var body: some View {
+        TextField(
+            "",
+            text: $text,
+            prompt: Text(placeholder)
+                .font(smallPlaceholder ? .footnote : Self.valueFont())
+                .foregroundColor(.forgeSecondaryLabel)
         )
-        if context.coordinator.appliedPlaceholder != wanted {
-            context.coordinator.appliedPlaceholder = wanted
-            field.attributedPlaceholder = NSAttributedString(
-                string: placeholder,
-                attributes: [
-                    .font: smallPlaceholder ? UIFont.preferredFont(forTextStyle: .footnote) : Self.valueFont(),
-                    .foregroundColor: UIColor.secondaryLabel,
-                ]
-            )
+        .font(Self.valueFont())
+        .foregroundColor(.forgeLabel)
+        .tint(.forgeLabel)
+        .keyboardType(keyboardType)
+        .multilineTextAlignment(textAlignment)
+        .padding(.horizontal, 8)
+        .focused($isFocused)
+        .onChange(of: isFocused) { wasFocused, focused in
+            if focused {
+                committedCurrentFocus = false
+                HangMonitor.note("value field focused")
+            } else if wasFocused {
+                commitFocusIfNeeded()
+            }
         }
-    }
-
-    /// Resigns before the field goes away.
-    ///
-    /// A UITextField removed from the window while it is still first responder leaves UIKit holding a
-    /// keyboard with nothing behind it: it stays up, its frame is recalculated over and over, and taps
-    /// land nowhere. SwiftUI tears a representable down whenever the row's identity changes, so this is
-    /// the backstop for any identity churn that is left.
-    static func dismantleUIView(_ field: UITextField, coordinator: Coordinator) {
-        if field.isFirstResponder { field.resignFirstResponder() }
-    }
-
-    /// What the field's placeholder was last built from, so it is only rebuilt when one of them moves.
-    struct PlaceholderStyle: Equatable {
-        let text: String
-        let small: Bool
-        let contentSize: UIContentSizeCategory
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
-
-    final class Coordinator: NSObject, UITextFieldDelegate {
-        var parent: RightAlignedNumberField
-        var appliedPlaceholder: PlaceholderStyle?
-        init(_ parent: RightAlignedNumberField) { self.parent = parent }
-
-        @objc func editingChanged(_ field: UITextField) {
-            parent.text = field.text ?? ""
-            moveCaretToEnd(field)
-        }
-
-        @objc func dismissKeyboard() {
-            HangMonitor.note("keyboard done tapped")
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        }
-
-        func textFieldDidBeginEditing(_ field: UITextField) {
-            HangMonitor.note("value field focused")
-            moveCaretToEnd(field)
-        }
-
-        func textFieldDidEndEditing(_ field: UITextField) {
-            HangMonitor.note("value field ended editing")
-            parent.text = field.text ?? ""
-            parent.onCommit()
-        }
-
-        /// Keeps the caret at the end, so a value is edited from the right like a calculator.
-        ///
-        /// Driven only by our own edits: focus arriving, and text changing. It used to hook
-        /// `textFieldDidChangeSelection`, which observes UIKit's selection changes and moved the caret
-        /// back in response to them. The re-entrancy guard there only covered a synchronous callback,
-        /// and UIKit re-establishes selection on a later turn of the run loop, by which time the guard
-        /// was down again. The two could then trade selection changes without end and wedge the main
-        /// thread, which is what a recorded freeze looks like: the keyboard resigning, a value
-        /// committing, and then nothing.
-        ///
-        /// The trade-off is that tapping into the middle of an already-focused value now leaves the
-        /// caret where it was put, instead of snapping back to the end.
-        private func moveCaretToEnd(_ field: UITextField) {
-            let end = field.endOfDocument
-            guard let range = field.textRange(from: end, to: end), field.selectedTextRange != range else { return }
-            field.selectedTextRange = range
+        .onDisappear {
+            // A mode change or row removal can take a focused field out of the tree without first
+            // delivering a focus change. Keep the typed value, but defer persistence until SwiftUI has
+            // finished removing the view so no model publication occurs during its update pass.
+            guard isFocused, !committedCurrentFocus else { return }
+            committedCurrentFocus = true
+            let commit = onCommit
+            HangMonitor.note("focused value field removed")
+            DispatchQueue.main.async {
+                HangMonitor.note("value field ended editing")
+                commit()
+                HangMonitor.note("value field commit finished")
+            }
         }
     }
 }
+
+/*
+ The field used to be a `UIViewRepresentable` wrapping `UITextField`, with its own `UIToolbar`
+ `inputAccessoryView`. Its screens also supplied SwiftUI's `.keyboard` toolbar. A Core Data change
+ could update the representable while UIKit was resigning it, and `textFieldDidEndEditing` synchronously
+ wrote SwiftUI state and Core Data from inside that responder callback. Freeze logs consistently ended
+ just after that callback and included duplicate keyboard-hide notifications.
+
+ The native `TextField` above gives focus and toolbar ownership to one framework and delivers its focus
+ change after responder teardown. Keep this history next to the control because reintroducing a UIKit
+ wrapper here would also reintroduce the failing ownership boundary.
+ */
 
 /// A number box that keeps what you typed while you are typing it.
 ///
