@@ -320,7 +320,7 @@ final class ScreenshotUITests: XCTestCase {
         let search = app.searchFields.firstMatch
         if search.waitForExistence(timeout: 3) {
             search.tap()
-            typeIfPossible("squat")
+            typeIfPossible(into: search, "squat")
             shot("exercise-search", settle: 1.2)
             _ = tapFirst(in: [app.buttons], labelled: "Cancel")
         } else {
@@ -420,12 +420,13 @@ final class ScreenshotUITests: XCTestCase {
         }
         weight.tap()
         shot("value-field-focused", settle: 1.2)
-        typeIfPossible("60")
+        typeIfPossible(into: weight, "60")
         shot("value-typed", settle: 0.8)
 
         if fields.count > 1 {
-            fields[1].tap()
-            typeIfPossible("8")
+            let reps = fields[1]
+            reps.tap()
+            typeIfPossible(into: reps, "8")
             shot("reps-typed", settle: 0.8)
         }
         // Scrolling dismisses the keyboard everywhere in the app.
@@ -726,14 +727,23 @@ final class ScreenshotUITests: XCTestCase {
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.04)).tap()
     }
 
-    /// Types only when a keyboard is actually up. A number pad needs the software keyboard, and a
-    /// runner with a hardware keyboard attached will not raise one.
-    private func typeIfPossible(_ text: String) {
-        guard app.keyboards.firstMatch.waitForExistence(timeout: 2) else {
+    /// Types into [element], but only when it actually holds keyboard focus.
+    ///
+    /// A keyboard being on screen is not enough. Typing at an element that does not have focus raises
+    /// "Failed to synthesize event: Neither element nor any descendant has keyboard focus", which is
+    /// not an assertion failure and so ends the whole test method regardless of continueAfterFailure.
+    /// That cost the running-workout journey every capture after the value fields. Checking focus
+    /// first turns it into a skipped step.
+    private func typeIfPossible(into element: XCUIElement, _ text: String) {
+        guard app.keyboards.firstMatch.waitForExistence(timeout: 3) else {
             note("No software keyboard, so \"\(text)\" was not typed.")
             return
         }
-        app.typeText(text)
+        guard (element.value(forKey: "hasKeyboardFocus") as? Bool) == true else {
+            note("\(element.elementType) never took keyboard focus, so \"\(text)\" was not typed.")
+            return
+        }
+        element.typeText(text)
     }
 
     // MARK: - Capture

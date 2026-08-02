@@ -60,8 +60,10 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
 
+      # Only when something failed. A green run should leave two artifacts and no guesswork about
+      # which one to open: the screenshots, and the .ipa.
       - name: Upload test results
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: TestResults
@@ -127,6 +129,10 @@ jobs:
           echo "Recovered:"
           ls -1 "$DIR"
 
+      # The one screenshot artifact. The .xcresult bundle is deliberately not uploaded: it was 125 MB,
+      # mostly video recordings and duplicate attachments, and everything worth reading out of it (the
+      # images, and a note plus hierarchy dump for any step the walkthrough could not reach) is already
+      # recovered into this folder.
       - name: Upload the screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -134,14 +140,6 @@ jobs:
           name: screenshots
           path: ${{ github.workspace }}/screenshots
           if-no-files-found: warn
-
-      - name: Upload the capture results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ScreenshotResults
-          path: ScreenshotResults.xcresult
-          if-no-files-found: ignore
 
   ipa:
     name: Package unsigned .ipa (AltStore / SideStore)

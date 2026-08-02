@@ -14,8 +14,9 @@ import shutil
 import sys
 
 # A failing UI test attaches its own diagnostics: a recording, a synthesized event per tap, a
-# snapshot per failure. They are named by timestamp and are not screens.
-DIAGNOSTIC_MARKERS = ("Snapshot", "Synthesized", "Recording", ".txt", ".mp4")
+# snapshot per failure, a description of the issue. They are named by timestamp or by a generic
+# phrase and are not screens. The walkthrough's own notes are named "<journey>-<step>-note".
+DIAGNOSTIC_MARKERS = ("Snapshot", "Synthesized", "Recording", "Issue Description", "Debug description", "hierarchy for")
 
 
 def collect(node, pairs):
@@ -54,10 +55,15 @@ def main():
         # Attachment names arrive as "history_0_<uuid>.png". The readable part is everything
         # before the first underscore, which is why capture names use hyphens.
         stem = name.split("_")[0]
-        if not stem.endswith(".png") and not stem.endswith(".txt"):
-            stem += ".png"
-        if any(word in stem for word in DIAGNOSTIC_MARKERS) and not stem.endswith(".txt"):
+        if any(word in stem for word in DIAGNOSTIC_MARKERS):
             continue
+        # The extension comes from the exported file, never from the readable name. Assuming .png
+        # gave the walkthrough's notes a .png name on a text file, so five files in the folder
+        # looked like screenshots and opened as nothing.
+        extension = os.path.splitext(exported)[1].lower() or ".png"
+        if extension not in (".png", ".txt"):
+            continue
+        stem = os.path.splitext(stem)[0] + extension
         shutil.copy2(source, os.path.join(out, stem))
         print("  ", stem)
 
