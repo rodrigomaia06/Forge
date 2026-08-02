@@ -11,6 +11,7 @@ import WorkoutDataKit
 
 struct TimerBannerView: View {
     @EnvironmentObject var restTimerStore: RestTimerStore
+    @EnvironmentObject var settingsStore: SettingsStore
     
     @ObservedObject var workout: Workout
 
