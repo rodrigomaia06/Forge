@@ -77,8 +77,22 @@ struct TimerBannerView: View {
 
     var body: some View {
         HStack {
-            // The elapsed-workout stopwatch on the left. In edit mode it opens the start/end editor;
-            // otherwise a tap shows a brief hint that the times can only be changed in edit mode.
+            // Both time readouts sit on the right, where iOS puts time and status. The stopwatch leads
+            // the rest timer, keeping the order they have always been read in. An earlier attempt at
+            // this put the rest timer on the left instead and was reverted; nothing moves to the left
+            // here, the pair just moves across together.
+            if showEditHint {
+                Text("Editable in Edit mode")
+                    .font(.caption2)
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
+
+            Spacer()
+
+            // In edit mode the stopwatch opens the start/end editor; otherwise a tap shows a brief hint
+            // that the times can only be changed in edit mode.
             Button(action: {
                 if isEditing {
                     self.activeSheet = .editTime
@@ -94,17 +108,7 @@ struct TimerBannerView: View {
             }
             .buttonStyle(.plain)
 
-            if showEditHint {
-                Text("Editable in Edit mode")
-                    .font(.caption2)
-                    .foregroundColor(.forgeSecondaryLabel)
-                    .transition(.opacity)
-                    .allowsHitTesting(false)
-            }
-
-            Spacer()
-
-            // Rest timer on the right, unless it has been turned off in Settings.
+            // Rest timer, unless it has been turned off in Settings.
             if settingsStore.showRestTimer {
                 Button(action: {
                     self.activeSheet = .restTimer

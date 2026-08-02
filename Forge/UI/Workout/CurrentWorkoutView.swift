@@ -378,7 +378,19 @@ struct CurrentWorkoutView: View {
                 .environment(\.editMode, $editMode)
                 .keyboardDoneToolbar()
             }
-            .background(Color.forgeBackground.ignoresSafeArea())
+            // Tapping the canvas dismisses the keyboard. This is the screen's background, behind
+            // everything else, so it only ever sees taps that nothing above it wanted: a row, a button
+            // or a value box still gets its own tap first. That is the difference from the window-wide
+            // recognizer this app used to have, which recognised alongside every other gesture and was
+            // removed for wedging touch delivery.
+            .background(
+                Color.forgeBackground
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+            )
             .navigationBarTitle(Text(""), displayMode: .inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { cancelButton }
