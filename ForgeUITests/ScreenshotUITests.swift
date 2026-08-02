@@ -172,7 +172,18 @@ final class ScreenshotUITests: XCTestCase {
         // three times, filing the alert under every later name. The alert is
         // not built from plain buttons, so this searches whatever is hittable
         // for the label instead.
-        guard tapAnything(in: app, labelled: "discard") else {
+        // The alert has two buttons and Discard is the destructive one, which
+        // iOS orders last. Matching on the label has failed four runs running,
+        // and the hierarchy captured at the last failure showed no alert at
+        // all, so position is the surer handle than text.
+        let alert = app.alerts.firstMatch
+        if alert.waitForExistence(timeout: 5) {
+            let buttons = alert.buttons
+            let last = buttons.element(boundBy: max(buttons.count - 1, 0))
+            attach(alert.debugDescription, named: "alert-hierarchy")
+            last.tap()
+        } else if !tapAnything(in: app, labelled: "discard") {
+            attach(app.debugDescription, named: "no-alert-hierarchy")
             XCTFail("Could not dismiss the discard alert")
             return
         }
@@ -214,6 +225,14 @@ final class ScreenshotUITests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// Files a hierarchy dump next to the images, so a failed run says why.
+    private func attach(_ text: String, named name: String) {
+        let attachment = XCTAttachment(string: text)
+        attachment.name = "\(name).txt"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
 
     /// Taps the first hittable element whose label contains [text].
     ///
