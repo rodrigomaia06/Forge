@@ -784,6 +784,7 @@ private struct ActiveSetRow: View {
     }
 
     private func commitWeight() {
+        HangMonitor.note("weight committed")
         let trimmed = weightInput.trimmingCharacters(in: .whitespaces)
         if isBodyweight {
             // Blank means a pure bodyweight set (added 0), not a normal set: keep addedWeight non-nil so it
@@ -804,6 +805,7 @@ private struct ActiveSetRow: View {
     }
 
     private func commitReps() {
+        HangMonitor.note("reps committed")
         let trimmed = repsInput.trimmingCharacters(in: .whitespaces)
         if trimmed.isEmpty {
             workoutSet.repetitions = nil

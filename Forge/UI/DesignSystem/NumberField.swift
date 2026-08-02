@@ -56,25 +56,55 @@ struct RightAlignedNumberField: UIViewRepresentable {
         return field
     }
 
+    /// Assigns only what actually changed.
+    ///
+    /// Both of these used to be written on every SwiftUI update, and an update here is not rare:
+    /// committing a value in one set row publishes a Core Data change that fans out across the whole
+    /// workout, so every field in every row is updated, the focused one included. Assigning
+    /// `keyboardType` to a field that is first responder makes UIKit reload its input views, which
+    /// posts a keyboard notification, which drives another update. A recorded freeze caught the shape
+    /// of it: three keyboardWillShow in a row with no hide between them, two hides 18ms apart, and
+    /// then the main thread stopped answering.
+    ///
+    /// Rebuilding `attributedPlaceholder` every time also allocated a new attributed string and
+    /// re-laid out the field for a value that almost never changes.
     func updateUIView(_ field: UITextField, context: Context) {
         context.coordinator.parent = self
         if field.text != text { field.text = text }
+        if field.keyboardType != keyboardType { field.keyboardType = keyboardType }
+
         // The placeholder (a planned rep range like "8-12") is smaller than the value so it fits the
-        // narrow box and reads as a hint rather than an entered number.
-        field.attributedPlaceholder = NSAttributedString(
-            string: placeholder,
-            attributes: [
-                .font: smallPlaceholder ? UIFont.preferredFont(forTextStyle: .footnote) : Self.valueFont(),
-                .foregroundColor: UIColor.secondaryLabel,
-            ]
+        // narrow box and reads as a hint rather than an entered number. The content size category is
+        // part of the identity so it still follows Dynamic Type.
+        let wanted = PlaceholderStyle(
+            text: placeholder,
+            small: smallPlaceholder,
+            contentSize: field.traitCollection.preferredContentSizeCategory
         )
-        field.keyboardType = keyboardType
+        if context.coordinator.appliedPlaceholder != wanted {
+            context.coordinator.appliedPlaceholder = wanted
+            field.attributedPlaceholder = NSAttributedString(
+                string: placeholder,
+                attributes: [
+                    .font: smallPlaceholder ? UIFont.preferredFont(forTextStyle: .footnote) : Self.valueFont(),
+                    .foregroundColor: UIColor.secondaryLabel,
+                ]
+            )
+        }
+    }
+
+    /// What the field's placeholder was last built from, so it is only rebuilt when one of them moves.
+    struct PlaceholderStyle: Equatable {
+        let text: String
+        let small: Bool
+        let contentSize: UIContentSizeCategory
     }
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     final class Coordinator: NSObject, UITextFieldDelegate {
         var parent: RightAlignedNumberField
+        var appliedPlaceholder: PlaceholderStyle?
         private var isPinningCaret = false
         init(_ parent: RightAlignedNumberField) { self.parent = parent }
 
