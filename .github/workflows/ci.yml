@@ -42,17 +42,62 @@ jobs:
         run: xcodegen generate
 
       - name: Build & test
+        env:
+          # Read by ScreenshotTests, which writes each PNG here as well as
+          # attaching it. SIMCTL_CHILD_ is what carries a variable into the
+          # process running inside the simulator.
+          SIMCTL_CHILD_FORGE_SCREENSHOT_DIR: ${{ github.workspace }}/screenshots
         run: |
           set -euo pipefail
-          DEVICE="$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ {gsub(/^ +| +$/, "", $1); print $1; exit}')"
-          echo "Testing on: $DEVICE"
+          # A large, recent iPhone. Taking whatever came first gave an SE, whose
+          # width wraps titles the reference does not.
+          DEVICES="$(xcrun simctl list devices available -j)"
+          for WANT in 'iPhone 17 Pro Max' 'iPhone 17 Pro' 'iPhone 16 Pro Max' \
+                      'iPhone 16 Pro' 'iPhone 15 Pro Max' 'iPhone 15 Pro'; do
+            NAME="$(echo "$DEVICES" | jq -r --arg n "$WANT" \
+              '[.devices[][] | select(.isAvailable and .name == $n)] | first | .name // empty')"
+            [ -n "$NAME" ] && break
+          done
+          if [ -z "${NAME:-}" ]; then
+            NAME="$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ {gsub(/^ +| +$/, "", $1); print $1; exit}')"
+          fi
+          echo "Testing on: $NAME"
+          mkdir -p "$SIMCTL_CHILD_FORGE_SCREENSHOT_DIR"
           xcodebuild test \
             -project Forge.xcodeproj \
             -scheme Forge \
-            -destination "platform=iOS Simulator,name=$DEVICE,OS=latest" \
+            -destination "platform=iOS Simulator,name=$NAME,OS=latest" \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
+
+      - name: Recover the screenshots from the result bundle
+        # A fallback for the direct write above. A test process inside the
+        # simulator may not be allowed to write to the workspace, in which case
+        # the attachments in the result bundle are the only copy.
+        if: always()
+        run: |
+          set -euo pipefail
+          DIR="${{ github.workspace }}/screenshots"
+          mkdir -p "$DIR"
+          if [ -n "$(ls -A "$DIR" 2>/dev/null)" ]; then
+            echo "Written directly; nothing to recover."
+            exit 0
+          fi
+          echo "Nothing written directly. Reading the result bundle."
+          xcrun xcresulttool export attachments \
+            --path TestResults.xcresult \
+            --output-path "$DIR" || \
+            echo 'Could not export attachments. They are still in the TestResults artifact.'
+          ls -la "$DIR" || true
+
+      - name: Upload the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: ${{ github.workspace }}/screenshots
+          if-no-files-found: warn
 
       - name: Upload test results
         if: always()

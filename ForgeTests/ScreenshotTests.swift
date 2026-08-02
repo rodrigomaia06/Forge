@@ -7,8 +7,13 @@
 //  (passed by CI via SIMCTL_CHILD_FORGE_SCREENSHOT_DIR), written to that directory
 //  so CI can upload it directly as a downloadable artifact.
 //
-//  As screens are restyled, add captures here (use .mockEnvironment(weightUnit:)
-//  for data-driven views).
+//  These are the reference the Dart rewrite is built against, which is why the
+//  set covers whole screens and not only components. They use
+//  screenshotEnvironment rather than mockEnvironment: the latter seeds random
+//  data, so two runs would differ and a comparison between them would mean
+//  nothing.
+//
+//  As screens are restyled, add captures here.
 //
 
 import XCTest
@@ -20,6 +25,10 @@ final class ScreenshotTests: XCTestCase {
 
     /// A representative iPhone width; height is intrinsic to the content.
     private let phoneWidth: CGFloat = 393
+
+    /// Tall enough for a whole screen. A List or a ScrollView has no intrinsic
+    /// height worth rendering, so a full screen has to be given one.
+    private let phoneHeight: CGFloat = 852
 
     func testCaptureStyleGuide() throws {
         try capture(StyleGuide(), named: "style-guide")
@@ -37,12 +46,127 @@ final class ScreenshotTests: XCTestCase {
         try capture(ForgeHomeView(), named: "home")
     }
 
+    // MARK: - Whole screens
+
+    /// The app as it opens, tab bar and all.
+    func testCaptureContentView() throws {
+        try captureScreen(
+            ContentView().screenshotEnvironment(weightUnit: .metric),
+            named: "content"
+        )
+    }
+
+    func testCaptureFeed() throws {
+        try captureScreen(
+            FeedView().screenshotEnvironment(weightUnit: .metric),
+            named: "feed"
+        )
+    }
+
+    func testCaptureHistory() throws {
+        try captureScreen(
+            NavigationStack { HistoryView() }
+                .screenshotEnvironment(weightUnit: .metric),
+            named: "history"
+        )
+    }
+
+    func testCaptureWorkoutTab() throws {
+        try captureScreen(
+            NavigationStack { WorkoutTab() }
+                .screenshotEnvironment(weightUnit: .metric),
+            named: "workout-tab"
+        )
+    }
+
+    func testCaptureSettings() throws {
+        try captureScreen(
+            NavigationStack { SettingsView() }
+                .screenshotEnvironment(weightUnit: .metric),
+            named: "settings"
+        )
+    }
+
+    func testCaptureGeneralSettings() throws {
+        try captureScreen(
+            NavigationStack { GeneralSettingsView() }
+                .screenshotEnvironment(weightUnit: .metric),
+            named: "settings-general"
+        )
+    }
+
+    func testCaptureBackupAndExport() throws {
+        try captureScreen(
+            NavigationStack { BackupAndExportView() }
+                .screenshotEnvironment(weightUnit: .metric),
+            named: "settings-backup"
+        )
+    }
+
+    func testCaptureAbout() throws {
+        try captureScreen(NavigationStack { AboutView() }, named: "settings-about")
+    }
+
+    func testCaptureExercises() throws {
+        try captureScreen(
+            NavigationStack {
+                ExercisesView(exercises: ExerciseStore.shared.shownExercises)
+            }
+            .screenshotEnvironment(weightUnit: .metric),
+            named: "exercises"
+        )
+    }
+
+    func testCaptureRestTimer() throws {
+        try captureScreen(
+            RestTimerView().environmentObject(RestTimerStore.shared),
+            named: "rest-timer"
+        )
+    }
+
+    /// One screen in light, to check the palette holds up. Forge is dark-first,
+    /// so the rest of the set stays dark rather than doubling in size.
+    func testCaptureContentViewLight() throws {
+        try captureScreen(
+            ContentView().screenshotEnvironment(weightUnit: .metric),
+            named: "content-light",
+            colorScheme: .light
+        )
+    }
+
+    /// Imperial reads differently and the layout has to survive the longer
+    /// numbers.
+    func testCaptureHistoryImperial() throws {
+        try captureScreen(
+            NavigationStack { HistoryView() }
+                .screenshotEnvironment(weightUnit: .imperial),
+            named: "history-imperial"
+        )
+    }
+
     // MARK: - Helpers
 
-    private func capture<V: View>(_ view: V, named name: String) throws {
+    /// A whole screen, at phone size.
+    private func captureScreen<V: View>(
+        _ view: V,
+        named name: String,
+        colorScheme: ColorScheme = .dark
+    ) throws {
+        try capture(
+            view.frame(height: phoneHeight),
+            named: name,
+            colorScheme: colorScheme
+        )
+    }
+
+    private func capture<V: View>(
+        _ view: V,
+        named name: String,
+        colorScheme: ColorScheme = .dark
+    ) throws {
         let renderer = ImageRenderer(content:
             view.frame(width: phoneWidth)
-                .environment(\.colorScheme, .dark) // Forge is dark-first
+                .environment(\.colorScheme, colorScheme) // Forge is dark-first
         )
         renderer.scale = 3
 
