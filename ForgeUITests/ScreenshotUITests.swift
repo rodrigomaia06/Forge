@@ -29,6 +29,7 @@ final class ScreenshotUITests: XCTestCase {
 
     func testCaptureEveryTab() throws {
         let app = XCUIApplication()
+        app.launchArguments += ["-ForgeSampleData"]
         app.launch()
 
         // The tab bar is the last thing to settle on a cold launch.
@@ -54,6 +55,7 @@ final class ScreenshotUITests: XCTestCase {
     /// Settings is a stack of pushed screens, and each one is worth having.
     func testCaptureSettingsScreens() throws {
         let app = XCUIApplication()
+        app.launchArguments += ["-ForgeSampleData"]
         app.launch()
         XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 30))
         app.tabBars.buttons["Settings"].tap()

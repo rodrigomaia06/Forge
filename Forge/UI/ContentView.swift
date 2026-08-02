@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import CoreData
 import WorkoutDataKit
 
 let NAVIGATION_BAR_SPACING: CGFloat = 16
@@ -39,6 +40,19 @@ struct ContentView : View {
         Binding(get: { sceneState.selectedTab }, set: { sceneState.selectedTab = $0 })
     }
 
+    /// The store the app runs against.
+    ///
+    /// A screenshot run gets the sample data instead, so the reference images
+    /// show populated screens without anyone's training history in them. The
+    /// sample container is in memory, so this cannot reach the real store, let
+    /// alone write to it.
+    private static var rootContext: NSManagedObjectContext {
+        if ProcessInfo.processInfo.arguments.contains("-ForgeSampleData") {
+            return MockWorkoutData.metric.context
+        }
+        return WorkoutDataStorage.shared.persistentContainer.viewContext
+    }
+
     var body: some View {
         TabView(selection: selectedTab) {
             FeedView()
@@ -57,7 +71,7 @@ struct ContentView : View {
         .environmentObject(SettingsStore.shared)
         .environmentObject(RestTimerStore.shared)
         .environmentObject(ExerciseStore.shared)
-        .environment(\.managedObjectContext, WorkoutDataStorage.shared.persistentContainer.viewContext)
+        .environment(\.managedObjectContext, Self.rootContext)
         .tint(Color.forgeAccent) // single monochrome accent
         .dismissesKeyboardOnBackgroundTap()
         .preferredColorScheme((ForgeAppearance(rawValue: settings.appearance) ?? .dark).colorScheme) // Forge is dark-first; overridable in Settings
