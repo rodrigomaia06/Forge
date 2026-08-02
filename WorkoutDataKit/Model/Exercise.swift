@@ -20,7 +20,6 @@ public struct Exercise: Hashable {
     public let steps: [String]
     public let tips: [String]
     public let references: [String]
-    public let pdfPaths: [String]
 }
 
 extension Exercise {
@@ -162,7 +161,6 @@ extension Exercise: Codable {
         case steps
         case tips
         case references
-        case pdf
 //        case png
     }
     
@@ -180,9 +178,8 @@ extension Exercise: Codable {
         let steps = try container.decodeIfPresent([String].self, forKey: .steps) ?? []
         let tips = try container.decodeIfPresent([String].self, forKey: .tips) ?? []
         let references = try container.decodeIfPresent([String].self, forKey: .references) ?? []
-        let pdf = try container.decodeIfPresent([String].self, forKey: .pdf) ?? []
-        
-        self.init(uuid: uuid, everkineticId: id, title: title, alias: alias, description: primer, primaryMuscle: primary, secondaryMuscle: secondary, equipment: equipment, steps: steps, tips: tips, references: references, pdfPaths: pdf)
+
+        self.init(uuid: uuid, everkineticId: id, title: title, alias: alias, description: primer, primaryMuscle: primary, secondaryMuscle: secondary, equipment: equipment, steps: steps, tips: tips, references: references)
     }
     
     // MARK: Encodalbe
@@ -199,6 +196,5 @@ extension Exercise: Codable {
         try container.encode(steps, forKey: .steps)
         try container.encode(tips, forKey: .tips)
         try container.encode(references, forKey: .references)
-        try container.encode(pdfPaths, forKey: .pdf)
     }
 }

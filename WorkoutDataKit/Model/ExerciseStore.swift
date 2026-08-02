@@ -277,7 +277,7 @@ extension ExerciseStore {
             primaryMuscle: decodeStrings(entity.primaryMusclesJSON),
             secondaryMuscle: decodeStrings(entity.secondaryMusclesJSON),
             equipment: decodeStrings(entity.equipmentJSON),
-            steps: [], tips: [], references: [], pdfPaths: []
+            steps: [], tips: [], references: []
         )
     }
 

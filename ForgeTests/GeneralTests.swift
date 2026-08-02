@@ -48,16 +48,6 @@ class GeneralTests: XCTestCase {
         XCTAssert(totalCount == exercises.count)
     }
 
-    func testEverkineticPDFsExist() {
-        let exercises = loadExercises()
-        for exercise in exercises {
-            for pdf in exercise.pdfPaths {
-                let url = ExerciseStore.defaultBuiltInExercisesResourceURL.appendingPathComponent(pdf)
-                XCTAssertNoThrow(try Data(contentsOf: url))
-            }
-        }
-    }
-
     func testUniq() {
         var array = ["Hello","Me","That","Me","Hello","Me","as","the"]
         

@@ -39,48 +39,6 @@ struct ExerciseDetailView : View {
         }
     }
     
-    private func pdfToImage(url: URL, fit: CGSize) -> UIImage? {
-        // A non-positive fit size (e.g. during an early layout pass) would make the renderer
-        // size zero or negative and crash. Bail out until a valid size is available.
-        guard fit.width > 0, fit.height > 0 else { return nil }
-        guard let document = CGPDFDocument(url as CFURL) else { return nil }
-        guard let page = document.page(at: 1) else { return nil }
-
-        let pageRect = page.getBoxRect(.mediaBox)
-        guard pageRect.width > 0, pageRect.height > 0 else { return nil }
-        let scale = min(fit.width / pageRect.width, fit.height / pageRect.height)
-        let size = CGSize(width: pageRect.width * scale, height: pageRect.height * scale)
-        guard size.width > 0, size.height > 0 else { return nil }
-        
-        let renderer = UIGraphicsImageRenderer(size: size)
-        let img = renderer.image { ctx in
-            // flip
-            ctx.cgContext.translateBy(x: 0, y: size.height)
-            ctx.cgContext.scaleBy(x: 1, y: -1)
-            
-            // aspect fit
-            ctx.cgContext.scaleBy(x: scale, y: scale)
-            
-            // draw
-            ctx.cgContext.drawPDFPage(page)
-        }
-        
-        return img
-    }
-
-    private func exerciseImages(width: CGFloat, height: CGFloat) -> [UIImage] {
-        guard width > 0, height > 0 else { return [] }
-        return exercise.pdfPaths
-            .map { ExerciseStore.defaultBuiltInExercisesResourceURL.appendingPathComponent($0) }
-            .compactMap { pdfToImage(url: $0, fit: CGSize(width: width, height: height)) }
-            .compactMap { $0.tinted(with: .label) }
-    }
-
-    private func imageHeight(geometry: GeometryProxy) -> CGFloat {
-        let available = geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom
-        return max(0, min(geometry.size.width, max(0, available) * 0.7))
-    }
-    
     private var closeSheetButton: some View {
         Button("Close") {
             self.activeSheet = nil
@@ -104,13 +62,6 @@ struct ExerciseDetailView : View {
                 .navigationBarItems(leading: closeSheetButton)
                 .environmentObject(self.settingsStore)
                 .environment(\.managedObjectContext, self.managedObjectContext)
-        }
-    }
-    
-    private func imageSection(geometry: GeometryProxy) -> some View {
-        Section {
-            AnimatedImageView(uiImages: self.exerciseImages(width: geometry.size.width, height: self.imageHeight(geometry: geometry)), duration: 2)
-                .frame(height: self.imageHeight(geometry: geometry))
         }
     }
     
@@ -204,36 +155,32 @@ struct ExerciseDetailView : View {
     }
 
     var body: some View {
-        GeometryReader { geometry in
-            List {
-                self.restTimeSection
+        // A plain List, not a GeometryReader wrapping one. The reader existed only to size the
+        // exercise illustration, and it made the whole list re-evaluate on every size change.
+        List {
+            restTimeSection
 
-                if !self.exercise.pdfPaths.isEmpty {
-                    self.imageSection(geometry: geometry)
-                }
-
-                if self.exercise.description != nil {
-                    self.descriptionSection
-                }
-
-                if !(self.exercise.primaryMuscleCommonName.isEmpty && self.exercise.secondaryMuscleCommonName.isEmpty) {
-                    self.muscleSection
-                }
-
-                if !self.exercise.tips.isEmpty {
-                    self.tipsSection
-                }
-
-                if !self.exercise.references.isEmpty {
-                    self.referencesSection
-                }
-                
-                if !self.exercise.alias.isEmpty {
-                    self.aliasSection
-                }
+            if exercise.description != nil {
+                descriptionSection
             }
-            .listStyleCompat_InsetGroupedListStyle()
+
+            if !(exercise.primaryMuscleCommonName.isEmpty && exercise.secondaryMuscleCommonName.isEmpty) {
+                muscleSection
+            }
+
+            if !exercise.tips.isEmpty {
+                tipsSection
+            }
+
+            if !exercise.references.isEmpty {
+                referencesSection
+            }
+
+            if !exercise.alias.isEmpty {
+                aliasSection
+            }
         }
+        .listStyleCompat_InsetGroupedListStyle()
         .sheet(item: $activeSheet) { type in
             self.sheetView(type: type)
         }
