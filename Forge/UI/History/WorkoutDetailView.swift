@@ -21,6 +21,7 @@ struct WorkoutDetailView : View {
     // system EditButton rendered a "Done" checkmark overlapping the "Edit" label inside the nav glass.
     @State private var editMode: EditMode
     @State private var showingExerciseSelectorSheet = false
+    @State private var activeExerciseSheet: WorkoutExerciseSheetRoute?
     /// Set by a row tap while this list is editing, since an editing List swallows NavigationLink taps.
     @State private var exerciseToOpen: WorkoutExercise?
 
@@ -183,7 +184,11 @@ struct WorkoutDetailView : View {
                 // Each exercise as its own read-only card with the set table inline (previous, weight, reps),
                 // so the whole workout reads in one scroll without tapping into each exercise.
                 ForEach(workoutExercises) { workoutExercise in
-                    WorkoutExerciseDetailView(workoutExercise: workoutExercise, embedded: true)
+                    WorkoutExerciseDetailView(
+                        workoutExercise: workoutExercise,
+                        embedded: true,
+                        onPresentSheet: { activeExerciseSheet = $0 }
+                    )
                         .environmentObject(self.settingsStore)
                 }
             } else {
@@ -308,6 +313,9 @@ struct WorkoutDetailView : View {
                     }
                     self.managedObjectContext.saveOrCrash()
             })
+        }
+        .sheet(item: $activeExerciseSheet) { route in
+            WorkoutExerciseSheetContent(route: route) { activeExerciseSheet = nil }
         }
         .overlay(ActivitySheet(activityItems: $activityItems))
     }

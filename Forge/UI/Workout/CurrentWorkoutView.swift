@@ -32,8 +32,14 @@ struct CurrentWorkoutView: View {
     
     private enum SheetType: Identifiable {
         case exerciseSelector
+        case workoutExercise(WorkoutExerciseSheetRoute)
 
-        var id: Self { self }
+        var id: String {
+            switch self {
+            case .exerciseSelector: return "exercise-selector"
+            case .workoutExercise(let route): return route.id
+            }
+        }
     }
     
     private func sheetView(type: SheetType) -> AnyView {
@@ -45,7 +51,14 @@ struct CurrentWorkoutView: View {
                 onAdd: { selection in self.addExercises(Array(selection), asSuperset: false) },
                 onAddSuperset: { ordered in self.addExercises(ordered, asSuperset: true) }
             ).typeErased
+        case .workoutExercise(let route):
+            return WorkoutExerciseSheetContent(route: route) { activeSheet = nil }.typeErased
         }
+    }
+
+    private func present(_ route: WorkoutExerciseSheetRoute) {
+        HangMonitor.note("workout sheet requested")
+        activeSheet = .workoutExercise(route)
     }
 
     /// Adds the exercises to the workout, each with default sets. When `asSuperset` is true and there are
@@ -355,9 +368,19 @@ struct CurrentWorkoutView: View {
                         ForEach(Array(workout.exerciseSlots.enumerated()), id: \.element.id) { index, slot in
                             switch slot {
                             case .single(let workoutExercise):
-                                WorkoutExerciseDetailView(workoutExercise: workoutExercise, embedded: true, sectionHeader: index == 0 ? "Exercises" : nil)
+                                WorkoutExerciseDetailView(
+                                    workoutExercise: workoutExercise,
+                                    embedded: true,
+                                    sectionHeader: index == 0 ? "Exercises" : nil,
+                                    onPresentSheet: present
+                                )
                             case .superset(_, let exercises):
-                                SupersetCard(anchor: exercises[0], exercises: exercises, sectionHeader: index == 0 ? "Exercises" : nil)
+                                SupersetCard(
+                                    anchor: exercises[0],
+                                    exercises: exercises,
+                                    sectionHeader: index == 0 ? "Exercises" : nil,
+                                    onPresentSheet: present
+                                )
                             }
                         }
                     }
@@ -402,6 +425,8 @@ struct CurrentWorkoutView: View {
         }
         .sheet(item: $activeSheet) { type in
             self.sheetView(type: type)
+                .onAppear { HangMonitor.note("workout sheet presented") }
+                .onDisappear { HangMonitor.note("workout sheet dismissed") }
         }
         .alert("Discard workout?", isPresented: $showingCancelActionSheet) {
             Button("Discard", role: .destructive) { self.cancelWorkout() }
@@ -440,8 +465,7 @@ private struct SupersetCard: View {
     @ObservedObject var anchor: WorkoutExercise
     let exercises: [WorkoutExercise]
     let sectionHeader: String?
-
-    @State private var showingNoteEditor = false
+    let onPresentSheet: (WorkoutExerciseSheetRoute) -> Void
 
     /// The group's shared note, read from the observed anchor (all members are kept equal).
     private var note: String? { anchor.supersetNote }
@@ -457,7 +481,8 @@ private struct SupersetCard: View {
                         label: exercise.supersetLabel ?? "",
                         isFirst: index == 0,
                         isLast: index == exercises.count - 1
-                    )
+                    ),
+                    onPresentSheet: onPresentSheet
                 )
             }
         } header: {
@@ -486,7 +511,7 @@ private struct SupersetCard: View {
             }
             Spacer()
             Menu {
-                Button { showingNoteEditor = true } label: {
+                Button { onPresentSheet(.supersetNote(anchor)) } label: {
                     Label(note == nil ? "Add note" : "Change note", systemImage: "square.and.pencil")
                 }
                 Button(role: .destructive) { ungroup() } label: {
@@ -500,18 +525,6 @@ private struct SupersetCard: View {
             }
         }
         .listRowInsets(EdgeInsets(top: Theme.Spacing.m, leading: Theme.Spacing.m, bottom: Theme.Spacing.s, trailing: Theme.Spacing.m))
-        .sheet(isPresented: $showingNoteEditor) {
-            NavigationStack {
-                SupersetNoteEditor(anchor: anchor)
-                    .navigationBarTitle("Superset note", displayMode: .inline)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") { showingNoteEditor = false }.fontWeight(.semibold)
-                        }
-                    }
-            }
-            .presentationDetents([.medium])
-        }
     }
 
     private func ungroup() {
@@ -519,27 +532,6 @@ private struct SupersetCard: View {
         Haptics.selection()
         workout.ungroupSuperset(id: uuid)
         managedObjectContext.saveOrCrash()
-    }
-}
-
-/// Edits the note shared by a whole superset. Editing an anchor member writes the note to every member of
-/// the group, so it survives reordering within the group.
-private struct SupersetNoteEditor: View {
-    @ObservedObject var anchor: WorkoutExercise
-    @State private var draft = ""
-
-    var body: some View {
-        Form {
-            Section(footer: Text("A note for the whole superset.")) {
-                TextField("Note", text: $draft, axis: .vertical)
-                    .lineLimit(3...8)
-            }
-        }
-        .onAppear { draft = anchor.supersetNote ?? "" }
-        .onDisappear {
-            anchor.setSupersetNote(draft)
-            anchor.managedObjectContext?.saveOrCrash()
-        }
     }
 }
 

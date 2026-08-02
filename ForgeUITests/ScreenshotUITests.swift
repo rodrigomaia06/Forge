@@ -247,6 +247,37 @@ final class ScreenshotUITests: XCTestCase {
         }
     }
 
+    /// Reproduces the freeze ordering: a focused value field commits as the set-options sheet opens.
+    /// The sheet must finish presenting, dismiss, and return touch input to the live workout.
+    func testSetOptionsSurvivesUnderlyingValueCommit() throws {
+        continueAfterFailure = false
+        launch("set-options-commit")
+        selectTab("Workout")
+
+        XCTAssertTrue(app.buttons["Cancel"].firstMatch.waitForExistence(timeout: 10))
+        let weight = app.textFields.firstMatch
+        XCTAssertTrue(weight.waitForExistence(timeout: 5))
+        weight.tap()
+        guard app.keyboards.firstMatch.waitForExistence(timeout: 3) else {
+            throw XCTSkip("The simulator did not show a software keyboard.")
+        }
+
+        let details = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Details")).firstMatch
+        XCTAssertTrue(details.waitForExistence(timeout: 5))
+        XCTAssertTrue(details.isHittable)
+        details.tap()
+
+        XCTAssertTrue(app.buttons["Delete set"].firstMatch.waitForExistence(timeout: 5))
+        let done = app.buttons["Done"].firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        done.tap()
+
+        let returnedWeight = app.textFields.firstMatch
+        XCTAssertTrue(returnedWeight.waitForExistence(timeout: 5))
+        returnedWeight.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 3))
+    }
+
     /// The Workout tab with nothing running: the plans list, the add menu, and the routine and plan
     /// editors reached from it.
     func testWorkoutPlans() throws {
