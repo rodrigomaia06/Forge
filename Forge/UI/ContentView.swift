@@ -47,9 +47,13 @@ struct ContentView : View {
     /// sample container is in memory, so this cannot reach the real store, let
     /// alone write to it.
     private static var rootContext: NSManagedObjectContext {
+        // Debug only. MockWorkoutData is compiled out of a release build, and
+        // a flag that swaps the user's store has no business shipping anyway.
+        #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ForgeSampleData") {
             return MockWorkoutData.metric.context
         }
+        #endif
         return WorkoutDataStorage.shared.persistentContainer.viewContext
     }
 
