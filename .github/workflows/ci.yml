@@ -1,11 +1,17 @@
 name: CI
 
-# Builds/tests Forge and produces artifacts (UI screenshots + an unsigned .ipa) on a
-# GitHub-hosted macOS runner — the only build environment (the maintainer has no Mac).
+# Builds, tests and photographs Forge on a GitHub-hosted macOS runner, the only build environment
+# (the maintainer has no Mac). Three jobs, all running in parallel:
 #
-# Built with Xcode 26 (the newest installed on the runner) so the app links against the iOS 26
-# SDK and the native UI adopts Liquid Glass on iOS 26 devices. Deployment target stays iOS 17,
-# so it still runs on iOS 17+. The .xcodeproj is generated from project.yml each run.
+#   test        unit and integration tests (ForgeTests, minus the capture tests)
+#   screenshots the UI walkthrough that photographs the running app, plus the component captures
+#   ipa         an unsigned .ipa for AltStore / SideStore
+#
+# Tests and screenshots used to share one job, so a green build waited on a full UI walkthrough.
+# Split, the wall clock is the slower of the two rather than their sum, and a test failure is
+# reported without the screenshot run having to finish.
+#
+# The .xcodeproj is generated from project.yml each run.
 
 on:
   # Run on every branch push, so each run is named after its commit rather than a pull request. A push
@@ -19,21 +25,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-test:
-    name: Build, test & screenshots (iOS Simulator)
+  test:
+    name: Test (unit & integration)
     runs-on: macos-15
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select newest Xcode (26 for Liquid Glass)
-        run: |
-          set -euo pipefail
-          XPATH="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)"
-          echo "Selecting $XPATH"
-          sudo xcode-select -s "$XPATH"
-          xcodebuild -version
+      - name: Select newest Xcode
+        run: .github/scripts/select-xcode.sh
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -41,40 +42,75 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Build & test
-        env:
-          # Read by ScreenshotTests, which writes each PNG here as well as
-          # attaching it. SIMCTL_CHILD_ is what carries a variable into the
-          # process running inside the simulator.
-          SIMCTL_CHILD_FORGE_SCREENSHOT_DIR: ${{ github.workspace }}/screenshots
+      - name: Pick a simulator
+        run: .github/scripts/pick-simulator.sh
+
+      - name: Run tests
         run: |
           set -euo pipefail
-          # A large, recent iPhone. Taking whatever came first gave an SE, whose
-          # width wraps titles the reference does not.
-          DEVICES="$(xcrun simctl list devices available -j)"
-          for WANT in 'iPhone 17 Pro Max' 'iPhone 17 Pro' 'iPhone 16 Pro Max' \
-                      'iPhone 16 Pro' 'iPhone 15 Pro Max' 'iPhone 15 Pro'; do
-            NAME="$(echo "$DEVICES" | jq -r --arg n "$WANT" \
-              '[.devices[][] | select(.isAvailable and .name == $n)] | first | .name // empty')"
-            [ -n "$NAME" ] && break
-          done
-          if [ -z "${NAME:-}" ]; then
-            NAME="$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ {gsub(/^ +| +$/, "", $1); print $1; exit}')"
-          fi
-          echo "Testing on: $NAME"
-          mkdir -p "$SIMCTL_CHILD_FORGE_SCREENSHOT_DIR"
+          echo "Testing on: $SIMULATOR_NAME"
+          # ScreenshotTests only renders components to PNGs; it runs in the screenshots job instead.
           xcodebuild test \
             -project Forge.xcodeproj \
             -scheme Forge \
-            -destination "platform=iOS Simulator,name=$NAME,OS=latest" \
+            -destination "platform=iOS Simulator,name=$SIMULATOR_NAME,OS=latest" \
             -resultBundlePath TestResults.xcresult \
+            -only-testing:ForgeTests \
+            -skip-testing:ForgeTests/ScreenshotTests \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestResults
+          path: TestResults.xcresult
+          if-no-files-found: ignore
+
+  screenshots:
+    name: Screenshots (iOS Simulator)
+    runs-on: macos-15
+    # The walkthrough opens every screen, sheet, menu and alert in the app, so it is the long job.
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select newest Xcode
+        run: .github/scripts/select-xcode.sh
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Pick a simulator
+        run: .github/scripts/pick-simulator.sh
+
+      - name: Capture
+        env:
+          # Read by ScreenshotTests, which writes each PNG here as well as attaching it.
+          # SIMCTL_CHILD_ is what carries a variable into the process running inside the simulator.
+          SIMCTL_CHILD_FORGE_SCREENSHOT_DIR: ${{ github.workspace }}/screenshots
+        run: |
+          set -euo pipefail
+          echo "Capturing on: $SIMULATOR_NAME"
+          mkdir -p "$SIMCTL_CHILD_FORGE_SCREENSHOT_DIR"
+          # A capture run should hand back every screen it did reach, so one broken path does not
+          # cost the rest. The walkthrough records a skipped step rather than failing the run.
+          xcodebuild test \
+            -project Forge.xcodeproj \
+            -scheme Forge \
+            -destination "platform=iOS Simulator,name=$SIMULATOR_NAME,OS=latest" \
+            -resultBundlePath ScreenshotResults.xcresult \
+            -only-testing:ForgeUITests \
+            -only-testing:ForgeTests/ScreenshotTests \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO
 
       - name: Recover the screenshots from the result bundle
-        # The UI tests can only attach, not write: their process runs inside the
-        # simulator. Exported attachments are named by UUID, so they are renamed
-        # from the manifest the export writes alongside them.
         if: always()
         run: |
           set -euo pipefail
@@ -82,56 +118,12 @@ jobs:
           RAW="${{ github.workspace }}/screenshots-raw"
           mkdir -p "$DIR" "$RAW"
           xcrun xcresulttool export attachments \
-            --path TestResults.xcresult \
+            --path ScreenshotResults.xcresult \
             --output-path "$RAW" || {
               echo 'Could not export attachments.'
               exit 0
             }
-          python3 - "$RAW" "$DIR" <<'PYTHON'
-          import json, os, shutil, sys
-
-          raw, out = sys.argv[1], sys.argv[2]
-          manifest = os.path.join(raw, 'manifest.json')
-          if not os.path.exists(manifest):
-              print('No manifest; leaving the exported files as they are.')
-              for name in os.listdir(raw):
-                  shutil.copy2(os.path.join(raw, name), os.path.join(out, name))
-              raise SystemExit
-
-          pairs = []
-          def walk(node):
-              if isinstance(node, dict):
-                  name = node.get('suggestedHumanReadableName') or node.get('name')
-                  exported = node.get('exportedFileName')
-                  if name and exported:
-                      pairs.append((name, exported))
-                  for value in node.values():
-                      walk(value)
-              elif isinstance(node, list):
-                  for value in node:
-                      walk(value)
-
-          with open(manifest) as handle:
-              walk(json.load(handle))
-
-          for name, exported in sorted(set(pairs)):
-              source = os.path.join(raw, exported)
-              if not os.path.exists(source):
-                  continue
-              # Attachment names arrive as "history_0_<uuid>.png". The readable
-              # part is everything before the first underscore.
-              stem = name.split('_')[0]
-              if not stem.endswith('.png'):
-                  stem += '.png'
-              # A failing UI test attaches its own diagnostics: a recording, a
-              # synthesized event per tap, a snapshot per failure. They are
-              # named by timestamp and are not screens.
-              if any(word in stem for word in
-                     ('Snapshot', 'Synthesized', 'Recording', '.txt', '.mp4')):
-                  continue
-              shutil.copy2(source, os.path.join(out, stem))
-              print('  ', stem)
-          PYTHON
+          .github/scripts/recover-screenshots.py "$RAW" "$DIR"
           echo "Recovered:"
           ls -1 "$DIR"
 
@@ -143,15 +135,15 @@ jobs:
           path: ${{ github.workspace }}/screenshots
           if-no-files-found: warn
 
-      - name: Upload test results
+      - name: Upload the capture results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: TestResults
-          path: TestResults.xcresult
+          name: ScreenshotResults
+          path: ScreenshotResults.xcresult
           if-no-files-found: ignore
 
-  package-ipa:
+  ipa:
     name: Package unsigned .ipa (AltStore / SideStore)
     runs-on: macos-15
     timeout-minutes: 30
@@ -159,13 +151,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select newest Xcode (26 for Liquid Glass)
-        run: |
-          set -euo pipefail
-          XPATH="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)"
-          echo "Selecting $XPATH"
-          sudo xcode-select -s "$XPATH"
-          xcodebuild -version
+      - name: Select newest Xcode
+        run: .github/scripts/select-xcode.sh
 
       - name: Install XcodeGen
         run: brew install xcodegen
