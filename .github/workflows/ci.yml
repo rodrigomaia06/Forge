@@ -123,6 +123,12 @@ jobs:
               stem = name.split('_')[0]
               if not stem.endswith('.png'):
                   stem += '.png'
+              # A failing UI test attaches its own diagnostics: a recording, a
+              # synthesized event per tap, a snapshot per failure. They are
+              # named by timestamp and are not screens.
+              if any(word in stem for word in
+                     ('Snapshot', 'Synthesized', 'Recording', '.txt', '.mp4')):
+                  continue
               shutil.copy2(source, os.path.join(out, stem))
               print('  ', stem)
           PYTHON

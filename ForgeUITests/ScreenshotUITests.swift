@@ -220,8 +220,12 @@ final class ScreenshotUITests: XCTestCase {
     /// Exact lookups keep missing here: a menu item or an alert button is not
     /// always a plain button, and the label carries extra text as often as not.
     private func tapAnything(in app: XCUIApplication, labelled text: String) -> Bool {
+        // Alerts and sheets first. A SwiftUI .alert puts its buttons in their
+        // own hierarchy, so app.buttons does not reach them: that is why three
+        // runs could not press Discard on a plain Button("Discard").
         let queries: [XCUIElementQuery] = [
-            app.buttons, app.staticTexts, app.cells, app.otherElements,
+            app.alerts.buttons, app.sheets.buttons, app.buttons,
+            app.staticTexts, app.cells, app.otherElements,
         ]
         for query in queries {
             _ = query.firstMatch.waitForExistence(timeout: 3)
