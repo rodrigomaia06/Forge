@@ -24,7 +24,9 @@ final class HangMonitor {
     /// Below this a stall is a hitch, not a freeze, and is not worth a record.
     private static let hangThreshold: TimeInterval = 3
     private static let pingInterval: TimeInterval = 0.5
-    private static let breadcrumbLimit = 40
+    // Long enough to retain several minutes of one-second timer checkpoints plus the interaction trail
+    // that led to a freeze. Events are function names and lifecycle phases only, never workout data.
+    private static let breadcrumbLimit = 300
     private static let reportLimit = 20
 
     private let queue = DispatchQueue(label: "com.rodrigomaia.forge.hang-monitor")
@@ -55,17 +57,32 @@ final class HangMonitor {
         observers = [
             center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
                 // Coming back from the background, the gap since the last response is not a hang.
+                Self.note("UIApplication.didBecomeActive")
                 self?.becameActive()
             },
             center.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
+                Self.note("UIApplication.willResignActive")
                 self?.queue.async { self?.isActive = false }
             },
-            // The keyboard is a suspect worth timestamping, and observing it here costs no call sites.
+            // Bracket the whole keyboard transition, including frame changes. The paired will/did events
+            // distinguish a completed system transition from one that never returned to the run loop.
             center.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { _ in
-                Self.note("keyboard shown")
+                Self.note("keyboard will show")
+            },
+            center.addObserver(forName: UIResponder.keyboardDidShowNotification, object: nil, queue: .main) { _ in
+                Self.note("keyboard did show")
             },
             center.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
-                Self.note("keyboard hidden")
+                Self.note("keyboard will hide")
+            },
+            center.addObserver(forName: UIResponder.keyboardDidHideNotification, object: nil, queue: .main) { _ in
+                Self.note("keyboard did hide")
+            },
+            center.addObserver(forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: .main) { _ in
+                Self.note("keyboard will change frame")
+            },
+            center.addObserver(forName: UIResponder.keyboardDidChangeFrameNotification, object: nil, queue: .main) { _ in
+                Self.note("keyboard did change frame")
             },
         ]
 

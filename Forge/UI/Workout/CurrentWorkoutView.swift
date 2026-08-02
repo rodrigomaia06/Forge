@@ -280,6 +280,7 @@ struct CurrentWorkoutView: View {
         let _ = HangMonitor.note("live workout rendered")
         return NavigationStack {
             VStack(spacing: 0) {
+                let _ = HangMonitor.note("CurrentWorkoutView.header build")
                 // A prominent title header, matching the Workout tab's greeting but a little smaller, so
                 // the active workout reads consistently with the rest of that tab.
                 HStack {
@@ -299,6 +300,7 @@ struct CurrentWorkoutView: View {
                 TimerBannerView(workout: workout, isEditing: editMode == .active)
                 Divider()
                 List {
+                    let _ = HangMonitor.note("CurrentWorkoutView.list build")
                     // Characteristics. Edit mode always exposes the name and comment. Otherwise a blank
                     // workout shows a single empty name field, editable directly for quick naming, while
                     // a workout that already has a name (its own, or a routine's) shows only the comment
@@ -399,7 +401,6 @@ struct CurrentWorkoutView: View {
                 }
                 .listStyleCompat_InsetGroupedListStyle()
                 .environment(\.editMode, $editMode)
-                .keyboardDoneToolbar()
             }
             // Tapping the canvas dismisses the keyboard. This is the screen's background, behind
             // everything else, so it only ever sees taps that nothing above it wanted: a row, a button

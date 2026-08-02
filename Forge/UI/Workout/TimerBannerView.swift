@@ -19,15 +19,7 @@ struct TimerBannerView: View {
     /// tap can't change the recorded times while logging.
     var isEditing: Bool = false
 
-    // This view owns the refresher. `@ObservedObject = Refresher()` created a new publisher whenever
-    // CurrentWorkoutView rebuilt its header, including while SwiftUI was already reconciling a timer-
-    // driven update. Keep one object for this banner's identity instead.
-    @StateObject private var refresher = Refresher()
-
-    // Building an autoconnected publisher in body replaced the subscription on every tick: the tick
-    // refreshed the view, whose new body created another publisher. One process-wide clock is enough for
-    // the single live-workout banner and stays stable across parent renders.
-    private static let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    @ObservedObject private var refresher = Refresher()
     
     @State private var activeSheet: SheetType?
     @State private var showEditHint = false
@@ -84,6 +76,7 @@ struct TimerBannerView: View {
     }
 
     var body: some View {
+        let _ = HangMonitor.note("TimerBannerView.body")
         HStack {
             // Both time readouts sit on the right, where iOS puts time and status. The stopwatch leads
             // the rest timer, keeping the order they have always been read in. An earlier attempt at
@@ -143,7 +136,11 @@ struct TimerBannerView: View {
                 self.restTimerSheet
             }
         }
-        .onReceive(Self.refreshTimer) { _ in self.refresher.refresh() }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+            HangMonitor.note("TimerBannerView.tick begin")
+            self.refresher.refresh()
+            HangMonitor.note("TimerBannerView.tick end")
+        }
     }
 }
 

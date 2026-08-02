@@ -279,8 +279,8 @@ final class ScreenshotUITests: XCTestCase {
     }
 
     /// Reproduces the current-device trace: complete a set while a value field owns the keyboard, then
-    /// scroll. Scrolling must leave focus alone; after an explicit Done, wait beyond the in-app monitor's
-    /// three-second threshold before proving that another field can still take focus.
+    /// leave it presented past the in-app monitor's three-second threshold before dismissing it and
+    /// proving that another field can still take focus.
     func testValueFieldTeardownSurvivesSetCompletion() throws {
         continueAfterFailure = false
         launch("value-field-teardown")
@@ -299,17 +299,14 @@ final class ScreenshotUITests: XCTestCase {
         XCTAssertTrue(complete.isHittable)
         complete.tap()
 
-        app.swipeUp(velocity: .slow)
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 2))
+        let stayedResponsive = expectation(description: "Main thread stays responsive past hang threshold")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { stayedResponsive.fulfill() }
+        wait(for: [stayedResponsive], timeout: 5)
 
         let done = app.buttons["Done"].firstMatch
         XCTAssertTrue(done.waitForExistence(timeout: 3))
         done.tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 3))
-
-        let stayedResponsive = expectation(description: "Main thread stays responsive past hang threshold")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { stayedResponsive.fulfill() }
-        wait(for: [stayedResponsive], timeout: 5)
 
         let fields = app.textFields
         XCTAssertGreaterThan(fields.count, 1)
@@ -508,11 +505,8 @@ final class ScreenshotUITests: XCTestCase {
             typeIfPossible(into: app.textFields.element(boundBy: 1), "8")
             shot("reps-typed", settle: 0.8)
         }
-        // Scrolling a focused List used to start a second responder transition and permanently block the
-        // main thread on device. It now only scrolls; Done is the one explicit dismissal in this path.
+        // Scrolling dismisses the keyboard everywhere in the app.
         app.swipeUp(velocity: .slow)
-        shot("value-field-scrolled", settle: 0.8)
-        _ = tapFirst(in: [app.buttons], labelled: "Done")
         shot("keyboard-dismissed", settle: 0.8)
         app.swipeDown(velocity: .slow)
     }

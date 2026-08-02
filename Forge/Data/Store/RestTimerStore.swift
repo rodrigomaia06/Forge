@@ -48,6 +48,8 @@ final class RestTimerStore: ObservableObject {
             userDefaults.restTimerStart
         }
         set {
+            HangMonitor.note("RestTimerStore.start setter begin")
+            defer { HangMonitor.note("RestTimerStore.start setter end") }
             self.objectWillChange.send()
             userDefaults.restTimerStart = newValue
             updateNotification()
@@ -59,6 +61,8 @@ final class RestTimerStore: ObservableObject {
             userDefaults.restTimerDuration
         }
         set {
+            HangMonitor.note("RestTimerStore.duration setter begin")
+            defer { HangMonitor.note("RestTimerStore.duration setter end") }
             self.objectWillChange.send()
             userDefaults.restTimerDuration = newValue
             updateNotification()
@@ -83,6 +87,8 @@ final class RestTimerStore: ObservableObject {
     /// on again. Only the two surfaces go: the activity above the camera, and the alert that would have
     /// fired.
     private func updateNotification() {
+        HangMonitor.note("RestTimerStore.updateSurfaces begin")
+        defer { HangMonitor.note("RestTimerStore.updateSurfaces end") }
         guard SettingsStore.shared.showRestTimer else {
             NotificationManager.shared.removePendingNotificationRequests(withIdentifiers: [.restTimerUp])
             NotificationManager.shared.removeDeliveredNotification(withIdentifiers: [.restTimerUp])

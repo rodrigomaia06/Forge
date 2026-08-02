@@ -133,6 +133,8 @@ struct WorkoutExerciseDetailView : View {
     }
 
     private func completeSet(_ set: WorkoutSet) {
+        HangMonitor.note("WorkoutExercise.completeSet begin")
+        defer { HangMonitor.note("WorkoutExercise.completeSet end") }
         guard isCurrentWorkout else { return }
         guard set.weightValue >= 0, set.repetitionsValue >= 0 else { return }
         set.isCompleted = true
@@ -144,8 +146,10 @@ struct WorkoutExerciseDetailView : View {
         // Inside a superset the rest timer holds until the last exercise of the round; other exercises
         // start it on completion as before.
         if workoutExercise.startsRestTimerOnSetCompletion {
+            HangMonitor.note("WorkoutExercise.restTimer update begin")
             restTimerStore.restTimerDuration = restTimerDuration
             restTimerStore.restTimerStart = Date() // start the rest timer
+            HangMonitor.note("WorkoutExercise.restTimer update end")
         }
         managedObjectContext.saveOrCrash()
     }
@@ -902,19 +906,17 @@ private struct ActiveSetRow: View {
             // Blank means a pure bodyweight set (added 0), not a normal set: keep addedWeight non-nil so it
             // stays bodyweight. The sign comes from the exercise's added/assisted mode.
             if trimmed.isEmpty {
-                if workoutSet.addedWeightValue != 0 { workoutSet.addedWeightValue = 0 }
+                workoutSet.addedWeightValue = 0
             } else if let number = Self.weightFormatter.number(from: trimmed) {
                 let magnitude = max(0, min(WeightUnit.convert(weight: number.doubleValue, from: weightUnit, to: .metric), WorkoutSet.MAX_WEIGHT))
-                let value = assisted ? -magnitude : magnitude
-                if workoutSet.addedWeightValue != value { workoutSet.addedWeightValue = value }
+                workoutSet.addedWeightValue = assisted ? -magnitude : magnitude
             }
             return
         }
         if trimmed.isEmpty {
-            if workoutSet.weight != nil { workoutSet.weight = nil }
+            workoutSet.weight = nil
         } else if let number = Self.weightFormatter.number(from: trimmed) {
-            let value = max(0, min(WeightUnit.convert(weight: number.doubleValue, from: weightUnit, to: .metric), WorkoutSet.MAX_WEIGHT))
-            if workoutSet.weightValue != value { workoutSet.weightValue = value }
+            workoutSet.weightValue = max(0, min(WeightUnit.convert(weight: number.doubleValue, from: weightUnit, to: .metric), WorkoutSet.MAX_WEIGHT))
         }
     }
 
@@ -922,10 +924,9 @@ private struct ActiveSetRow: View {
         HangMonitor.note("reps committed")
         let trimmed = repsInput.trimmingCharacters(in: .whitespaces)
         if trimmed.isEmpty {
-            if workoutSet.repetitions != nil { workoutSet.repetitions = nil }
+            workoutSet.repetitions = nil
         } else if let value = Int(trimmed) {
-            let repetitions = Int16(max(0, min(value, Int(WorkoutSet.MAX_REPETITIONS))))
-            if workoutSet.repetitionsValue != repetitions { workoutSet.repetitionsValue = repetitions }
+            workoutSet.repetitionsValue = Int16(max(0, min(value, Int(WorkoutSet.MAX_REPETITIONS))))
         }
     }
 
@@ -976,6 +977,8 @@ private struct ActiveSetRow: View {
     /// A set needs a weight and reps before it can be completed. Bodyweight sets can enter 0 for weight;
     /// what is blocked is completing an empty field.
     private func attemptComplete() {
+        HangMonitor.note("ActiveSetRow.attemptComplete begin")
+        defer { HangMonitor.note("ActiveSetRow.attemptComplete end") }
         if workoutSet.isCompleted {
             onToggleComplete()
             return

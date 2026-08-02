@@ -28,7 +28,7 @@ struct DiagnosticsView: View {
 
     var body: some View {
         List {
-            Section(footer: Text("Forge watches its own main thread. If the app stops responding for more than a few seconds, it records when that happened, how long it lasted, and the interactions just before it. Only the names of actions are kept, never your workouts, values, or notes. Nothing is sent anywhere.")) {
+            Section(footer: Text("Forge watches its own main thread. If the app stops responding for more than a few seconds, it records when that happened, how long it lasted, and the actions and function phases just before it. Only diagnostic names are kept, never your workouts, values, or notes. Nothing is sent anywhere.")) {
                 if reports.isEmpty {
                     Text("No freezes recorded.")
                         .foregroundColor(.forgeSecondaryLabel)
