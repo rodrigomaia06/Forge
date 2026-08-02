@@ -15,6 +15,8 @@
 import XCTest
 import CoreData
 import WorkoutDataKit
+// cancel() is an app-layer extension (Forge/Extension/Workout+Logic.swift), not part of the framework.
+@testable import Forge
 
 final class WorkoutCancelTests: XCTestCase {
     var container: NSPersistentContainer!
@@ -61,6 +63,16 @@ final class WorkoutCancelTests: XCTestCase {
         XCTAssertNoThrow(try workout.cancel(), message)
         XCTAssertNil(try? context.existingObject(with: objectID), "\(message): the workout survived the discard")
         XCTAssertEqual(try context.count(for: Workout.currentWorkoutFetchRequest), 0, "\(message): a current workout is still on file")
+    }
+
+    /// The delete and the save on their own, without the app layer around them. cancel() also cancels
+    /// the rest timer and schedules notification work, so if this passes and the cancel() tests fail,
+    /// the fault is up there rather than in the model's validation and delete rules.
+    func testDeletingAndSavingACurrentWorkoutDirectly() {
+        let workout = makeCurrentWorkout(exerciseCount: 2, setsPerExercise: 3, completed: false)
+        context.delete(workout)
+        XCTAssertNoThrow(try context.save(), "Deleting a current workout and saving")
+        XCTAssertEqual(try context.count(for: Workout.currentWorkoutFetchRequest), 0)
     }
 
     /// The shape the app is actually in mid-session: sets added but not yet logged.
