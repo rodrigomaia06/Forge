@@ -16,6 +16,8 @@ struct CustomAttributesEditor: View {
     /// When true, the value of an already-present attribute can be edited without the edit gate. Used on
     /// the live workout so routine-seeded fields (mood, location) can be filled in directly.
     var valuesEditable: Bool = false
+    /// Draw an explicit card when hosted by the live workout's non-recycling ScrollView.
+    var standaloneCard: Bool = false
 
     // A local, ordered editing model. Edits happen here and are written back to the dictionary when a
     // field loses focus or the view goes away, so a rename does not fight the dictionary's key identity.
@@ -33,44 +35,68 @@ struct CustomAttributesEditor: View {
         case value(UUID)
     }
 
+    @ViewBuilder private var editorRows: some View {
+        ForEach($rows) { $row in
+            HStack {
+                if isEditable {
+                    TextField("Name", text: $row.key)
+                        .focused($focus, equals: .key(row.id))
+                        .foregroundColor(.forgeSecondaryLabel)
+                } else {
+                    Text(row.key)
+                        .foregroundColor(.forgeSecondaryLabel)
+                }
+                Spacer()
+                if isEditable || valuesEditable {
+                    TextField("Value", text: $row.value)
+                        .focused($focus, equals: .value(row.id))
+                        .multilineTextAlignment(.trailing)
+                        .foregroundColor(.forgeLabel)
+                } else {
+                    Text(row.value)
+                        .foregroundColor(.forgeLabel)
+                }
+            }
+            // Tapping anywhere in the row brings up the keyboard on the value, the common edit.
+            .contentShape(Rectangle())
+            .onTapGesture { focus = .value(row.id) }
+            .modifier(if: standaloneCard) { row in
+                row
+                    .padding(.horizontal, Theme.Spacing.m)
+                    .padding(.vertical, Theme.Spacing.s)
+                    .overlay(alignment: .bottom) {
+                        Divider().padding(.horizontal, Theme.Spacing.m)
+                    }
+            }
+        }
+        .onDelete(perform: isEditable ? deleteRows : nil)
+
+        if isEditable {
+            Button {
+                let row = Row(key: "", value: "")
+                rows.append(row)
+                focus = .key(row.id)
+            } label: {
+                Label("Add attribute", systemImage: "plus")
+            }
+            .modifier(if: standaloneCard) { row in
+                row.padding(.horizontal, Theme.Spacing.m).padding(.vertical, Theme.Spacing.s)
+            }
+        }
+    }
+
     var body: some View {
         if !attributes.isEmpty || isEditable {
-            Section(header: Text("Attributes"), footer: footer) {
-                ForEach($rows) { $row in
-                    HStack {
-                        if isEditable {
-                            TextField("Name", text: $row.key)
-                                .focused($focus, equals: .key(row.id))
-                                .foregroundColor(.forgeSecondaryLabel)
-                        } else {
-                            Text(row.key)
-                                .foregroundColor(.forgeSecondaryLabel)
-                        }
-                        Spacer()
-                        if isEditable || valuesEditable {
-                            TextField("Value", text: $row.value)
-                                .focused($focus, equals: .value(row.id))
-                                .multilineTextAlignment(.trailing)
-                                .foregroundColor(.forgeLabel)
-                        } else {
-                            Text(row.value)
-                                .foregroundColor(.forgeLabel)
-                        }
-                    }
-                    // Tapping anywhere in the row brings up the keyboard on the value, the common edit.
-                    .contentShape(Rectangle())
-                    .onTapGesture { focus = .value(row.id) }
-                }
-                .onDelete(perform: isEditable ? deleteRows : nil)
-
-                if isEditable {
-                    Button {
-                        let row = Row(key: "", value: "")
-                        rows.append(row)
-                        focus = .key(row.id)
-                    } label: {
-                        Label("Add attribute", systemImage: "plus")
-                    }
+            Group {
+                if standaloneCard {
+                    VStack(spacing: 0) { editorRows }
+                        .background(
+                            RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
+                                .fill(Color.forgeSurface)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
+                } else {
+                    Section(header: Text("Attributes"), footer: footer) { editorRows }
                 }
             }
             .onAppear { syncRowsFromAttributes() }

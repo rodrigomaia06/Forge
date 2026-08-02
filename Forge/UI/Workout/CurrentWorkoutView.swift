@@ -182,6 +182,123 @@ struct CurrentWorkoutView: View {
         )
     }
 
+    private var hasWorkoutName: Bool {
+        !(workout.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || workout.workoutPlanAndRoutineTitle() != nil
+    }
+
+    private var trimmedWorkoutComment: String {
+        (workout.comment ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func scrollSectionTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.forgeHeadline)
+            .foregroundColor(.forgeSecondaryLabel)
+            .padding(.horizontal, Theme.Spacing.l)
+    }
+
+    @ViewBuilder private var scrollCharacteristics: some View {
+        if !hasWorkoutName || !trimmedWorkoutComment.isEmpty {
+            VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+                scrollSectionTitle("Characteristics")
+                VStack(spacing: 0) {
+                    if !hasWorkoutName {
+                        ClearableTextField(titleKey: "Name", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
+                            .padding(.horizontal, Theme.Spacing.m)
+                            .padding(.vertical, Theme.Spacing.s)
+                    }
+                    if !hasWorkoutName, !trimmedWorkoutComment.isEmpty {
+                        Divider().padding(.horizontal, Theme.Spacing.m)
+                    }
+                    if !trimmedWorkoutComment.isEmpty {
+                        Text(trimmedWorkoutComment)
+                            .foregroundColor(.forgeSecondaryLabel)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, Theme.Spacing.m)
+                            .padding(.vertical, Theme.Spacing.s)
+                            .editModeHint()
+                    }
+                }
+                .forgeCard()
+            }
+        }
+    }
+
+    @ViewBuilder private var scrollAttributes: some View {
+        if !workout.customAttributes.isEmpty {
+            VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+                scrollSectionTitle("Attributes")
+                CustomAttributesEditor(
+                    attributes: workoutCustomAttributes,
+                    isEditable: false,
+                    valuesEditable: true,
+                    standaloneCard: true
+                )
+            }
+        }
+    }
+
+    private var addExerciseScrollButton: some View {
+        Button(action: {
+            HangMonitor.note("add exercise sheet opened")
+            self.activeSheet = .exerciseSelector
+        }) {
+            HStack {
+                Image(systemName: "plus")
+                Text("Add exercise")
+                Spacer()
+            }
+            .padding(.horizontal, Theme.Spacing.m)
+            .frame(minHeight: Theme.Layout.minTapTarget)
+            .contentShape(Rectangle())
+        }
+        .forgeCard()
+    }
+
+    /// Normal workout logging deliberately uses a non-lazy stack. All editable fields remain mounted for
+    /// the life of the screen instead of being recycled as they cross a List viewport boundary.
+    private var liveWorkoutScroll: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.l) {
+                scrollCharacteristics
+                scrollAttributes
+
+                VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+                    scrollSectionTitle("Exercises")
+                    VStack(spacing: Theme.Spacing.l) {
+                        ForEach(Array(workout.exerciseSlots.enumerated()), id: \.element.id) { _, slot in
+                            switch slot {
+                            case .single(let workoutExercise):
+                                WorkoutExerciseDetailView(
+                                    workoutExercise: workoutExercise,
+                                    embedded: true,
+                                    scrollCard: true,
+                                    onPresentSheet: present
+                                )
+                            case .superset(_, let exercises):
+                                SupersetCard(
+                                    anchor: exercises[0],
+                                    exercises: exercises,
+                                    sectionHeader: nil,
+                                    scrollCard: true,
+                                    onPresentSheet: present
+                                )
+                            }
+                        }
+                    }
+                }
+
+                addExerciseScrollButton
+            }
+            .padding(.horizontal, Theme.Spacing.l)
+            .padding(.top, Theme.Spacing.s)
+            .padding(.bottom, Theme.Spacing.xxl)
+        }
+        .scrollDismissesKeyboard(.immediately)
+        .background(Color.forgeBackground.ignoresSafeArea())
+    }
+
 
     /// The finish button routes here: block an empty workout, otherwise confirm before finishing.
     private func requestFinish() {
@@ -299,6 +416,7 @@ struct CurrentWorkoutView: View {
                 // it from the list below, so there is no boxed-in colored band.
                 TimerBannerView(workout: workout, isEditing: editMode == .active)
                 Divider()
+                if editMode == .active {
                 List {
                     let _ = HangMonitor.note("CurrentWorkoutView.list build")
                     // Characteristics. Edit mode always exposes the name and comment. Otherwise a blank
@@ -401,21 +519,11 @@ struct CurrentWorkoutView: View {
                 }
                 .listStyleCompat_InsetGroupedListStyle()
                 .environment(\.editMode, $editMode)
+                } else {
+                    liveWorkoutScroll
+                }
             }
-            // Tapping the canvas dismisses the keyboard. This is the screen's background, behind
-            // everything else, so it only ever sees taps that nothing above it wanted: a row, a button
-            // or a value box still gets its own tap first. That is the difference from the window-wide
-            // recognizer this app used to have, which recognised alongside every other gesture and was
-            // removed for wedging touch delivery.
-            .background(
-                Color.forgeBackground
-                    .ignoresSafeArea()
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        HangMonitor.note("workout canvas keyboard dismissed")
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                    }
-            )
+            .background(Color.forgeBackground.ignoresSafeArea())
             .navigationBarTitle(Text(""), displayMode: .inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { cancelButton }
@@ -467,28 +575,46 @@ private struct SupersetCard: View {
     @ObservedObject var anchor: WorkoutExercise
     let exercises: [WorkoutExercise]
     let sectionHeader: String?
+    var scrollCard: Bool = false
     let onPresentSheet: (WorkoutExerciseSheetRoute) -> Void
 
     /// The group's shared note, read from the observed anchor (all members are kept equal).
     private var note: String? { anchor.supersetNote }
 
+    @ViewBuilder private var members: some View {
+        ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
+            WorkoutExerciseDetailView(
+                workoutExercise: exercise,
+                embedded: true,
+                scrollCard: scrollCard,
+                supersetMember: .init(
+                    label: exercise.supersetLabel ?? "",
+                    isFirst: index == 0,
+                    isLast: index == exercises.count - 1
+                ),
+                onPresentSheet: onPresentSheet
+            )
+        }
+    }
+
     var body: some View {
-        Section {
-            supersetHeader
-            ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
-                WorkoutExerciseDetailView(
-                    workoutExercise: exercise,
-                    embedded: true,
-                    supersetMember: .init(
-                        label: exercise.supersetLabel ?? "",
-                        isFirst: index == 0,
-                        isLast: index == exercises.count - 1
-                    ),
-                    onPresentSheet: onPresentSheet
-                )
+        if scrollCard {
+            VStack(spacing: 0) {
+                supersetHeader
+                    .padding(.horizontal, Theme.Spacing.m)
+                    .padding(.vertical, Theme.Spacing.s)
+                Divider().padding(.horizontal, Theme.Spacing.m)
+                members
             }
-        } header: {
-            if let sectionHeader { Text(sectionHeader) }
+            .forgeCard()
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
+        } else {
+            Section {
+                supersetHeader
+                members
+            } header: {
+                if let sectionHeader { Text(sectionHeader) }
+            }
         }
     }
 

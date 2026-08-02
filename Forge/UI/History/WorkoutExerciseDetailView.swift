@@ -55,6 +55,9 @@ struct WorkoutExerciseDetailView : View {
     /// When true, renders as a card embedded in the current-workout list (name header + set table,
     /// no navigation bar). When false, renders as the pushed full-screen view used from history.
     let embedded: Bool
+    /// The live workout's normal mode uses a non-recycling ScrollView. In that container this view draws
+    /// its own card and separators instead of relying on List section styling.
+    let scrollCard: Bool
     /// Header for the embedded card's section. Set only on the first exercise so the group gets a
     /// single "Exercises" header in the same grouped style as the Characteristics and Attributes ones.
     private let sectionHeader: String?
@@ -75,9 +78,10 @@ struct WorkoutExerciseDetailView : View {
 
     /// [initialEditMode] carries editing in from the screen that opened this one, so a workout opened
     /// for editing keeps its sets editable one level down instead of reverting to read-only.
-    init(workoutExercise: WorkoutExercise, embedded: Bool = false, sectionHeader: String? = nil, supersetMember: SupersetMember? = nil, initialEditMode: EditMode = .inactive, onPresentSheet: ((WorkoutExerciseSheetRoute) -> Void)? = nil) {
+    init(workoutExercise: WorkoutExercise, embedded: Bool = false, scrollCard: Bool = false, sectionHeader: String? = nil, supersetMember: SupersetMember? = nil, initialEditMode: EditMode = .inactive, onPresentSheet: ((WorkoutExerciseSheetRoute) -> Void)? = nil) {
         self.workoutExercise = workoutExercise
         self.embedded = embedded
+        self.scrollCard = scrollCard
         self.sectionHeader = sectionHeader
         self.supersetMember = supersetMember
         self.onPresentSheet = onPresentSheet
@@ -322,7 +326,7 @@ struct WorkoutExerciseDetailView : View {
 
     private var currentWorkoutSets: some View {
         ForEach(indexedWorkoutSets(for: workoutExercise), id: \.1.id) { (index, workoutSet) in
-            ActiveSetRow(
+            let row = ActiveSetRow(
                 workoutSet: workoutSet,
                 index: index,
                 weightUnit: settingsStore.weightUnit,
@@ -343,18 +347,28 @@ struct WorkoutExerciseDetailView : View {
                     present(.setOptions(workoutSet))
                 }
             )
-            // Tighter vertical insets so the set rows sit closer together, less separation between sets.
-            .listRowInsets(EdgeInsets(top: 3, leading: Theme.Spacing.m, bottom: 3, trailing: Theme.Spacing.m))
-            // Explicit red tint: the app-wide white tint was overriding the destructive colour, so the
-            // swipe button rendered white on the dark background instead of a full red delete action.
-            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                Button(role: .destructive) {
-                    deleteSet(workoutSet)
-                } label: {
-                    Label("Delete", systemImage: "trash")
+            if scrollCard {
+                row
+                    .padding(.horizontal, Theme.Spacing.m)
+                    .padding(.vertical, 3)
+                    .overlay(alignment: .bottom) {
+                        Divider().padding(.horizontal, Theme.Spacing.m)
+                    }
+            } else {
+                row
+                    // Tighter vertical insets so the set rows sit closer together, less separation between sets.
+                    .listRowInsets(EdgeInsets(top: 3, leading: Theme.Spacing.m, bottom: 3, trailing: Theme.Spacing.m))
+                    // Explicit red tint: the app-wide white tint was overriding the destructive colour, so the
+                    // swipe button rendered white on the dark background instead of a full red delete action.
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            deleteSet(workoutSet)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                        .tint(Color.forgeDestructive)
+                    }
                 }
-                .tint(Color.forgeDestructive)
-            }
         }
     }
     
@@ -487,6 +501,43 @@ struct WorkoutExerciseDetailView : View {
         }
     }
 
+    /// The same exercise rows as the List version, kept alive together inside one explicit card. A plain
+    /// VStack is deliberate: LazyVStack/List recycling was repeatedly constructing and dismantling the
+    /// focused numeric fields immediately before the permanent main-thread block.
+    private var scrollRows: some View {
+        VStack(spacing: 0) {
+            exerciseHeaderRow
+                .padding(.horizontal, Theme.Spacing.m)
+                .padding(.vertical, Theme.Spacing.s)
+            Divider().padding(.horizontal, Theme.Spacing.m)
+            if exerciseIsBodyweight && setsEditable && isAdHocWorkout {
+                bodyweightModeRow
+                    .padding(.horizontal, Theme.Spacing.m)
+                    .padding(.vertical, Theme.Spacing.xs)
+                Divider().padding(.horizontal, Theme.Spacing.m)
+            }
+            setsHeader
+                .padding(.horizontal, Theme.Spacing.m)
+                .padding(.vertical, Theme.Spacing.xs)
+            Divider().padding(.horizontal, Theme.Spacing.m)
+            currentWorkoutSets
+            if setsEditable {
+                addSetButton
+                    .padding(.horizontal, Theme.Spacing.m)
+                    .padding(.vertical, Theme.Spacing.s)
+            }
+        }
+    }
+
+    private var scrollCardBody: some View {
+        scrollRows
+            .background(
+                RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
+                    .fill(Color.forgeSurface)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
+    }
+
     /// The pushed, full-screen layout used when viewing an exercise from history. Read-only until Edit.
     private var standaloneBody: some View {
         VStack(spacing: 0) {
@@ -528,7 +579,13 @@ struct WorkoutExerciseDetailView : View {
 
     var body: some View {
         if embedded {
-            if supersetMember != nil {
+            if scrollCard {
+                if supersetMember != nil {
+                    scrollRows
+                } else {
+                    scrollCardBody
+                }
+            } else if supersetMember != nil {
                 // The superset card provides the section and the shared header, so a member contributes
                 // only its rows.
                 embeddedContent

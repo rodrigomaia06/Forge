@@ -279,8 +279,8 @@ final class ScreenshotUITests: XCTestCase {
     }
 
     /// Reproduces the current-device trace: complete a set while a value field owns the keyboard, then
-    /// leave it presented past the in-app monitor's three-second threshold before dismissing it and
-    /// proving that another field can still take focus.
+    /// leave it presented past the in-app monitor's three-second threshold before dismissing it by
+    /// scrolling and proving that another field can still take focus.
     func testValueFieldTeardownSurvivesSetCompletion() throws {
         continueAfterFailure = false
         launch("value-field-teardown")
@@ -303,10 +303,9 @@ final class ScreenshotUITests: XCTestCase {
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) { stayedResponsive.fulfill() }
         wait(for: [stayedResponsive], timeout: 5)
 
-        let done = app.buttons["Done"].firstMatch
-        XCTAssertTrue(done.waitForExistence(timeout: 3))
-        done.tap()
+        app.swipeUp(velocity: .slow)
         XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 3))
+        app.swipeDown(velocity: .slow)
 
         let fields = app.textFields
         XCTAssertGreaterThan(fields.count, 1)

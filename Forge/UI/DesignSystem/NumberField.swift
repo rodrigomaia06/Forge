@@ -42,43 +42,10 @@ struct RightAlignedNumberField: UIViewRepresentable {
         return UIFontMetrics(forTextStyle: .body).scaledFont(for: font)
     }
 
-    /// A Done bar above the keyboard, built here in UIKit rather than with SwiftUI's `.keyboard` toolbar
-    /// placement.
-    ///
-    /// SwiftUI only shows a keyboard toolbar for a field it owns and tracks focus for. This is a
-    /// UITextField behind a UIViewRepresentable, so SwiftUI never knows it is first responder and the
-    /// toolbar never appeared. With the lists no longer dismissing the keyboard when scrolled, that left
-    /// a number pad with no way out at all: it has no return key. An input accessory view belongs to the
-    /// field itself, so it always shows.
-    private static func doneBar(target: Coordinator) -> UIToolbar {
-        // An explicit frame, not a bare UIToolbar() plus sizeToFit(). Sized from nothing, the bar has no
-        // settled height, and UIKit recalculates the keyboard frame each time it tries: a freeze log
-        // caught keyboardWillShow firing three and four times within a few milliseconds, with no hide
-        // and no focus change between them.
-        let toolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 44))
-        toolbar.autoresizingMask = .flexibleWidth
-        // A bar of its own, rather than a control floating on the content. Without a configured
-        // appearance the bar draws nothing, so the button sat over the list with no separation from the
-        // keyboard beneath it.
-        let appearance = UIToolbarAppearance()
-        appearance.configureWithDefaultBackground()
-        toolbar.standardAppearance = appearance
-        toolbar.compactAppearance = appearance
-        // Plain and in the label colour. The .done style renders as a filled tinted capsule, which came
-        // out as a blue pill: the wrong weight for this, and the only blue in an otherwise monochrome app.
-        toolbar.tintColor = .label
-        toolbar.items = [
-            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
-            UIBarButtonItem(title: "Done", style: .plain, target: target, action: #selector(Coordinator.dismissKeyboard)),
-        ]
-        return toolbar
-    }
-
     func makeUIView(context: Context) -> UITextField {
         HangMonitor.note("NumberField.makeUIView begin")
         let field = PaddedTextField()
         field.delegate = context.coordinator
-        field.inputAccessoryView = Self.doneBar(target: context.coordinator)
         field.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged(_:)), for: .editingChanged)
         field.textAlignment = alignment
         field.font = Self.valueFont()
@@ -165,13 +132,6 @@ struct RightAlignedNumberField: UIViewRepresentable {
             parent.text = field.text ?? ""
             moveCaretToEnd(field)
             HangMonitor.note("NumberField.editingChanged end")
-        }
-
-        @objc func dismissKeyboard() {
-            HangMonitor.note("keyboard done tapped")
-            HangMonitor.note("NumberField.dismissKeyboard sendAction begin")
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            HangMonitor.note("NumberField.dismissKeyboard sendAction end")
         }
 
         func textFieldDidBeginEditing(_ field: UITextField) {
