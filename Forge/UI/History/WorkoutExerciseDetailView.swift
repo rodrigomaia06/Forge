@@ -35,8 +35,9 @@ struct WorkoutExerciseDetailView : View {
     }
     
     @State private var showExerciseInfo = false
-    // History (standalone) starts read-only; its Edit button flips this so sets become editable.
-    @State private var historyEditMode: EditMode = .inactive
+    // History (standalone) starts read-only unless the screen that opened it was already editing; its
+    // Edit button flips this so sets become editable.
+    @State private var historyEditMode: EditMode
 
     /// Sets are editable during the live workout, or in history only after tapping Edit.
     private var setsEditable: Bool { isCurrentWorkout || historyEditMode == .active }
@@ -59,11 +60,14 @@ struct WorkoutExerciseDetailView : View {
         let isLast: Bool
     }
 
-    init(workoutExercise: WorkoutExercise, embedded: Bool = false, sectionHeader: String? = nil, supersetMember: SupersetMember? = nil) {
+    /// [initialEditMode] carries editing in from the screen that opened this one, so a workout opened
+    /// for editing keeps its sets editable one level down instead of reverting to read-only.
+    init(workoutExercise: WorkoutExercise, embedded: Bool = false, sectionHeader: String? = nil, supersetMember: SupersetMember? = nil, initialEditMode: EditMode = .inactive) {
         self.workoutExercise = workoutExercise
         self.embedded = embedded
         self.sectionHeader = sectionHeader
         self.supersetMember = supersetMember
+        _historyEditMode = State(initialValue: initialEditMode)
         _workoutExerciseHistory = FetchRequest(fetchRequest: workoutExercise.historyFetchRequest)
     }
 

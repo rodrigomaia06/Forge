@@ -19,8 +19,17 @@ struct WorkoutDetailView : View {
 
     // Owned here (not the ambient editMode) so the Edit/Done control can be a plain text button. The
     // system EditButton rendered a "Done" checkmark overlapping the "Edit" label inside the nav glass.
-    @State private var editMode: EditMode = .inactive
+    @State private var editMode: EditMode
     @State private var showingExerciseSelectorSheet = false
+    /// Set by a row tap while this list is editing, since an editing List swallows NavigationLink taps.
+    @State private var exerciseToOpen: WorkoutExercise?
+
+    /// [initialEditMode] carries editing in from the screen that opened this one, so entering Edit in
+    /// History and tapping a workout lands on an editable workout rather than a read-only one.
+    init(workout: Workout, initialEditMode: EditMode = .inactive) {
+        self.workout = workout
+        _editMode = State(initialValue: initialEditMode)
+    }
     // When on, every exercise is shown expanded with its set table inline (like the live workout), instead
     // of a compact list you tap into. A read-only overview of the whole workout in one scroll.
     @State private var expanded = false
@@ -81,6 +90,13 @@ struct WorkoutDetailView : View {
         workoutExercise.workoutSets?.array as? [WorkoutSet] ?? []
     }
     
+    /// The pushed exercise screen. Shared by the row's link and by the edit-mode tap, so both routes
+    /// land on the same thing, editable when this workout is being edited.
+    private func exerciseDestination(_ workoutExercise: WorkoutExercise) -> some View {
+        WorkoutExerciseDetailView(workoutExercise: workoutExercise, initialEditMode: editMode)
+            .environmentObject(self.settingsStore)
+    }
+
     private func workoutExerciseView(workoutExercise: WorkoutExercise) -> some View {
         VStack(alignment: .leading) {
             Text(workoutExercise.exercise(in: self.exerciseStore.exercises)?.title ?? "")
@@ -173,8 +189,18 @@ struct WorkoutDetailView : View {
             } else {
             Section {
                 ForEach(workoutExercises) { workoutExercise in
-                    NavigationLink(destination: WorkoutExerciseDetailView(workoutExercise: workoutExercise).environmentObject(self.settingsStore)) {
+                    NavigationLink(destination: exerciseDestination(workoutExercise)) {
                         self.workoutExerciseView(workoutExercise: workoutExercise)
+                    }
+                    // Same reason as the History rows: an editing List swallows the NavigationLink tap,
+                    // so editing would otherwise be unable to reach an exercise's sets at all. The
+                    // overlay covers only the row content, leaving the delete and reorder controls.
+                    .overlay {
+                        if editMode.isEditing {
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .onTapGesture { exerciseToOpen = workoutExercise }
+                        }
                     }
                 }
                 .onDelete { offsets in
@@ -211,6 +237,7 @@ struct WorkoutDetailView : View {
         }
         .listStyleCompat_InsetGroupedListStyle()
         .environment(\.editMode, $editMode)
+        .navigationDestination(item: $exerciseToOpen) { exerciseDestination($0) }
         .keyboardDoneToolbar()
         // Commit the title and comment when Edit is turned off, so tapping Done saves even if the field
         // never lost focus (the text field's own onCommit does not fire when it is removed).

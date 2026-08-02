@@ -153,6 +153,18 @@ struct HistoryView : View {
                                         }
                                 }
                             }
+                            // A List in edit mode swallows the taps that would follow a NavigationLink, so
+                            // while editing the row gets its own tap target that pushes the same
+                            // destination. Editing then carries into the workout rather than being a dead
+                            // end: the workout opens already in edit mode. The overlay covers only the row
+                            // content, so the delete circle and the reorder handle still take their taps.
+                            .overlay {
+                                if editMode == .active {
+                                    Color.clear
+                                        .contentShape(Rectangle())
+                                        .onTapGesture { path.append(workout) }
+                                }
+                            }
                             // Tint the row while it waits for the delete confirmation, so it is clear which
                             // workout is about to be removed. It stays in the list until Delete is confirmed.
                             .listRowBackground(workoutsToDelete?.contains(workout) == true ? Color.forgeDestructive.opacity(0.18) : nil)
@@ -174,7 +186,8 @@ struct HistoryView : View {
             .listStyleCompat_InsetGroupedListStyle()
             .environment(\.editMode, $editMode)
             .navigationDestination(for: Workout.self) { workout in
-                WorkoutDetailView(workout: workout)
+                // Opened from an editing list, the workout opens editable too.
+                WorkoutDetailView(workout: workout, initialEditMode: editMode)
                     .environmentObject(self.settingsStore)
             }
             .alert("Delete workout?", isPresented: Binding(get: { workoutsToDelete != nil }, set: { if !$0 { workoutsToDelete = nil } })) {
