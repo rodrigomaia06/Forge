@@ -24,7 +24,6 @@ extension UserDefaults {
         case showRPE
         case restTimerSound
         case restTimerHaptic
-        case restTimerBreaksThroughFocus
         case appearance
         case showPlanInWorkoutTitle
         case bodyweight
@@ -53,14 +52,6 @@ extension UserDefaults {
     var restTimerHaptic: Bool {
         set { self.set(newValue, forKey: SettingsKeys.restTimerHaptic.rawValue) }
         get { self.value(forKey: SettingsKeys.restTimerHaptic.rawValue) as? Bool ?? true }
-    }
-
-    /// Deliver the rest-timer alert as a Time Sensitive notification, so it can arrive during a Focus.
-    /// Off by default: breaking through Focus is the user's call, not the app's. Only the rest timer
-    /// ever uses it.
-    var restTimerBreaksThroughFocus: Bool {
-        set { self.set(newValue, forKey: SettingsKeys.restTimerBreaksThroughFocus.rawValue) }
-        get { self.value(forKey: SettingsKeys.restTimerBreaksThroughFocus.rawValue) as? Bool ?? false }
     }
 
     /// Whether to show the personal-record (estimated 1RM) trophy on qualifying sets.

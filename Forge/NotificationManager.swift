@@ -98,13 +98,6 @@ class NotificationManager: NSObject {
                 content.sound = UNNotificationSound(named: UNNotificationSoundName("alarm.wav"))
             }
             content.categoryIdentifier = NotificationCategoryIdentifier.restTimerUp.rawValue
-            // The rest timer is the one notification allowed through a Focus, and only when the user has
-            // turned that on. Everything else stays at the default level. If the entitlement is missing
-            // (a build signed without it), iOS delivers this at the normal level instead of failing, so
-            // the alert still arrives; it just waits for the Focus to end.
-            if SettingsStore.shared.restTimerBreaksThroughFocus {
-                content.interruptionLevel = .timeSensitive
-            }
             
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: remainingTime, repeats: false)
             

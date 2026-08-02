@@ -101,16 +101,6 @@ struct GeneralSettingsView: View {
                 .tint(.forgeSuccess)
         }
     }
-
-    private var focusSection: some View {
-        Section(
-            header: Text("Focus"),
-            footer: Text("Lets the rest timer alert arrive while a Focus is on, so a set of Do Not Disturb during training doesn't hold it until you check your phone. Nothing else in Forge breaks through. iOS can still block it: Settings has a Time Sensitive switch for Forge, and each Focus decides whether to allow them.")
-        ) {
-            Toggle("Rest timer alert during Focus", isOn: $settingsStore.restTimerBreaksThroughFocus)
-                .tint(.forgeSuccess)
-        }
-    }
     
     private var reminderSection: some View {
         Section(header: Text("Reminders"), footer: Text("Sends a single reminder if you leave a workout in progress after logging a set.")) {
@@ -150,7 +140,6 @@ struct GeneralSettingsView: View {
             calendarSection
             restTimerSection
             restTimerAlertSection
-            focusSection
             reminderSection
             workoutNameSection
             recordsSection
