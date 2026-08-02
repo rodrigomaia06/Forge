@@ -35,23 +35,17 @@ extension View {
     func listStyleCompat_InsetGroupedListStyle() -> some View {
         if #available(iOS 16.0, *) {
             // Hide the system grouped background and use the dashboard canvas, so every screen shares
-            // the same near-black instead of the system's pure-black grouped background. Scrolling
-            // dismisses the keyboard everywhere these lists are used.
+            // the same near-black instead of the system's pure-black grouped background.
             //
-            // .never, after .interactively and then .immediately both left the app freezing.
-            //
-            // Every recorded freeze is preceded by two keyboardWillHide about fifteen milliseconds
-            // apart: the focused field resigning, and the scroll dismissing the keyboard, landing in the
-            // same turn of the run loop. The hang starts in the update that follows. Both earlier modes
-            // install machinery that resigns the first responder out from under a list that hosts a
-            // UITextField, and this is the third freeze in a row that ends the same way.
-            //
-            // Scrolling no longer dismisses the keyboard, so `keyboardDoneToolbar()` now puts a real Done
-            // above it. A number pad has no return key, so that button is the way out; a visible control
-            // is also a better answer than a gesture nothing on screen advertises.
+            // Scrolling dismisses the keyboard again. This was turned off while the freeze was being
+            // chased, on the theory that resigning the first responder mid-scroll was wedging UIKit. The
+            // cause turned out to be elsewhere: a set's SwiftUI identity came from its Core Data
+            // objectID, which changes the first time a newly created object is saved, so the row holding
+            // the focused field was destroyed under it. Scrolling was never the problem, and without it
+            // the only way out of a number pad was the Done bar.
             listStyle(.insetGrouped)
                 .scrollContentBackground(.hidden)
-                .scrollDismissesKeyboard(.never)
+                .scrollDismissesKeyboard(.immediately)
                 .background(Color.forgeBackground.ignoresSafeArea())
         } else if #available(iOS 14.0, *) {
             listStyle(InsetGroupedListStyle())

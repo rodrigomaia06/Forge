@@ -118,7 +118,7 @@ struct WorkoutExerciseDetailView : View {
         Haptics.success()
         // Inside a superset the rest timer holds until the last exercise of the round; other exercises
         // start it on completion as before.
-        if workoutExercise.startsRestTimerOnSetCompletion {
+        if settingsStore.showRestTimer, workoutExercise.startsRestTimerOnSetCompletion {
             restTimerStore.restTimerDuration = restTimerDuration
             restTimerStore.restTimerStart = Date() // start the rest timer
         }

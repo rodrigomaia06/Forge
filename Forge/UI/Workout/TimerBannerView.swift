@@ -75,56 +75,51 @@ struct TimerBannerView: View {
         .padding()
     }
 
-    /// The stopwatch is hidden when the user has turned the elapsed counter off, except in edit mode,
-    /// where it is the only way into the start/end editor and is showing recorded times rather than
-    /// counting. The workout records its real start and end either way.
-    private var showsStopwatch: Bool { settingsStore.showWorkoutTimer || isEditing }
-
     var body: some View {
         HStack {
             // The elapsed-workout stopwatch on the left. In edit mode it opens the start/end editor;
             // otherwise a tap shows a brief hint that the times can only be changed in edit mode.
-            if showsStopwatch {
-                Button(action: {
-                    if isEditing {
-                        self.activeSheet = .editTime
-                    } else {
-                        Haptics.impact(.light)
-                        withAnimation { showEditHint = true }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            withAnimation { showEditHint = false }
-                        }
+            Button(action: {
+                if isEditing {
+                    self.activeSheet = .editTime
+                } else {
+                    Haptics.impact(.light)
+                    withAnimation { showEditHint = true }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        withAnimation { showEditHint = false }
                     }
-                }) {
-                    stopwatchLabel
                 }
-                .buttonStyle(.plain)
+            }) {
+                stopwatchLabel
+            }
+            .buttonStyle(.plain)
 
-                if showEditHint {
-                    Text("Editable in Edit mode")
-                        .font(.caption2)
-                        .foregroundColor(.forgeSecondaryLabel)
-                        .transition(.opacity)
-                        .allowsHitTesting(false)
-                }
+            if showEditHint {
+                Text("Editable in Edit mode")
+                    .font(.caption2)
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
             }
 
             Spacer()
 
-            // Rest timer on the right.
-            Button(action: {
-                self.activeSheet = .restTimer
-            }) {
-                let remainingTime = restTimerStore.restTimerRemainingTime
-                HStack {
-                    Image(systemName: "timer")
-                    if let remainingTime = remainingTime {
-                        Text(restTimerDurationFormatter.string(from: abs(remainingTime.rounded(.up))) ?? "")
-                            .font(Font.body.monospacedDigit())
+            // Rest timer on the right, unless it has been turned off in Settings.
+            if settingsStore.showRestTimer {
+                Button(action: {
+                    self.activeSheet = .restTimer
+                }) {
+                    let remainingTime = restTimerStore.restTimerRemainingTime
+                    HStack {
+                        Image(systemName: "timer")
+                        if let remainingTime = remainingTime {
+                            Text(restTimerDurationFormatter.string(from: abs(remainingTime.rounded(.up))) ?? "")
+                                .font(Font.body.monospacedDigit())
+                        }
                     }
+                    .foregroundColor(remainingTime ?? 0 < 0 ? .forgeDestructive : nil)
+                    .padding()
                 }
-                .foregroundColor(remainingTime ?? 0 < 0 ? .forgeDestructive : nil)
-                .padding()
             }
         }
         // No fill: the timer row sits on the workout canvas so it reads as part of the header rather

@@ -181,13 +181,13 @@ final class SettingsStore: ObservableObject {
         }
     }
 
-    var showWorkoutTimer: Bool {
+    var showRestTimer: Bool {
         get {
-            userDefaults.showWorkoutTimer
+            userDefaults.showRestTimer
         }
         set {
             self.objectWillChange.send()
-            userDefaults.showWorkoutTimer = newValue
+            userDefaults.showRestTimer = newValue
         }
     }
 

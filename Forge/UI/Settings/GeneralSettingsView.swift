@@ -70,38 +70,42 @@ struct GeneralSettingsView: View {
         }
     }
 
-    private var liveWorkoutSection: some View {
-        Section(
-            header: Text("Live workout"),
-            footer: Text("The elapsed-time counter in the workout header. Turning it off hides it while you train. The workout still records when it started and ended, and you can edit those times through Edit or afterwards in History.")
-        ) {
-            Toggle("Show elapsed time", isOn: $settingsStore.showWorkoutTimer)
-                .tint(.forgeSuccess)
-        }
-    }
-
+    /// Everything below the switch depends on there being a rest timer at all, so it is all hidden when
+    /// the timer is off rather than left as settings for something that never runs.
     private var restTimerSection: some View {
-        Section(header: Text("Rest timer"), footer: Text("The default is used for exercises without their own rest time (set that on the exercise's page). Keeping the timer running shows the time exceeded in red.")) {
-            Picker("Default rest time", selection: $settingsStore.defaultRestTime) {
-                ForEach(restTimerCustomTimes, id: \.self) { time in
-                    Text(restTimerDurationFormatter.string(from: time) ?? "").tag(time)
+        Section(header: Text("Rest timer"), footer: Text(restTimerFooter)) {
+            Toggle("Rest timer", isOn: $settingsStore.showRestTimer)
+                .tint(.forgeSuccess)
+            if settingsStore.showRestTimer {
+                Picker("Default rest time", selection: $settingsStore.defaultRestTime) {
+                    ForEach(restTimerCustomTimes, id: \.self) { time in
+                        Text(restTimerDurationFormatter.string(from: time) ?? "").tag(time)
+                    }
                 }
+                Toggle("Keep rest timer running", isOn: Binding(get: {
+                    settingsStore.keepRestTimerRunning
+                }, set: { newValue in
+                    settingsStore.keepRestTimerRunning = newValue
+                }))
+                .tint(.forgeSuccess)
             }
-            Toggle("Keep rest timer running", isOn: Binding(get: {
-                settingsStore.keepRestTimerRunning
-            }, set: { newValue in
-                settingsStore.keepRestTimerRunning = newValue
-            }))
-            .tint(.forgeSuccess)
         }
     }
 
-    private var restTimerAlertSection: some View {
-        Section(header: Text("Rest timer alert"), footer: Text("Plays when the rest timer ends. The sound also plays with the notification when Forge is in the background.")) {
-            Toggle("Sound", isOn: $settingsStore.restTimerSound)
-                .tint(.forgeSuccess)
-            Toggle("Haptic", isOn: $settingsStore.restTimerHaptic)
-                .tint(.forgeSuccess)
+    private var restTimerFooter: String {
+        settingsStore.showRestTimer
+            ? "The default is used for exercises without their own rest time (set that on the exercise's page). Keeping the timer running shows the time exceeded in red."
+            : "Off, the timer is not shown during a workout, finishing a set does not start one, and no rest alert arrives."
+    }
+
+    @ViewBuilder private var restTimerAlertSection: some View {
+        if settingsStore.showRestTimer {
+            Section(header: Text("Rest timer alert"), footer: Text("Plays when the rest timer ends. The sound also plays with the notification when Forge is in the background.")) {
+                Toggle("Sound", isOn: $settingsStore.restTimerSound)
+                    .tint(.forgeSuccess)
+                Toggle("Haptic", isOn: $settingsStore.restTimerHaptic)
+                    .tint(.forgeSuccess)
+            }
         }
     }
     
@@ -141,7 +145,6 @@ struct GeneralSettingsView: View {
             appearanceSection
             weightPickerSection
             calendarSection
-            liveWorkoutSection
             restTimerSection
             restTimerAlertSection
             reminderSection

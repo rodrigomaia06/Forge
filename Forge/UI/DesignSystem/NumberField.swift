@@ -57,9 +57,19 @@ struct RightAlignedNumberField: UIViewRepresentable {
         // and no focus change between them.
         let toolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 44))
         toolbar.autoresizingMask = .flexibleWidth
+        // A bar of its own, rather than a control floating on the content. Without a configured
+        // appearance the bar draws nothing, so the button sat over the list with no separation from the
+        // keyboard beneath it.
+        let appearance = UIToolbarAppearance()
+        appearance.configureWithDefaultBackground()
+        toolbar.standardAppearance = appearance
+        toolbar.compactAppearance = appearance
+        // Plain and in the label colour. The .done style renders as a filled tinted capsule, which came
+        // out as a blue pill: the wrong weight for this, and the only blue in an otherwise monochrome app.
+        toolbar.tintColor = .label
         toolbar.items = [
             UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
-            UIBarButtonItem(title: "Done", style: .done, target: target, action: #selector(Coordinator.dismissKeyboard)),
+            UIBarButtonItem(title: "Done", style: .plain, target: target, action: #selector(Coordinator.dismissKeyboard)),
         ]
         return toolbar
     }
