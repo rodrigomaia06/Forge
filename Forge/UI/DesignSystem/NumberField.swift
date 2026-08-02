@@ -51,12 +51,16 @@ struct RightAlignedNumberField: UIViewRepresentable {
     /// a number pad with no way out at all: it has no return key. An input accessory view belongs to the
     /// field itself, so it always shows.
     private static func doneBar(target: Coordinator) -> UIToolbar {
-        let toolbar = UIToolbar()
+        // An explicit frame, not a bare UIToolbar() plus sizeToFit(). Sized from nothing, the bar has no
+        // settled height, and UIKit recalculates the keyboard frame each time it tries: a freeze log
+        // caught keyboardWillShow firing three and four times within a few milliseconds, with no hide
+        // and no focus change between them.
+        let toolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 44))
+        toolbar.autoresizingMask = .flexibleWidth
         toolbar.items = [
             UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
             UIBarButtonItem(title: "Done", style: .done, target: target, action: #selector(Coordinator.dismissKeyboard)),
         ]
-        toolbar.sizeToFit()
         return toolbar
     }
 
@@ -164,5 +168,60 @@ struct RightAlignedNumberField: UIViewRepresentable {
             guard let range = field.textRange(from: end, to: end), field.selectedTextRange != range else { return }
             field.selectedTextRange = range
         }
+    }
+}
+
+/// A number box that keeps what you typed while you are typing it.
+///
+/// Binding a field straight at a formatted number cannot accept a decimal separator. Type "12," and the
+/// value round-trips through the formatter, comes back as "12", and `updateUIView` deletes the separator
+/// from under you, so a decimal can never be entered. The raw text lives here instead and reaches the
+/// model when editing ends, which is how the set rows in a live workout already behave.
+struct DecimalNumberField: View {
+    /// The value in the unit on screen. Zero shows as an empty box.
+    let value: Double
+    var placeholder: String = "0"
+    var width: CGFloat = 90
+    /// Called when the field loses focus, with the parsed value. Zero means cleared.
+    let onCommit: (Double) -> Void
+
+    @State private var text = ""
+
+    private static let formatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = false
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 3
+        formatter.minimum = 0
+        return formatter
+    }()
+
+    private var formatted: String {
+        value > 0 ? (Self.formatter.string(from: NSNumber(value: value)) ?? "") : ""
+    }
+
+    /// Accepts either separator: the decimal pad shows whichever the locale uses, and a number typed on
+    /// one device should still read on another.
+    private func parse(_ raw: String) -> Double {
+        let trimmed = raw.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return 0 }
+        if let number = Self.formatter.number(from: trimmed) { return number.doubleValue }
+        return Double(trimmed.replacingOccurrences(of: ",", with: ".")) ?? 0
+    }
+
+    var body: some View {
+        RightAlignedNumberField(
+            text: $text,
+            placeholder: placeholder,
+            keyboardType: .decimalPad,
+            alignment: .right,
+            smallPlaceholder: false,
+            onCommit: { onCommit(parse(text)) }
+        )
+        .frame(width: width, height: 28)
+        .onAppear { text = formatted }
+        // Follows the model when it moves for another reason, such as the weight unit changing.
+        .onChange(of: value) { _, _ in text = formatted }
     }
 }

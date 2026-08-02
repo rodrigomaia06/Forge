@@ -22,8 +22,11 @@ struct GeneralSettingsView: View {
                 Text("Bodyweight")
                 Spacer()
                 HStack(spacing: 0) {
-                    RightAlignedNumberField(text: bodyweightText, placeholder: "0", keyboardType: .decimalPad, alignment: .right, smallPlaceholder: false)
-                        .frame(width: 52, height: 28)
+                    DecimalNumberField(value: displayedBodyweight, width: 60) { newValue in
+                        settingsStore.bodyweight = newValue > 0
+                            ? WeightUnit.convert(weight: newValue, from: settingsStore.weightUnit, to: .metric)
+                            : 0
+                    }
                     Text(settingsStore.weightUnit.unit.symbol)
                         .foregroundColor(.secondary)
                 }
@@ -31,21 +34,11 @@ struct GeneralSettingsView: View {
         }
     }
 
-    /// Bodyweight shown and edited in the user's unit; stored as kilograms. Empty or 0 clears it.
-    private var bodyweightText: Binding<String> {
-        Binding(
-            get: {
-                let kg = settingsStore.bodyweight
-                guard kg > 0 else { return "" }
-                let value = WeightUnit.convert(weight: kg, from: .metric, to: settingsStore.weightUnit)
-                return settingsStore.weightUnit.numberFormatter.string(from: value as NSNumber) ?? String(value)
-            },
-            set: { newValue in
-                let normalized = newValue.replacingOccurrences(of: ",", with: ".")
-                let value = Double(normalized) ?? 0
-                settingsStore.bodyweight = value > 0 ? WeightUnit.convert(weight: value, from: settingsStore.weightUnit, to: .metric) : 0
-            }
-        )
+    /// Bodyweight shown in the user's unit; stored as kilograms. Empty or 0 clears it.
+    private var displayedBodyweight: Double {
+        let kg = settingsStore.bodyweight
+        guard kg > 0 else { return 0 }
+        return WeightUnit.convert(weight: kg, from: .metric, to: settingsStore.weightUnit)
     }
 
     private var appearance: Binding<ForgeAppearance> {

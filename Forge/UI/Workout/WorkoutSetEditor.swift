@@ -379,21 +379,6 @@ struct SetMoreView: View {
         )
     }
 
-    /// String view of the target weight, so it can use the shared numeric field (caret pinned to the end).
-    private var targetWeightText: Binding<String> {
-        Binding(
-            get: {
-                let value = targetWeightField.wrappedValue
-                guard value > 0 else { return "" }
-                return weightUnit.numberFormatter.string(from: value as NSNumber) ?? String(value)
-            },
-            set: { newValue in
-                let normalized = newValue.replacingOccurrences(of: ",", with: ".")
-                targetWeightField.wrappedValue = Double(normalized) ?? 0
-            }
-        )
-    }
-
     private var targetRpeField: Binding<Double?> {
         Binding(
             get: { workoutSet.targetRpeValue },
@@ -510,8 +495,9 @@ struct SetMoreView: View {
                 HStack {
                     Text("Weight")
                     Spacer()
-                    RightAlignedNumberField(text: targetWeightText, placeholder: "0", keyboardType: .decimalPad, alignment: .right, smallPlaceholder: false)
-                        .frame(width: 90, height: 28)
+                    DecimalNumberField(value: targetWeightField.wrappedValue, width: 90) { newValue in
+                        targetWeightField.wrappedValue = newValue
+                    }
                     Text(weightUnit.unit.symbol)
                         .foregroundColor(.secondary)
                 }
