@@ -103,6 +103,18 @@ targets:
     dependencies:
       - target: Forge
 
+  ForgeUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rodrigomaia.forge.uitests
+        TEST_TARGET_NAME: Forge
+    sources:
+      - path: ForgeUITests
+    dependencies:
+      - target: Forge
+
 schemes:
   Forge:
     build:
@@ -111,3 +123,4 @@ schemes:
     test:
       targets:
         - ForgeTests
+        - ForgeUITests

@@ -72,24 +72,62 @@ jobs:
             CODE_SIGNING_REQUIRED=NO
 
       - name: Recover the screenshots from the result bundle
-        # A fallback for the direct write above. A test process inside the
-        # simulator may not be allowed to write to the workspace, in which case
-        # the attachments in the result bundle are the only copy.
+        # The UI tests can only attach, not write: their process runs inside the
+        # simulator. Exported attachments are named by UUID, so they are renamed
+        # from the manifest the export writes alongside them.
         if: always()
         run: |
           set -euo pipefail
           DIR="${{ github.workspace }}/screenshots"
-          mkdir -p "$DIR"
-          if [ -n "$(ls -A "$DIR" 2>/dev/null)" ]; then
-            echo "Written directly; nothing to recover."
-            exit 0
-          fi
-          echo "Nothing written directly. Reading the result bundle."
+          RAW="${{ github.workspace }}/screenshots-raw"
+          mkdir -p "$DIR" "$RAW"
           xcrun xcresulttool export attachments \
             --path TestResults.xcresult \
-            --output-path "$DIR" || \
-            echo 'Could not export attachments. They are still in the TestResults artifact.'
-          ls -la "$DIR" || true
+            --output-path "$RAW" || {
+              echo 'Could not export attachments.'
+              exit 0
+            }
+          python3 - "$RAW" "$DIR" <<'PYTHON'
+          import json, os, shutil, sys
+
+          raw, out = sys.argv[1], sys.argv[2]
+          manifest = os.path.join(raw, 'manifest.json')
+          if not os.path.exists(manifest):
+              print('No manifest; leaving the exported files as they are.')
+              for name in os.listdir(raw):
+                  shutil.copy2(os.path.join(raw, name), os.path.join(out, name))
+              raise SystemExit
+
+          pairs = []
+          def walk(node):
+              if isinstance(node, dict):
+                  name = node.get('suggestedHumanReadableName') or node.get('name')
+                  exported = node.get('exportedFileName')
+                  if name and exported:
+                      pairs.append((name, exported))
+                  for value in node.values():
+                      walk(value)
+              elif isinstance(node, list):
+                  for value in node:
+                      walk(value)
+
+          with open(manifest) as handle:
+              walk(json.load(handle))
+
+          for name, exported in sorted(set(pairs)):
+              source = os.path.join(raw, exported)
+              if not os.path.exists(source):
+                  continue
+              # Attachment names arrive as "history_0_<uuid>.png". The readable
+              # part is everything before the first underscore.
+              stem = name.split('_')[0]
+              if not stem.endswith('.png'):
+                  stem += '.png'
+              shutil.copy2(source, os.path.join(out, stem))
+              print('  ', stem)
+          PYTHON
+          echo "Recovered:"
+          ls -1 "$DIR"
 
       - name: Upload the screenshots
         if: always()
