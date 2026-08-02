@@ -255,7 +255,7 @@ final class ScreenshotUITests: XCTestCase {
         selectTab("Workout")
 
         XCTAssertTrue(app.buttons["Cancel"].firstMatch.waitForExistence(timeout: 10))
-        let weight = app.textFields.firstMatch
+        let weight = app.textFields["Set 1 weight"].firstMatch
         XCTAssertTrue(weight.waitForExistence(timeout: 5))
         weight.tap()
         guard app.keyboards.firstMatch.waitForExistence(timeout: 3) else {
@@ -278,7 +278,7 @@ final class ScreenshotUITests: XCTestCase {
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 3))
     }
 
-    /// Reproduces the current-device trace: complete a set while a value field owns the keyboard, then
+    /// Reproduces the current-device trace: toggle a set's completion while its value field owns the keyboard, then
     /// leave it presented past the in-app monitor's three-second threshold before dismissing it by
     /// scrolling and proving that another field can still take focus.
     func testValueFieldTeardownSurvivesSetCompletion() throws {
@@ -294,10 +294,12 @@ final class ScreenshotUITests: XCTestCase {
             throw XCTSkip("The simulator did not show a software keyboard.")
         }
 
-        let complete = app.buttons["Complete set"].firstMatch
-        XCTAssertTrue(complete.waitForExistence(timeout: 5))
-        XCTAssertTrue(complete.isHittable)
-        complete.tap()
+        // Sample data starts set 1 completed. Its value field and "Set completed" control are in the
+        // same row; using the first incomplete control instead would select a different, off-screen row.
+        let completionToggle = app.buttons["Set completed"].firstMatch
+        XCTAssertTrue(completionToggle.waitForExistence(timeout: 5))
+        XCTAssertTrue(completionToggle.isHittable)
+        completionToggle.tap()
 
         let stayedResponsive = expectation(description: "Main thread stays responsive past hang threshold")
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) { stayedResponsive.fulfill() }
