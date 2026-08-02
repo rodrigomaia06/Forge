@@ -72,8 +72,12 @@ struct WorkoutSetCell: View {
                 }
 
                 if let comment = workoutSet.comment {
+                    // Wraps only when it does not fit: a short comment stays on one line, a long one
+                    // breaks rather than being cut off mid-word. Three lines keeps a row from growing
+                    // without bound.
                     Text(comment.enquoted)
-                        .lineLimit(1)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
                         .font(.forgeCaption.italic())
                         .foregroundColor(.forgeSecondaryLabel)
                 }

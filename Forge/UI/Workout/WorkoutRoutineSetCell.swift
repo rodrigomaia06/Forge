@@ -37,9 +37,13 @@ struct WorkoutRoutineSetCell: View {
         HStack(spacing: Theme.Spacing.s) {
             numberChip
 
+            // Wraps only when it does not fit: a short comment stays on one line beside the chip, a
+            // long one breaks rather than being cut off mid-word. Three lines keeps a row from
+            // growing without bound.
             workoutRoutineSet.comment.map {
                 Text($0.enquoted)
-                    .lineLimit(1)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
                     .font(Font.caption.italic())
                     .foregroundColor(.secondary)
             }
