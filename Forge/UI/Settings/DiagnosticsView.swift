@@ -13,6 +13,12 @@ struct DiagnosticsView: View {
     @State private var activityItems: [Any]?
     @State private var showingClearConfirmation = false
 
+    private static let clock: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss.SSS"
+        return formatter
+    }()
+
     private static let stamp: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -33,6 +39,11 @@ struct DiagnosticsView: View {
                 Section(header: Text(Self.stamp.string(from: report.date))) {
                     LabeledContent("Unresponsive for") {
                         Text("\(report.seconds, specifier: "%.1f") seconds")
+                    }
+                    if let last = report.lastResponse {
+                        LabeledContent("Last responded") {
+                            Text(Self.clock.string(from: last))
+                        }
                     }
                     if report.breadcrumbs.isEmpty {
                         Text("Nothing recorded before it.")
@@ -77,6 +88,9 @@ struct DiagnosticsView: View {
         for report in reports.reversed() {
             lines.append(Self.stamp.string(from: report.date))
             lines.append(String(format: "Unresponsive for %.1f seconds", report.seconds))
+            if let last = report.lastResponse {
+                lines.append("Main thread last responded at \(Self.clock.string(from: last))")
+            }
             lines.append(contentsOf: report.breadcrumbs.map { "  \($0)" })
             lines.append("")
         }

@@ -24,7 +24,7 @@ final class HangMonitor {
     /// Below this a stall is a hitch, not a freeze, and is not worth a record.
     private static let hangThreshold: TimeInterval = 3
     private static let pingInterval: TimeInterval = 0.5
-    private static let breadcrumbLimit = 30
+    private static let breadcrumbLimit = 40
     private static let reportLimit = 20
 
     private let queue = DispatchQueue(label: "com.rodrigomaia.forge.hang-monitor")
@@ -140,11 +140,12 @@ final class HangMonitor {
     private func record(stalledFor duration: TimeInterval) {
         lock.lock()
         let trail = breadcrumbs
+        let last = lastResponse
         lock.unlock()
 
         os_log("Main thread unresponsive for %.1fs", type: .error, duration)
         var reports = Self.loadReports()
-        reports.append(FreezeReport(date: Date(), seconds: duration, breadcrumbs: trail))
+        reports.append(FreezeReport(date: Date(), seconds: duration, lastResponse: last, breadcrumbs: trail))
         if reports.count > Self.reportLimit {
             reports.removeFirst(reports.count - Self.reportLimit)
         }
@@ -180,6 +181,9 @@ final class HangMonitor {
 struct FreezeReport: Codable, Identifiable {
     let date: Date
     let seconds: TimeInterval
+    /// The last moment the main thread answered a ping. The gap between the final breadcrumb and this
+    /// says whether the app was idle before it hung or was already busy with something unrecorded.
+    let lastResponse: Date?
     let breadcrumbs: [String]
 
     var id: Date { date }

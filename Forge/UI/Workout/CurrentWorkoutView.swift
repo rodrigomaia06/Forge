@@ -262,7 +262,10 @@ struct CurrentWorkoutView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        // Diagnostic, to be removed once the freeze is found: a runaway re-render of this screen is the
+        // main thing a freeze log cannot currently see, and it would show here as an unbroken run.
+        let _ = HangMonitor.note("live workout rendered")
+        return NavigationStack {
             VStack(spacing: 0) {
                 // A prominent title header, matching the Workout tab's greeting but a little smaller, so
                 // the active workout reads consistently with the rest of that tab.
