@@ -1025,8 +1025,14 @@ private struct ActiveSetRow: View {
     /// A value box, entered from the right. A planned rep range (when there is one) shows as the
     /// placeholder inside the box, so it disappears once a value is typed and never floats out of place.
     /// The field fills the box, so tapping anywhere in it opens the keyboard.
-    private func setField(_ text: Binding<String>, keyboard: UIKeyboardType, width: CGFloat, placeholder: String = "", invalid: Bool = false, onCommit: @escaping () -> Void = {}) -> some View {
-        RightAlignedNumberField(text: text, placeholder: placeholder, keyboardType: keyboard, onCommit: onCommit)
+    private func setField(_ text: Binding<String>, keyboard: UIKeyboardType, width: CGFloat, accessibilityLabel: String, placeholder: String = "", invalid: Bool = false, onCommit: @escaping () -> Void = {}) -> some View {
+        RightAlignedNumberField(
+            text: text,
+            placeholder: placeholder,
+            keyboardType: keyboard,
+            accessibilityLabel: accessibilityLabel,
+            onCommit: onCommit
+        )
             .frame(width: width, height: Self.boxHeight)
             .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
             .overlay(
@@ -1094,8 +1100,8 @@ private struct ActiveSetRow: View {
                 .frame(maxWidth: .infinity, alignment: .center)
 
             if isEditable {
-                setField($weightInput, keyboard: .decimalPad, width: 68, placeholder: weightPlaceholder, invalid: weightInvalid, onCommit: commitWeight)
-                setField($repsInput, keyboard: .numberPad, width: 60, placeholder: targetRepsString ?? "", invalid: repsInvalid, onCommit: commitReps)
+                setField($weightInput, keyboard: .decimalPad, width: 68, accessibilityLabel: "Set \(index) weight", placeholder: weightPlaceholder, invalid: weightInvalid, onCommit: commitWeight)
+                setField($repsInput, keyboard: .numberPad, width: 60, accessibilityLabel: "Set \(index) repetitions", placeholder: targetRepsString ?? "", invalid: repsInvalid, onCommit: commitReps)
             } else {
                 readValue(isBodyweight ? bodyweightReadText : (workoutSet.weight == nil ? "—" : weightText), width: 68)
                 readValue(workoutSet.repetitions == nil ? "—" : "\(workoutSet.repetitionsValue)", width: 60)

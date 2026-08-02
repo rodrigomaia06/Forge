@@ -22,6 +22,9 @@ struct RightAlignedNumberField: UIViewRepresentable {
     @Binding var text: String
     var placeholder: String = ""
     var keyboardType: UIKeyboardType = .decimalPad
+    /// Stable, value-free semantics for VoiceOver and UI automation. Callers must describe the field's
+    /// role, never the value or a model identifier.
+    var accessibilityLabel: String? = nil
     /// Centered in the compact set boxes; trailing in labeled form rows. The caret is pinned to the end
     /// either way, so the value is always edited from the right.
     var alignment: NSTextAlignment = .center
@@ -52,6 +55,7 @@ struct RightAlignedNumberField: UIViewRepresentable {
         field.adjustsFontForContentSizeCategory = true
         field.textColor = .label
         field.tintColor = .label
+        field.accessibilityLabel = accessibilityLabel
         field.setContentHuggingPriority(.defaultLow, for: .horizontal)
         field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         HangMonitor.note(.numberFieldMakeEnd)
@@ -75,6 +79,7 @@ struct RightAlignedNumberField: UIViewRepresentable {
         context.coordinator.parent = self
         if field.text != text { field.text = text }
         if field.keyboardType != keyboardType { field.keyboardType = keyboardType }
+        if field.accessibilityLabel != accessibilityLabel { field.accessibilityLabel = accessibilityLabel }
 
         // The placeholder (a planned rep range like "8-12") is smaller than the value so it fits the
         // narrow box and reads as a hint rather than an entered number. The content size category is

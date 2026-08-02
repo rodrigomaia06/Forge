@@ -287,7 +287,7 @@ final class ScreenshotUITests: XCTestCase {
         selectTab("Workout")
 
         XCTAssertTrue(app.buttons["Cancel"].firstMatch.waitForExistence(timeout: 10))
-        let firstField = app.textFields.firstMatch
+        let firstField = app.textFields["Set 1 weight"].firstMatch
         XCTAssertTrue(firstField.waitForExistence(timeout: 5))
         firstField.tap()
         guard app.keyboards.firstMatch.waitForExistence(timeout: 3) else {
@@ -307,9 +307,7 @@ final class ScreenshotUITests: XCTestCase {
         XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 3))
         app.swipeDown(velocity: .slow)
 
-        let fields = app.textFields
-        XCTAssertGreaterThan(fields.count, 1)
-        let secondField = fields.element(boundBy: 1)
+        let secondField = app.textFields["Set 1 repetitions"].firstMatch
         XCTAssertTrue(secondField.waitForExistence(timeout: 3))
         secondField.tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 3))
