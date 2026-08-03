@@ -293,7 +293,7 @@ struct CurrentWorkoutView: View {
             }
             .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
             .padding(.top, Theme.Spacing.l)
-            .padding(.bottom, Theme.Spacing.xxl)
+            .padding(.bottom, Theme.Layout.bottomScrollClearance)
         }
         .scrollDismissesKeyboard(.immediately)
         .background(Color.forgeBackground.ignoresSafeArea())

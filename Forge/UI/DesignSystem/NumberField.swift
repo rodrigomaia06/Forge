@@ -29,6 +29,9 @@ struct RightAlignedNumberField: UIViewRepresentable {
     @Binding var text: String
     var placeholder: String = ""
     var keyboardType: UIKeyboardType = .decimalPad
+    /// A compact representation used only while the field is idle. The binding retains the complete
+    /// editable text, which is restored as soon as focus arrives.
+    var displayText: String? = nil
     /// Stable, value-free semantics for VoiceOver and UI automation. Callers must describe the field's
     /// role, never the value or a model identifier.
     var accessibilityLabel: String? = nil
@@ -78,6 +81,8 @@ struct RightAlignedNumberField: UIViewRepresentable {
         field.textAlignment = alignment
         field.font = Self.valueFont()
         field.adjustsFontForContentSizeCategory = true
+        field.adjustsFontSizeToFitWidth = true
+        field.minimumFontSize = 13
         field.textColor = .label
         field.tintColor = .label
         field.accessibilityLabel = accessibilityLabel
@@ -102,7 +107,8 @@ struct RightAlignedNumberField: UIViewRepresentable {
     func updateUIView(_ field: UITextField, context: Context) {
         if field.isFirstResponder { HangMonitor.note(.numberFieldFocusedUpdateBegin) }
         context.coordinator.parent = self
-        if field.text != text { field.text = text }
+        let visibleText = field.isFirstResponder ? text : (displayText ?? text)
+        if field.text != visibleText { field.text = visibleText }
         if field.keyboardType != keyboardType { field.keyboardType = keyboardType }
         if field.accessibilityLabel != accessibilityLabel { field.accessibilityLabel = accessibilityLabel }
 
@@ -167,6 +173,8 @@ struct RightAlignedNumberField: UIViewRepresentable {
         func textFieldDidBeginEditing(_ field: UITextField) {
             HangMonitor.note(.numberFieldDidBeginEditingBegin)
             HangMonitor.note(.valueFieldFocused)
+            // Replace the rounded idle representation with the complete editable value.
+            if field.text != parent.text { field.text = parent.text }
             moveCaretToEnd(field)
             HangMonitor.note(.numberFieldDidBeginEditingEnd)
         }
@@ -176,6 +184,7 @@ struct RightAlignedNumberField: UIViewRepresentable {
             HangMonitor.note(.valueFieldEndedEditing)
             parent.text = field.text ?? ""
             parent.onCommit()
+            field.text = parent.displayText ?? parent.text
             HangMonitor.note(.valueFieldCommitFinished)
             HangMonitor.note(.numberFieldDidEndEditingEnd)
         }

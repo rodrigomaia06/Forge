@@ -38,6 +38,9 @@ enum Theme {
         /// Default content inset used by an inset-grouped List row. Scroll-hosted cards use the same
         /// value so moving them out of a recycling List does not change their visual geometry.
         static let insetGroupedRowInset: CGFloat = 20
+        /// Extra scroll runway above the translucent system tab bar. This lets the final set or add-set
+        /// action be pulled fully clear of the bar without changing the resting card geometry.
+        static let bottomScrollClearance: CGFloat = 88
     }
 }
 
@@ -61,7 +64,12 @@ extension Color {
     /// Primary text and numbers.
     static let forgeLabel = forgeGrey(light: (0.11, 1), dark: (0.97, 1))
     /// Secondary / supporting text.
-    static let forgeSecondaryLabel = forgeGrey(light: (0.11, 0.55), dark: (0.97, 0.55))
+    static let forgeSecondaryLabel = Color(UIColor { traits in
+        let alpha: CGFloat = traits.accessibilityContrast == .high ? 0.78 : 0.55
+        return traits.userInterfaceStyle == .dark
+            ? UIColor(white: 0.97, alpha: alpha)
+            : UIColor(white: 0.11, alpha: alpha)
+    })
     /// Hairlines and dividers.
     static let forgeSeparator = forgeGrey(light: (0.0, 0.10), dark: (1.0, 0.12))
 
@@ -115,6 +123,10 @@ extension Font {
 
     /// Supporting captions and secondary metadata.
     static var forgeCaption: Font { .subheadline }
+
+    /// Secondary information that still needs to be read quickly during a workout. One step below the
+    /// primary value, but deliberately larger and stronger than ordinary metadata.
+    static var forgeSupportingValue: Font { .system(.callout, design: .rounded).weight(.medium) }
 
     /// Large, calm greeting / screen title (e.g. "Good afternoon"). Uses a text style so it
     /// scales with Dynamic Type instead of clipping at a fixed size.

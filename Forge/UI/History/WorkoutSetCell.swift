@@ -66,8 +66,11 @@ struct WorkoutSetCell: View {
                 // the value. A target here is a plan for next time, not a recorded value.
                 if let target = targetWeightString {
                     Text("\(Image(systemName: "target")) next workout \(target)")
-                        .font(.forgeCaption)
+                        .font(.forgeSupportingValue)
                         .foregroundColor(.forgeSecondaryLabel)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                        .allowsTightening(true)
                         .accessibilityLabel("Target for next workout: \(target)")
                 }
 

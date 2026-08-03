@@ -898,7 +898,7 @@ private struct ActiveSetRow: View {
 
     private var weightText: String {
         let value = WeightUnit.convert(weight: workoutSet.weightValue, from: .metric, to: weightUnit)
-        return String(format: "%g", value)
+        return Self.compactWeightFormatter.string(from: NSNumber(value: value)) ?? String(format: "%g", value)
     }
 
     /// Read-only weight display for a bodyweight set: BW, +added, or -assisted. Sets logged before this
@@ -908,7 +908,7 @@ private struct ActiveSetRow: View {
         let added = workoutSet.addedWeightValue ?? workoutSet.weightValue
         if added == 0 { return "BW" }
         let magnitude = WeightUnit.convert(weight: abs(added), from: .metric, to: weightUnit)
-        let text = Self.weightFormatter.string(from: NSNumber(value: magnitude)) ?? String(format: "%g", magnitude)
+        let text = Self.compactWeightFormatter.string(from: NSNumber(value: magnitude)) ?? String(format: "%g", magnitude)
         return (added > 0 ? "+" : "-") + text
     }
 
@@ -927,6 +927,22 @@ private struct ActiveSetRow: View {
         f.minimum = 0
         return f
     }()
+
+    /// Keeps converted weights readable in a narrow idle box (for example 115.74 rather than an
+    /// ellipsis). The unrounded three-decimal input remains in `weightInput` and returns on focus.
+    private static let compactWeightFormatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.usesGroupingSeparator = false
+        f.minimumFractionDigits = 0
+        f.maximumFractionDigits = 2
+        return f
+    }()
+
+    private var compactWeightText: String? {
+        guard !weightInput.isEmpty, let number = Self.weightFormatter.number(from: weightInput) else { return nil }
+        return Self.compactWeightFormatter.string(from: number)
+    }
 
     private func syncInputsFromModel() {
         if isBodyweight {
@@ -997,11 +1013,12 @@ private struct ActiveSetRow: View {
     /// A value box, entered from the right. A planned rep range (when there is one) shows as the
     /// placeholder inside the box, so it disappears once a value is typed and never floats out of place.
     /// The field fills the box, so tapping anywhere in it opens the keyboard.
-    private func setField(_ text: Binding<String>, keyboard: UIKeyboardType, width: CGFloat, accessibilityLabel: String, placeholder: String = "", invalid: Bool = false, onCommit: @escaping () -> Void = {}) -> some View {
+    private func setField(_ text: Binding<String>, keyboard: UIKeyboardType, width: CGFloat, accessibilityLabel: String, placeholder: String = "", displayText: String? = nil, invalid: Bool = false, onCommit: @escaping () -> Void = {}) -> some View {
         RightAlignedNumberField(
             text: text,
             placeholder: placeholder,
             keyboardType: keyboard,
+            displayText: displayText,
             accessibilityLabel: accessibilityLabel,
             onCommit: onCommit
         )
@@ -1067,7 +1084,7 @@ private struct ActiveSetRow: View {
                 .frame(maxWidth: .infinity, alignment: .center)
 
             if isEditable {
-                setField($weightInput, keyboard: .decimalPad, width: 68, accessibilityLabel: "Set \(index) weight", placeholder: weightPlaceholder, invalid: weightInvalid, onCommit: commitWeight)
+                setField($weightInput, keyboard: .decimalPad, width: 68, accessibilityLabel: "Set \(index) weight", placeholder: weightPlaceholder, displayText: compactWeightText, invalid: weightInvalid, onCommit: commitWeight)
                 setField($repsInput, keyboard: .numberPad, width: 60, accessibilityLabel: "Set \(index) repetitions", placeholder: targetRepsString ?? "", invalid: repsInvalid, onCommit: commitReps)
             } else {
                 readValue(isBodyweight ? bodyweightReadText : (workoutSet.weight == nil ? "—" : weightText), width: 68)
