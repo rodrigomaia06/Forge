@@ -44,14 +44,14 @@ struct BackupAndExportView: View {
     var body: some View {
         Form {
             Section(
-                header: Text("Database".uppercased()),
+                header: Text("Database"),
                 footer: Text("The database is a standard SQLite file you can open and edit in any SQLite tool. Importing replaces all current data — a safety copy is kept first, and you'll need to reopen Forge afterwards.")
             ) {
                 Button("Export Database") { exportDatabase() }
                 Button("Import Database") { showImporter = true }
             }
 
-            Section(header: Text("Export".uppercased())) {
+            Section(header: Text("Export")) {
                 Menu("Workout Data") {
                     Button("Export as JSON") { exportWorkoutData(asJSON: true) }
                     Button("Export as text") { exportWorkoutData(asJSON: false) }
@@ -59,14 +59,14 @@ struct BackupAndExportView: View {
             }
 
             Section(
-                header: Text("Share".uppercased()),
+                header: Text("Share"),
                 footer: Text("Import a JSON file someone shared. Plans and routines are added, and any workouts in the file are added to your History. Everything comes in with new identifiers, so it never overwrites what you already have. You'll see what a file contains before it's imported.")
             ) {
                 Button("Import from file") { showJSONImporter = true }
             }
 
             Section(
-                header: Text("Reset".uppercased()),
+                header: Text("Reset"),
                 footer: Text("Removes all workouts, routines, plans, and custom exercises, returning Forge to a clean state. The built-in exercises remain. Export a backup first if you might want your data later.")
             ) {
                 Button("Reset all data", role: .destructive) { showResetConfirm = true }
