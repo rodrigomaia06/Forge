@@ -60,8 +60,8 @@ struct CustomAttributesEditor: View {
             // Tapping anywhere in the row brings up the keyboard on the value, the common edit.
             .contentShape(Rectangle())
             .onTapGesture { focus = .value(row.id) }
-            .modifier(if: standaloneCard) { row in
-                row
+            .modifier(if: standaloneCard) { content in
+                content
                     .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                     .frame(minHeight: Theme.Layout.minTapTarget)
                     .overlay(alignment: .bottom) {
