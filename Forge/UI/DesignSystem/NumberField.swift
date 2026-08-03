@@ -16,6 +16,13 @@ private final class PaddedTextField: UITextField {
     override func textRect(forBounds bounds: CGRect) -> CGRect { bounds.inset(by: inset) }
     override func editingRect(forBounds bounds: CGRect) -> CGRect { bounds.inset(by: inset) }
     override func placeholderRect(forBounds bounds: CGRect) -> CGRect { bounds.inset(by: inset) }
+
+    /// Numeric values in Forge edit like a calculator: a tap always resolves to the trailing edge and
+    /// the insertion caret is always drawn there. This avoids observing and rewriting selection changes,
+    /// which previously let UIKit and SwiftUI trade callbacks indefinitely while the keyboard was moving.
+    override func closestPosition(to point: CGPoint) -> UITextPosition? { endOfDocument }
+    override func closestPosition(to point: CGPoint, within range: UITextRange) -> UITextPosition? { range.end }
+    override func caretRect(for position: UITextPosition) -> CGRect { super.caretRect(for: endOfDocument) }
 }
 
 struct RightAlignedNumberField: UIViewRepresentable {
@@ -34,6 +41,24 @@ struct RightAlignedNumberField: UIViewRepresentable {
     /// Called when editing ends (the field resigns focus). Lets a caller persist the value once per edit
     /// instead of on every keystroke, which keeps a single character from churning the whole screen.
     var onCommit: () -> Void = {}
+
+    /// Returns a replacement translated to the right edge, or nil when UIKit's requested range already
+    /// edits the existing suffix and can be applied normally. Kept pure so the right-only contract has a
+    /// regression test independent of keyboard timing.
+    static func trailingReplacement(
+        in current: String,
+        requestedRange range: NSRange,
+        replacement string: String
+    ) -> String? {
+        let value = current as NSString
+        let length = value.length
+        let safeLength = min(max(range.length, 0), length)
+        let requestedEnd = min(max(range.location + safeLength, 0), length)
+        guard requestedEnd != length else { return nil }
+
+        let trailingRange = NSRange(location: length - safeLength, length: safeLength)
+        return value.replacingCharacters(in: trailingRange, with: string)
+    }
 
     private static func valueFont() -> UIFont {
         // Matches `.forgeValue`: rounded, monospaced digits, at the body text size, scaled for Dynamic
@@ -155,18 +180,38 @@ struct RightAlignedNumberField: UIViewRepresentable {
             HangMonitor.note(.numberFieldDidEndEditingEnd)
         }
 
+        /// Enforce trailing-edge editing even if UIKit establishes a middle selection through a hardware
+        /// keyboard, accessibility command, or selection gesture. Changes that do not touch the existing
+        /// suffix are translated to an equal-length range at the right edge. Normal end edits stay on
+        /// UIKit's native path.
+        func textField(
+            _ field: UITextField,
+            shouldChangeCharactersIn range: NSRange,
+            replacementString string: String
+        ) -> Bool {
+            let current = field.text ?? ""
+            guard let replacement = RightAlignedNumberField.trailingReplacement(
+                in: current,
+                requestedRange: range,
+                replacement: string
+            ) else { return true }
+
+            field.text = replacement
+            field.sendActions(for: .editingChanged)
+            return false
+        }
+
         /// Keeps the caret at the end, so a value is edited from the right like a calculator.
         ///
-        /// Driven only by our own edits: focus arriving, and text changing. It used to hook
+        /// Driven only by our own edits: focus arriving, and text changing. A touch is resolved to the
+        /// end by `PaddedTextField`, and the delegate translates any non-touch middle edit to the suffix.
+        /// This used to hook
         /// `textFieldDidChangeSelection`, which observes UIKit's selection changes and moved the caret
         /// back in response to them. The re-entrancy guard there only covered a synchronous callback,
         /// and UIKit re-establishes selection on a later turn of the run loop, by which time the guard
         /// was down again. The two could then trade selection changes without end and wedge the main
         /// thread, which is what a recorded freeze looks like: the keyboard resigning, a value
         /// committing, and then nothing.
-        ///
-        /// The trade-off is that tapping into the middle of an already-focused value now leaves the
-        /// caret where it was put, instead of snapping back to the end.
         private func moveCaretToEnd(_ field: UITextField) {
             let end = field.endOfDocument
             guard let range = field.textRange(from: end, to: end), field.selectedTextRange != range else { return }

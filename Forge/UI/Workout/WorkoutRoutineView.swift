@@ -387,8 +387,6 @@ private struct RoutineSetRow: View {
     @State private var minInput = ""
     @State private var maxInput = ""
 
-    private static let boxHeight: CGFloat = 36
-
     private func syncFromModel() {
         minInput = workoutRoutineSet.minRepetitionsValue.map { "\($0)" } ?? ""
         maxInput = workoutRoutineSet.maxRepetitionsValue.map { "\($0)" } ?? ""
@@ -418,8 +416,7 @@ private struct RoutineSetRow: View {
 
     private func field(_ text: Binding<String>, placeholder: String, onCommit: @escaping () -> Void) -> some View {
         RightAlignedNumberField(text: text, placeholder: placeholder, keyboardType: .numberPad, alignment: .center, onCommit: onCommit)
-            .frame(width: 56, height: Self.boxHeight)
-            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
+            .forgeSetValueBox(width: 56)
     }
 
     private var hasNote: Bool { !(workoutRoutineSet.comment ?? "").isEmpty }
@@ -427,17 +424,11 @@ private struct RoutineSetRow: View {
     var body: some View {
         HStack(spacing: Theme.Spacing.s) {
             Button(action: onOpenOptions) {
-                let tint = workoutRoutineSet.tagValue?.color
-                Text("\(index)")
-                    .font(.forgeCaption)
-                    .foregroundColor(tint ?? .forgeSecondaryLabel)
-                    .frame(width: 28, height: 28)
-                    .background(Circle().fill((tint ?? .forgeSecondaryLabel).opacity(tint == nil ? 0.14 : 0.22)))
-                    .overlay(alignment: .topTrailing) {
-                        if hasNote {
-                            Circle().fill(Color.forgeAccent).frame(width: 7, height: 7)
-                        }
-                    }
+                ForgeSetNumberChip(
+                    index: index,
+                    tint: workoutRoutineSet.tagValue?.color,
+                    showsNote: hasNote
+                )
             }
             .buttonStyle(.plain)
             Spacer()

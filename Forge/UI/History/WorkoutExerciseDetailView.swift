@@ -349,7 +349,7 @@ struct WorkoutExerciseDetailView : View {
             )
             if scrollCard {
                 row
-                    .padding(.horizontal, Theme.Spacing.m)
+                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                     .padding(.vertical, 3)
                     .overlay(alignment: .bottom) {
                         ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
@@ -421,9 +421,9 @@ struct WorkoutExerciseDetailView : View {
             if let member = supersetMember {
                 Text(member.label)
                     .font(.forgeCaption.weight(.bold))
-                    .foregroundColor(.forgeLabel)
-                    .frame(width: 22, height: 22)
-                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.forgeSeparator))
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .frame(width: 20, height: 20)
+                    .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.forgeSeparator))
                     .accessibilityLabel("Superset position \(member.label)")
             }
             VStack(alignment: .leading, spacing: 2) {
@@ -444,7 +444,7 @@ struct WorkoutExerciseDetailView : View {
             } label: {
                 Image(systemName: "ellipsis")
                     .foregroundColor(.forgeSecondaryLabel)
-                    .frame(width: 34, height: 30)
+                    .frame(width: 44, height: 30)
                     .contentShape(Rectangle())
             }
         }
@@ -512,17 +512,18 @@ struct WorkoutExerciseDetailView : View {
             ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
             if exerciseIsBodyweight && setsEditable && isAdHocWorkout {
                 bodyweightModeRow
-                    .padding(.horizontal, Theme.Spacing.m)
+                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                     .frame(minHeight: Theme.Layout.minTapTarget)
                 ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
             }
             setsHeader
-                .padding(.horizontal, Theme.Spacing.m)
+                .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                 .frame(minHeight: Theme.Layout.minTapTarget)
             ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
             currentWorkoutSets
             if setsEditable {
                 addSetButton
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                     .frame(minHeight: Theme.Layout.minTapTarget)
             }
@@ -870,26 +871,6 @@ private struct SupersetNoteEditor: View {
     }
 }
 
-/// A small monochrome dot (label color, hairline in the canvas color) that marks a note.
-private struct NoteDot: View {
-    var body: some View {
-        Circle()
-            .fill(Color.forgeLabel)
-            .frame(width: 7, height: 7)
-            .overlay(Circle().strokeBorder(Color.forgeBackground, lineWidth: 1))
-    }
-}
-
-/// A small accent dot that marks a set whose weight comes from the previous workout's plan.
-private struct PreviousValueDot: View {
-    var body: some View {
-        Circle()
-            .fill(Color.forgeAccent)
-            .frame(width: 6, height: 6)
-            .overlay(Circle().strokeBorder(Color.forgeBackground, lineWidth: 1))
-    }
-}
-
 /// A single set row laid out as a table: number chip (tap for options), the previous session's
 /// result, editable weight and reps, and a checkmark to complete it.
 private struct ActiveSetRow: View {
@@ -994,18 +975,12 @@ private struct ActiveSetRow: View {
     // The set number sits in a filled chip tinted by the set type (failure, drop set); a dot marks a
     // set that has a note. Tapping the chip opens the options sheet (tag, note, target, RPE).
     private var numberChip: some View {
-        let tint = workoutSet.tagValue?.color
-        return Text("\(index)")
-            .font(.forgeCaption)
-            .foregroundColor(tint ?? .forgeSecondaryLabel)
-            .frame(width: 28, height: 28)
-            .background(Circle().fill((tint ?? .forgeSecondaryLabel).opacity(tint == nil ? 0.14 : 0.22)))
-            .overlay(alignment: .topTrailing) {
-                if hasNote { NoteDot() }
-            }
-            .overlay(alignment: .bottomLeading) {
-                if hasPreviousValue { PreviousValueDot() }
-            }
+        ForgeSetNumberChip(
+            index: index,
+            tint: workoutSet.tagValue?.color,
+            showsNote: hasNote,
+            showsPreviousValue: hasPreviousValue
+        )
     }
 
     /// The planned rep range from the routine (e.g. "6–8"), shown as a faint hint over the reps field.
@@ -1015,8 +990,6 @@ private struct ActiveSetRow: View {
             maxRepetitions: workoutSet.maxTargetRepetitionsValue.map(Int.init)
         )
     }
-
-    private static let boxHeight: CGFloat = 36
 
     // Briefly outlined in red when the user tries to complete a set with this field empty.
     @State private var weightInvalid = false
@@ -1033,12 +1006,7 @@ private struct ActiveSetRow: View {
             accessibilityLabel: accessibilityLabel,
             onCommit: onCommit
         )
-            .frame(width: width, height: Self.boxHeight)
-            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(.tertiarySystemFill)))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(Color.forgeDestructive, lineWidth: invalid ? 2 : 0)
-            )
+            .forgeSetValueBox(width: width, invalid: invalid)
     }
 
     /// A set needs a weight and reps before it can be completed. Bodyweight sets can enter 0 for weight;
@@ -1079,7 +1047,7 @@ private struct ActiveSetRow: View {
     private func readValue(_ text: String, width: CGFloat) -> some View {
         Text(text)
             .font(.forgeValue)
-            .frame(width: width, height: Self.boxHeight)
+            .frame(width: width, height: ForgeSetRowStyle.numberBoxHeight)
     }
 
     var body: some View {
@@ -1089,7 +1057,7 @@ private struct ActiveSetRow: View {
             // the chip is easy to hit mid-workout, not just the 28pt circle.
             Button(action: onMore) { numberChip }
                 .buttonStyle(.plain)
-                .frame(width: 36, height: Self.boxHeight)
+                .frame(width: 36, height: ForgeSetRowStyle.numberBoxHeight)
                 .contentShape(Rectangle())
                 .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title). Details" } ?? "Set \(index). Details")
 
