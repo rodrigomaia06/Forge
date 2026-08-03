@@ -605,7 +605,7 @@ private struct SupersetCard: View {
         if scrollCard {
             VStack(spacing: 0) {
                 supersetHeader
-                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                    .padding(.horizontal, Theme.Spacing.m)
                     .padding(.vertical, Theme.Spacing.s)
                     .frame(minHeight: Theme.Layout.minTapTarget)
                 ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)

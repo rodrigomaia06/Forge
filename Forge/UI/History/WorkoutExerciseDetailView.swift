@@ -349,7 +349,7 @@ struct WorkoutExerciseDetailView : View {
             )
             if scrollCard {
                 row
-                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                    .padding(.horizontal, Theme.Spacing.m)
                     .padding(.vertical, 3)
                     .overlay(alignment: .bottom) {
                         ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
@@ -421,9 +421,9 @@ struct WorkoutExerciseDetailView : View {
             if let member = supersetMember {
                 Text(member.label)
                     .font(.forgeCaption.weight(.bold))
-                    .foregroundColor(.forgeSecondaryLabel)
-                    .frame(width: 20, height: 20)
-                    .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.forgeSeparator))
+                    .foregroundColor(.forgeLabel)
+                    .frame(width: 22, height: 22)
+                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.forgeSeparator))
                     .accessibilityLabel("Superset position \(member.label)")
             }
             VStack(alignment: .leading, spacing: 2) {
@@ -444,7 +444,7 @@ struct WorkoutExerciseDetailView : View {
             } label: {
                 Image(systemName: "ellipsis")
                     .foregroundColor(.forgeSecondaryLabel)
-                    .frame(width: 44, height: 30)
+                    .frame(width: 34, height: 30)
                     .contentShape(Rectangle())
             }
         }
@@ -512,18 +512,17 @@ struct WorkoutExerciseDetailView : View {
             ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
             if exerciseIsBodyweight && setsEditable && isAdHocWorkout {
                 bodyweightModeRow
-                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                    .padding(.horizontal, Theme.Spacing.m)
                     .frame(minHeight: Theme.Layout.minTapTarget)
                 ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
             }
             setsHeader
-                .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                .padding(.horizontal, Theme.Spacing.m)
                 .frame(minHeight: Theme.Layout.minTapTarget)
             ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
             currentWorkoutSets
             if setsEditable {
                 addSetButton
-                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                     .frame(minHeight: Theme.Layout.minTapTarget)
             }

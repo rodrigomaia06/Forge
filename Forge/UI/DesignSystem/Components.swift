@@ -47,7 +47,10 @@ struct ForgeSetNumberChip: View {
             .background(Circle().fill(color.opacity(tint == nil ? 0.14 : 0.22)))
             .overlay(alignment: .topTrailing) {
                 if showsNote {
-                    Circle().fill(Color.forgeAccent).frame(width: 7, height: 7)
+                    Circle()
+                        .fill(Color.forgeLabel)
+                        .frame(width: 7, height: 7)
+                        .overlay(Circle().strokeBorder(Color.forgeBackground, lineWidth: 1))
                 }
             }
             .overlay(alignment: .bottomLeading) {

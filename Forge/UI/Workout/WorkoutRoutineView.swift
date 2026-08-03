@@ -120,9 +120,9 @@ struct WorkoutRoutineView: View {
                 if let label = ex.supersetLabel {
                     Text(label)
                         .font(.forgeCaption.weight(.bold))
-                        .foregroundColor(.forgeSecondaryLabel)
-                        .frame(width: 20, height: 20)
-                        .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.forgeSeparator))
+                        .foregroundColor(.forgeLabel)
+                        .frame(width: 22, height: 22)
+                        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.forgeSeparator))
                         .accessibilityLabel("Superset \(label)")
                 }
                 Text(ex.exercise(in: exerciseStore.exercises)?.title ?? "Unknown Exercise")
@@ -132,10 +132,12 @@ struct WorkoutRoutineView: View {
             }
             ForEach(indexedRoutineSets(ex), id: \.1.id) { (index, set) in
                 RoutineSetRow(workoutRoutineSet: set, index: index, singleTarget: ex.singleRepTargetValue, isEditable: true, onOpenOptions: { optionsSet = set })
+                    .listRowInsets(EdgeInsets(top: 3, leading: Theme.Spacing.m, bottom: 3, trailing: Theme.Spacing.m))
             }
             .onDelete { deleteRoutineSets(ex, $0) }
             Button { addRoutineSet(to: ex) } label: {
                 HStack { Image(systemName: "plus"); Text("Add set") }
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
         }
     }
@@ -175,7 +177,7 @@ struct WorkoutRoutineView: View {
         } label: {
             Image(systemName: "ellipsis")
                 .foregroundColor(.forgeSecondaryLabel)
-                .frame(width: 44, height: 30)
+                .frame(width: 34, height: 30)
                 .contentShape(Rectangle())
         }
         .accessibilityLabel("Exercise options")
@@ -244,9 +246,9 @@ struct WorkoutRoutineView: View {
                             if let label = workoutRoutineExercise.supersetLabel {
                                 Text(label)
                                     .font(.forgeCaption.weight(.bold))
-                                    .foregroundColor(.forgeSecondaryLabel)
-                                    .frame(width: 20, height: 20)
-                                    .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.forgeSeparator))
+                                    .foregroundColor(.forgeLabel)
+                                    .frame(width: 22, height: 22)
+                                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.forgeSeparator))
                                     .accessibilityLabel("Superset \(label)")
                             }
                             VStack(alignment: .leading) {
@@ -431,6 +433,8 @@ private struct RoutineSetRow: View {
                 )
             }
             .buttonStyle(.plain)
+            .frame(width: 36, height: ForgeSetRowStyle.numberBoxHeight)
+            .contentShape(Rectangle())
             Spacer()
             if isEditable {
                 if singleTarget {
