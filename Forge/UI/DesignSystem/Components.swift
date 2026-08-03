@@ -34,6 +34,7 @@ struct ForgeSwipeToDeleteRow<Content: View>: View {
 
     @State private var restingOffset: CGFloat = 0
     @GestureState private var dragOffset: CGFloat = 0
+    @State private var isRemoving: Bool = false
 
     init(onDelete: @escaping () -> Void, @ViewBuilder content: () -> Content) {
         self.onDelete = onDelete
@@ -48,7 +49,13 @@ struct ForgeSwipeToDeleteRow<Content: View>: View {
         // Let the focused field resign before its Core Data row is removed. The deletion runs on the
         // current main-loop turn so the row removal stays in the same animation transaction.
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        // Shrink and fade the row first, then call the deletion after the animation completes.
         withAnimation(.interactiveSpring(response: 0.22, dampingFraction: 0.86)) {
+            // hide the exposed actions and animate collapse
+            restingOffset = 0
+            isRemoving = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
             onDelete()
         }
     }
@@ -76,6 +83,10 @@ struct ForgeSwipeToDeleteRow<Content: View>: View {
                 .offset(x: visibleOffset)
         }
         .clipped()
+        // When removing, scale & fade so the surrounding stack animates smoothly.
+        .scaleEffect(x: 1, y: isRemoving ? 0.001 : 1, anchor: .top)
+        .opacity(isRemoving ? 0 : 1)
+        .allowsHitTesting(!isRemoving)
         .contentShape(Rectangle())
         .simultaneousGesture(
             DragGesture(minimumDistance: horizontalActivationDistance)
