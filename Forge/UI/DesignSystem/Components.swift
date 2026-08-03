@@ -46,9 +46,11 @@ struct ForgeSwipeToDeleteRow<Content: View>: View {
 
     private func performDelete() {
         // Let the focused field resign before its Core Data row is removed. The deletion runs on the
-        // next main-loop turn, after UIKit has started dismantling the input session.
+        // current main-loop turn so the row removal stays in the same animation transaction.
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        DispatchQueue.main.async(execute: onDelete)
+        withAnimation(.interactiveSpring(response: 0.22, dampingFraction: 0.86)) {
+            onDelete()
+        }
     }
 
     var body: some View {
