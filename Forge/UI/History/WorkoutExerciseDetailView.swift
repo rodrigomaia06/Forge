@@ -352,7 +352,7 @@ struct WorkoutExerciseDetailView : View {
                     .padding(.horizontal, Theme.Spacing.m)
                     .padding(.vertical, 3)
                     .overlay(alignment: .bottom) {
-                        ForgeListSeparator().padding(.horizontal, Theme.Spacing.m)
+                        ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                     }
             } else {
                 row
@@ -507,24 +507,24 @@ struct WorkoutExerciseDetailView : View {
     private var scrollRows: some View {
         VStack(spacing: 0) {
             exerciseHeaderRow
-                .padding(.horizontal, Theme.Spacing.m)
-                .padding(.vertical, Theme.Spacing.s)
-            ForgeListSeparator().padding(.horizontal, Theme.Spacing.m)
+                .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                .frame(minHeight: Theme.Layout.minTapTarget)
+            ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
             if exerciseIsBodyweight && setsEditable && isAdHocWorkout {
                 bodyweightModeRow
                     .padding(.horizontal, Theme.Spacing.m)
-                    .padding(.vertical, Theme.Spacing.xs)
-                ForgeListSeparator().padding(.horizontal, Theme.Spacing.m)
+                    .frame(minHeight: Theme.Layout.minTapTarget)
+                ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
             }
             setsHeader
                 .padding(.horizontal, Theme.Spacing.m)
-                .padding(.vertical, Theme.Spacing.xs)
-            ForgeListSeparator().padding(.horizontal, Theme.Spacing.m)
+                .frame(minHeight: Theme.Layout.minTapTarget)
+            ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
             currentWorkoutSets
             if setsEditable {
                 addSetButton
-                    .padding(.horizontal, Theme.Spacing.m)
-                    .padding(.vertical, Theme.Spacing.s)
+                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                    .frame(minHeight: Theme.Layout.minTapTarget)
             }
         }
     }

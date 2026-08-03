@@ -62,10 +62,12 @@ struct CustomAttributesEditor: View {
             .onTapGesture { focus = .value(row.id) }
             .modifier(if: standaloneCard) { row in
                 row
-                    .padding(.horizontal, Theme.Spacing.m)
-                    .padding(.vertical, Theme.Spacing.s)
+                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                    .frame(minHeight: Theme.Layout.minTapTarget)
                     .overlay(alignment: .bottom) {
-                        ForgeListSeparator().padding(.horizontal, Theme.Spacing.m)
+                        if row.id != rows.last?.id || isEditable {
+                            ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                        }
                     }
             }
         }
@@ -80,7 +82,9 @@ struct CustomAttributesEditor: View {
                 Label("Add attribute", systemImage: "plus")
             }
             .modifier(if: standaloneCard) { row in
-                row.padding(.horizontal, Theme.Spacing.m).padding(.vertical, Theme.Spacing.s)
+                row
+                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                    .frame(minHeight: Theme.Layout.minTapTarget)
             }
         }
     }

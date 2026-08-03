@@ -195,28 +195,28 @@ struct CurrentWorkoutView: View {
         Text(title)
             .font(.forgeHeadline)
             .foregroundColor(.forgeSecondaryLabel)
-            .padding(.horizontal, Theme.Spacing.l)
+            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
     }
 
     @ViewBuilder private var scrollCharacteristics: some View {
         if !hasWorkoutName || !trimmedWorkoutComment.isEmpty {
-            VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.m) {
                 scrollSectionTitle("Characteristics")
                 VStack(spacing: 0) {
                     if !hasWorkoutName {
                         ClearableTextField(titleKey: "Name", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
-                            .padding(.horizontal, Theme.Spacing.m)
-                            .padding(.vertical, Theme.Spacing.s)
+                            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                            .frame(minHeight: Theme.Layout.minTapTarget)
                     }
                     if !hasWorkoutName, !trimmedWorkoutComment.isEmpty {
-                        ForgeListSeparator().padding(.horizontal, Theme.Spacing.m)
+                        ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                     }
                     if !trimmedWorkoutComment.isEmpty {
                         Text(trimmedWorkoutComment)
                             .foregroundColor(.forgeSecondaryLabel)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, Theme.Spacing.m)
-                            .padding(.vertical, Theme.Spacing.s)
+                            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                            .frame(minHeight: Theme.Layout.minTapTarget)
                             .editModeHint()
                     }
                 }
@@ -227,7 +227,7 @@ struct CurrentWorkoutView: View {
 
     @ViewBuilder private var scrollAttributes: some View {
         if !workout.customAttributes.isEmpty {
-            VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.m) {
                 scrollSectionTitle("Attributes")
                 CustomAttributesEditor(
                     attributes: workoutCustomAttributes,
@@ -249,7 +249,7 @@ struct CurrentWorkoutView: View {
                 Text("Add exercise")
                 Spacer()
             }
-            .padding(.horizontal, Theme.Spacing.m)
+            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
             .frame(minHeight: Theme.Layout.minTapTarget)
             .contentShape(Rectangle())
         }
@@ -260,13 +260,13 @@ struct CurrentWorkoutView: View {
     /// the life of the screen instead of being recycled as they cross a List viewport boundary.
     private var liveWorkoutScroll: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.l) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
                 scrollCharacteristics
                 scrollAttributes
 
-                VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.m) {
                     scrollSectionTitle("Exercises")
-                    VStack(spacing: Theme.Spacing.l) {
+                    VStack(spacing: Theme.Spacing.xxl) {
                         ForEach(Array(workout.exerciseSlots.enumerated()), id: \.element.id) { _, slot in
                             switch slot {
                             case .single(let workoutExercise):
@@ -291,8 +291,8 @@ struct CurrentWorkoutView: View {
 
                 addExerciseScrollButton
             }
-            .padding(.horizontal, Theme.Spacing.l)
-            .padding(.top, Theme.Spacing.s)
+            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+            .padding(.top, Theme.Spacing.l)
             .padding(.bottom, Theme.Spacing.xxl)
         }
         .scrollDismissesKeyboard(.immediately)
@@ -607,7 +607,8 @@ private struct SupersetCard: View {
                 supersetHeader
                     .padding(.horizontal, Theme.Spacing.m)
                     .padding(.vertical, Theme.Spacing.s)
-                ForgeListSeparator().padding(.horizontal, Theme.Spacing.m)
+                    .frame(minHeight: Theme.Layout.minTapTarget)
+                ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                 members
             }
             .forgeCard()

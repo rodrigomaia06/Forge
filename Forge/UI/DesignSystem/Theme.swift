@@ -35,6 +35,9 @@ enum Theme {
     enum Layout {
         /// Minimum comfortable one-handed tap target (Apple HIG).
         static let minTapTarget: CGFloat = 44
+        /// Default content inset used by an inset-grouped List row. Scroll-hosted cards use the same
+        /// value so moving them out of a recycling List does not change their visual geometry.
+        static let insetGroupedRowInset: CGFloat = 20
     }
 }
 
