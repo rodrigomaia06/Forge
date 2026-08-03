@@ -58,6 +58,9 @@ struct WorkoutExerciseDetailView : View {
     /// The live workout's normal mode uses a non-recycling ScrollView. In that container this view draws
     /// its own card and separators instead of relying on List section styling.
     let scrollCard: Bool
+    /// Both embedded scroll cards and the pushed session editor keep every set row mounted. Only legacy
+    /// List-hosted embedded/read-only layouts use native row modifiers.
+    private var usesNonRecyclingRows: Bool { scrollCard || !embedded }
     /// Header for the embedded card's section. Set only on the first exercise so the group gets a
     /// single "Exercises" header in the same grouped style as the Characteristics and Attributes ones.
     private let sectionHeader: String?
@@ -347,13 +350,15 @@ struct WorkoutExerciseDetailView : View {
                     present(.setOptions(workoutSet))
                 }
             )
-            if scrollCard {
-                row
-                    .padding(.horizontal, Theme.Spacing.m)
-                    .padding(.vertical, 3)
-                    .overlay(alignment: .bottom) {
-                        ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
-                    }
+            if usesNonRecyclingRows {
+                ForgeSwipeToDeleteRow(onDelete: { deleteSet(workoutSet) }) {
+                    row
+                        .padding(.horizontal, Theme.Spacing.m)
+                        .padding(.vertical, 3)
+                        .overlay(alignment: .bottom) {
+                            ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                        }
+                }
             } else {
                 row
                     // Tighter vertical insets so the set rows sit closer together, less separation between sets.
@@ -538,22 +543,48 @@ struct WorkoutExerciseDetailView : View {
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
     }
 
-    /// The pushed, full-screen layout used when viewing an exercise from history. Read-only until Edit.
-    private var standaloneBody: some View {
+    private var standaloneSessionCard: some View {
         VStack(spacing: 0) {
-            exerciseNoteSubtitle
-
-            List {
-                Section(header: Text("This session")) {
-                    if exerciseIsBodyweight && setsEditable && isAdHocWorkout { bodyweightModeRow }
-                    setsHeader
-                    currentWorkoutSets
-                    if setsEditable { addSetButton }
-                }
+            if exerciseIsBodyweight && setsEditable && isAdHocWorkout {
+                bodyweightModeRow
+                    .padding(.horizontal, Theme.Spacing.m)
+                    .frame(minHeight: Theme.Layout.minTapTarget)
+                ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
             }
-            .listStyleCompat_InsetGroupedListStyle()
-            .keyboardDoneToolbar()
+            setsHeader
+                .padding(.horizontal, Theme.Spacing.m)
+                .frame(minHeight: Theme.Layout.minTapTarget)
+            ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+            currentWorkoutSets
+            if setsEditable {
+                addSetButton
+                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                    .frame(minHeight: Theme.Layout.minTapTarget)
+            }
         }
+        .forgeCard()
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
+    }
+
+    /// The pushed, full-screen layout used when viewing an exercise from history. Read-only until Edit.
+    /// A non-lazy stack keeps an active numeric field alive if the user scrolls during editing.
+    private var standaloneBody: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+                exerciseNoteSubtitle
+                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                Text("This session")
+                    .font(.forgeHeadline)
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                standaloneSessionCard
+            }
+            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+            .padding(.top, Theme.Spacing.l)
+            .padding(.bottom, Theme.Layout.bottomScrollClearance)
+        }
+        .scrollDismissesKeyboard(.immediately)
+        .background(Color.forgeBackground.ignoresSafeArea())
         .navigationBarTitle(Text(exerciseTitle), displayMode: .inline)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
@@ -1078,9 +1109,11 @@ private struct ActiveSetRow: View {
                 .accessibilityLabel(workoutSet.tagValue.map { "Set \(index), \($0.title). Details" } ?? "Set \(index). Details")
 
             Text(previousText ?? "—")
-                .font(.forgeCaption)
+                .font(.forgeSupportingValue)
                 .foregroundColor(.forgeSecondaryLabel)
                 .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .allowsTightening(true)
                 .frame(maxWidth: .infinity, alignment: .center)
 
             if isEditable {

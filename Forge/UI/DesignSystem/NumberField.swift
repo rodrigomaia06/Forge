@@ -125,7 +125,7 @@ struct RightAlignedNumberField: UIViewRepresentable {
             field.attributedPlaceholder = NSAttributedString(
                 string: placeholder,
                 attributes: [
-                    .font: smallPlaceholder ? UIFont.preferredFont(forTextStyle: .footnote) : Self.valueFont(),
+                    .font: smallPlaceholder ? UIFont.preferredFont(forTextStyle: .subheadline) : Self.valueFont(),
                     .foregroundColor: UIColor.secondaryLabel,
                 ]
             )

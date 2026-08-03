@@ -172,7 +172,18 @@ final class ScreenshotUITests: XCTestCase {
             return
         }
         shot("running", settle: 1.5)
-        app.swipeUp(velocity: .slow)
+        // Begin inside the exercise card, not on the black gutter. Set-row swipe deletion must never
+        // prevent the surrounding workout from scrolling vertically over its Previous column.
+        let previousHeader = app.staticTexts["Previous"].firstMatch
+        if previousHeader.waitForExistence(timeout: 2), previousHeader.isHittable {
+            let initialY = previousHeader.frame.midY
+            let start = previousHeader.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            let destination = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.18))
+            start.press(forDuration: 0.05, thenDragTo: destination)
+            XCTAssertLessThan(previousHeader.frame.midY, initialY - 20, "Dragging from Previous must scroll the exercise card")
+        } else {
+            app.swipeUp(velocity: .slow)
+        }
         shot("running-scrolled")
         app.swipeDown(velocity: .slow)
 
@@ -351,7 +362,9 @@ final class ScreenshotUITests: XCTestCase {
         // An existing plan from the sample data, and a routine inside it.
         if tapFirst(in: [app.cells, app.buttons, app.staticTexts], labelled: "StrongLifts") {
             shot("plan-detail", settle: 1.5)
-            if tapRow(at: 1, preferring: [app.cells, app.buttons]) {
+            // The plan title is also a hittable field, so positional row lookup can focus it instead of
+            // opening a routine. Select the routine by its semantic label before testing its set fields.
+            if tapFirst(in: [app.buttons, app.cells, app.staticTexts], labelled: "Workout A") {
                 shot("plan-routine", settle: 1.5)
                 captureRoutineEditor()
                 back()
@@ -591,9 +604,26 @@ final class ScreenshotUITests: XCTestCase {
     /// menu with its nested pickers.
     private func captureRoutineEditor() {
         shot("routine-editor", settle: 1.5)
-        app.swipeUp(velocity: .slow)
-        shot("routine-editor-scrolled")
-        app.swipeDown(velocity: .slow)
+        let firstTarget = app.textFields.firstMatch
+        if firstTarget.waitForExistence(timeout: 3), firstTarget.isHittable {
+            firstTarget.tap()
+            shot("routine-value-field-focused", settle: 0.8)
+            // This used to recycle the focused UIKit field inside List and could permanently wedge the
+            // main thread. The non-lazy routine stack keeps it mounted until scrolling dismisses focus.
+            // Start the vertical gesture on the value box itself. This guards the requirement that the
+            // whole card scrolls, rather than only the background around it.
+            let initialY = firstTarget.frame.midY
+            let start = firstTarget.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            let destination = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.18))
+            start.press(forDuration: 0.05, thenDragTo: destination)
+            XCTAssertLessThan(firstTarget.frame.midY, initialY - 20, "Dragging from a routine value box must scroll the card")
+            shot("routine-editor-scrolled")
+            app.swipeDown(velocity: .slow)
+        } else {
+            app.swipeUp(velocity: .slow)
+            shot("routine-editor-scrolled")
+            app.swipeDown(velocity: .slow)
+        }
 
         if tapFirst(in: [app.buttons, app.staticTexts], labelled: "Add exercises") {
             shot("routine-add-exercises", settle: 1.5)

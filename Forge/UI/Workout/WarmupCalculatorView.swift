@@ -45,50 +45,90 @@ struct WarmupCalculatorView: View {
         weightUnit.numberFormatter.string(from: WeightUnit.convert(weight: kg, from: .metric, to: weightUnit) as NSNumber) ?? ""
     }
 
-    var body: some View {
-        Form {
-            Section(header: Text("Working set")) {
-                HStack {
-                    Text("Weight")
-                    Spacer()
-                    RightAlignedNumberField(text: $workingWeightInput, placeholder: "0", keyboardType: .decimalPad, alignment: .right, smallPlaceholder: false)
-                        .frame(width: 90, height: 28)
-                    Text(weightUnit.unit.symbol)
-                        .foregroundColor(.forgeSecondaryLabel)
-                }
-                HStack {
-                    Text("Reps")
-                    Spacer()
-                    RightAlignedNumberField(text: $workingRepsInput, placeholder: "0", keyboardType: .numberPad, alignment: .right, smallPlaceholder: false)
-                        .frame(width: 90, height: 28)
-                }
-            }
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.forgeHeadline)
+            .foregroundColor(.forgeSecondaryLabel)
+            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+    }
 
-            Section(header: Text("Warm-up sets")) {
-                if plan.isEmpty {
-                    Text(workingWeightKg > 0
-                         ? "This weight is light enough that warm-up sets aren't needed."
-                         : "Enter a working weight to see warm-up sets.")
-                        .foregroundColor(.forgeSecondaryLabel)
-                } else {
-                    ForEach(Array(plan.enumerated()), id: \.element.id) { index, set in
-                        HStack {
-                            Text("\(index + 1)")
-                                .foregroundColor(.forgeSecondaryLabel)
-                                .frame(width: 24, alignment: .leading)
-                            Text("\(weightText(set.weightKg)) \(weightUnit.unit.symbol)")
-                                .font(.body.monospacedDigit())
-                            Spacer()
-                            Text("× \(set.reps)")
-                                .font(.body.monospacedDigit())
-                                .foregroundColor(.forgeSecondaryLabel)
-                        }
-                        .accessibilityElement(children: .combine)
+    private var workingSetCard: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Weight")
+                Spacer()
+                RightAlignedNumberField(text: $workingWeightInput, placeholder: "0", keyboardType: .decimalPad, alignment: .right, smallPlaceholder: false)
+                    .frame(width: 90, height: 28)
+                Text(weightUnit.unit.symbol)
+                    .foregroundColor(.forgeSecondaryLabel)
+            }
+            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+            .frame(minHeight: Theme.Layout.minTapTarget)
+            ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+            HStack {
+                Text("Reps")
+                Spacer()
+                RightAlignedNumberField(text: $workingRepsInput, placeholder: "0", keyboardType: .numberPad, alignment: .right, smallPlaceholder: false)
+                    .frame(width: 90, height: 28)
+            }
+            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+            .frame(minHeight: Theme.Layout.minTapTarget)
+        }
+        .forgeCard()
+    }
+
+    private var warmupSetsCard: some View {
+        VStack(spacing: 0) {
+            if plan.isEmpty {
+                Text(workingWeightKg > 0
+                     ? "This weight is light enough that warm-up sets aren't needed."
+                     : "Enter a working weight to see warm-up sets.")
+                    .foregroundColor(.forgeSecondaryLabel)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                    .frame(minHeight: Theme.Layout.minTapTarget)
+            } else {
+                ForEach(Array(plan.enumerated()), id: \.element.id) { index, set in
+                    HStack {
+                        Text("\(index + 1)")
+                            .foregroundColor(.forgeSecondaryLabel)
+                            .frame(width: 24, alignment: .leading)
+                        Text("\(weightText(set.weightKg)) \(weightUnit.unit.symbol)")
+                            .font(.body.monospacedDigit())
+                        Spacer()
+                        Text("× \(set.reps)")
+                            .font(.body.monospacedDigit())
+                            .foregroundColor(.forgeSecondaryLabel)
                     }
+                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                    .frame(minHeight: Theme.Layout.minTapTarget)
+                    .overlay(alignment: .bottom) {
+                        if index < plan.count - 1 {
+                            ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
                 }
             }
         }
-        .keyboardDoneToolbar()
+        .forgeCard()
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+                sectionTitle("Working set")
+                workingSetCard
+                sectionTitle("Warm-up sets")
+                    .padding(.top, Theme.Spacing.l)
+                warmupSetsCard
+            }
+            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+            .padding(.top, Theme.Spacing.l)
+            .padding(.bottom, Theme.Spacing.xxl)
+        }
+        .scrollDismissesKeyboard(.immediately)
+        .background(Color.forgeBackground.ignoresSafeArea())
         .presentationDetents([.height(sheetHeight), .large])
         .presentationDragIndicator(.visible)
         .navigationBarTitle("Warm-up sets", displayMode: .inline)

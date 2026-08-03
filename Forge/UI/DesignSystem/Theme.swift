@@ -126,7 +126,7 @@ extension Font {
 
     /// Secondary information that still needs to be read quickly during a workout. One step below the
     /// primary value, but deliberately larger and stronger than ordinary metadata.
-    static var forgeSupportingValue: Font { .system(.callout, design: .rounded).weight(.medium) }
+    static var forgeSupportingValue: Font { .system(.body, design: .rounded).weight(.medium) }
 
     /// Large, calm greeting / screen title (e.g. "Good afternoon"). Uses a text style so it
     /// scales with Dynamic Type instead of clipping at a fixed size.

@@ -10,6 +10,18 @@ import SwiftUI
 
 struct GeneralSettingsView: View {
     @EnvironmentObject var settingsStore: SettingsStore
+    @State private var bodyweightInput = ""
+    @FocusState private var bodyweightFocused: Bool
+
+    private static let bodyweightFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = false
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 3
+        formatter.minimum = 0
+        return formatter
+    }()
     
     private var weightPickerSection: some View {
         Section(header: Text("Weight"), footer: Text("Bodyweight weighs bodyweight exercises like pull-ups and dips in charts and totals. Log a per-set added or assisted amount for weighted or assisted reps. Leave it at 0 to count only the added weight.")) {
@@ -22,16 +34,24 @@ struct GeneralSettingsView: View {
                 Text("Bodyweight")
                 Spacer()
                 HStack(spacing: 0) {
-                    DecimalNumberField(value: displayedBodyweight, width: 60) { newValue in
-                        settingsStore.bodyweight = newValue > 0
-                            ? WeightUnit.convert(weight: newValue, from: settingsStore.weightUnit, to: .metric)
-                            : 0
-                    }
+                    TextField("0", text: $bodyweightInput)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .focused($bodyweightFocused)
+                        .frame(width: 60, height: 28)
                     Text(settingsStore.weightUnit.unit.symbol)
                         .foregroundColor(.secondary)
                 }
             }
         }
+        .onAppear { syncBodyweightInput() }
+        .onChange(of: bodyweightFocused) { focused in
+            if !focused { commitBodyweightInput() }
+        }
+        .onChange(of: settingsStore.weightUnit) { _ in
+            if !bodyweightFocused { syncBodyweightInput() }
+        }
+        .onDisappear { commitBodyweightInput() }
     }
 
     /// Bodyweight shown in the user's unit; stored as kilograms. Empty or 0 clears it.
@@ -39,6 +59,23 @@ struct GeneralSettingsView: View {
         let kg = settingsStore.bodyweight
         guard kg > 0 else { return 0 }
         return WeightUnit.convert(weight: kg, from: .metric, to: settingsStore.weightUnit)
+    }
+
+    private func syncBodyweightInput() {
+        bodyweightInput = displayedBodyweight > 0
+            ? (Self.bodyweightFormatter.string(from: NSNumber(value: displayedBodyweight)) ?? "")
+            : ""
+    }
+
+    private func commitBodyweightInput() {
+        let raw = bodyweightInput.trimmingCharacters(in: .whitespaces)
+        let value = Self.bodyweightFormatter.number(from: raw)?.doubleValue
+            ?? Double(raw.replacingOccurrences(of: ",", with: "."))
+            ?? 0
+        settingsStore.bodyweight = value > 0
+            ? WeightUnit.convert(weight: value, from: settingsStore.weightUnit, to: .metric)
+            : 0
+        syncBodyweightInput()
     }
 
     private var appearance: Binding<ForgeAppearance> {

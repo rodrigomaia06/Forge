@@ -23,6 +23,10 @@ struct WorkoutRoutineView: View {
     @State private var optionsSet: WorkoutRoutineSet?
     @State private var exerciseSheet: ExerciseSheet?
 
+    /// Native inset-grouped rows contributed more vertical breathing room than the raw set control.
+    /// Preserve that comfortable rhythm in the explicit non-recycling card.
+    private let routineCardRowHeight: CGFloat = 52
+
     /// The exercise-level sheet reached from a card's "..." menu. One presenter, keyed by kind and exercise.
     private enum ExerciseSheet: Identifiable {
         case note(WorkoutRoutineExercise)
@@ -101,21 +105,17 @@ struct WorkoutRoutineView: View {
         managedObjectContext.saveOrCrash()
     }
 
-    private func deleteRoutineSets(_ ex: WorkoutRoutineExercise, _ offsets: IndexSet) {
-        let sets = routineSets(ex)
-        for i in offsets {
-            let set = sets[i]
-            managedObjectContext.delete(set)
-            set.workoutRoutineExercise?.removeFromWorkoutRoutineSets(set)
-        }
+    private func deleteRoutineSet(_ set: WorkoutRoutineSet) {
+        managedObjectContext.delete(set)
+        set.workoutRoutineExercise?.removeFromWorkoutRoutineSets(set)
         managedObjectContext.saveOrCrash()
     }
 
     /// One exercise as a card in view mode: the name, a "..." menu with the rep-target and bodyweight
     /// controls and the exercise actions (info, note, previous sessions, remove), and its set table. Nothing
     /// navigates to open the exercise as its own screen; everything is edited here.
-    @ViewBuilder private func exerciseCard(_ ex: WorkoutRoutineExercise) -> some View {
-        Section {
+    private func exerciseCard(_ ex: WorkoutRoutineExercise) -> some View {
+        VStack(spacing: 0) {
             HStack(spacing: Theme.Spacing.s) {
                 if let label = ex.supersetLabel {
                     Text(label)
@@ -130,16 +130,28 @@ struct WorkoutRoutineView: View {
                 Spacer()
                 exerciseMenu(ex)
             }
+            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+            .frame(minHeight: routineCardRowHeight)
+            ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
             ForEach(indexedRoutineSets(ex), id: \.1.id) { (index, set) in
-                RoutineSetRow(workoutRoutineSet: set, index: index, singleTarget: ex.singleRepTargetValue, isEditable: true, onOpenOptions: { optionsSet = set })
-                    .listRowInsets(EdgeInsets(top: 3, leading: Theme.Spacing.m, bottom: 3, trailing: Theme.Spacing.m))
+                ForgeSwipeToDeleteRow(onDelete: { deleteRoutineSet(set) }) {
+                    RoutineSetRow(workoutRoutineSet: set, index: index, singleTarget: ex.singleRepTargetValue, isEditable: true, onOpenOptions: { optionsSet = set })
+                        .padding(.horizontal, Theme.Spacing.m)
+                        .padding(.vertical, Theme.Spacing.s)
+                        .overlay(alignment: .bottom) {
+                            ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                        }
+                }
             }
-            .onDelete { deleteRoutineSets(ex, $0) }
             Button { addRoutineSet(to: ex) } label: {
                 HStack { Image(systemName: "plus"); Text("Add set") }
                     .frame(maxWidth: .infinity, alignment: .center)
             }
+            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+            .frame(minHeight: routineCardRowHeight)
         }
+        .forgeCard()
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
     }
 
     private func exerciseMenu(_ ex: WorkoutRoutineExercise) -> some View {
@@ -215,60 +227,103 @@ struct WorkoutRoutineView: View {
         self.managedObjectContext.saveOrCrash()
     }
     
-    var body: some View {
-        List {
-            // Characteristics: the fields all show when viewing, but are editable only after Edit, so a
-            // stray tap can't change the routine.
-            Section(header: Text("Characteristics")) {
-                if editMode?.wrappedValue.isEditing == true {
-                    ClearableTextField(titleKey: "Title", text: workoutRoutineTitle, onCommit: { self.adjustAndSaveWorkoutRoutineTitleInput() })
-                    ClearableTextField(titleKey: "Comment", text: workoutRoutineComment, onCommit: { self.adjustAndSaveWorkoutRoutineCommentInput() })
-                } else {
-                    LabeledContent("Title") { Text(workoutRoutine.title ?? "Untitled").foregroundColor(.secondary) }
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.forgeHeadline)
+            .foregroundColor(.forgeSecondaryLabel)
+            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+    }
+
+    private var routineScroll: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+                    sectionTitle("Characteristics")
+                    VStack(spacing: 0) {
+                        LabeledContent("Title") {
+                            Text(workoutRoutine.title ?? "Untitled").foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                        .frame(minHeight: Theme.Layout.minTapTarget)
                         .editModeHint()
-                    if let comment = workoutRoutine.comment, !comment.isEmpty {
-                        LabeledContent("Comment") { Text(comment).foregroundColor(.secondary) }
-                            .editModeHint()
+                        if let comment = workoutRoutine.comment, !comment.isEmpty {
+                            ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                            LabeledContent("Comment") { Text(comment).foregroundColor(.secondary) }
+                                .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                                .frame(minHeight: Theme.Layout.minTapTarget)
+                                .editModeHint()
+                        }
+                    }
+                    .forgeCard()
+                }
+
+                if !workoutRoutine.customAttributes.isEmpty {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+                        sectionTitle("Attributes")
+                        CustomAttributesEditor(attributes: routineCustomAttributes, isEditable: false, standaloneCard: true)
                     }
                 }
+
+                VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+                    sectionTitle("Exercises")
+                    VStack(spacing: Theme.Spacing.xxl) {
+                        ForEach(workoutRoutineExercises) { exerciseCard($0) }
+                    }
+                }
+
+                Button(action: { self.showExerciseSelector = true }) {
+                    HStack {
+                        Image(systemName: "plus")
+                        Text("Add exercises")
+                        Spacer()
+                    }
+                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                    .frame(minHeight: Theme.Layout.minTapTarget)
+                    .contentShape(Rectangle())
+                }
+                .forgeCard()
+            }
+            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+            .padding(.top, Theme.Spacing.l)
+            .padding(.bottom, Theme.Layout.bottomScrollClearance)
+        }
+        .scrollDismissesKeyboard(.immediately)
+        .background(Color.forgeBackground.ignoresSafeArea())
+    }
+
+    private var editList: some View {
+        List {
+            Section(header: Text("Characteristics")) {
+                ClearableTextField(titleKey: "Title", text: workoutRoutineTitle, onCommit: { self.adjustAndSaveWorkoutRoutineTitleInput() })
+                ClearableTextField(titleKey: "Comment", text: workoutRoutineComment, onCommit: { self.adjustAndSaveWorkoutRoutineCommentInput() })
             }
 
-            CustomAttributesEditor(attributes: routineCustomAttributes, isEditable: editMode?.wrappedValue.isEditing == true)
+            CustomAttributesEditor(attributes: routineCustomAttributes, isEditable: true)
 
-            // Edit mode uses the compact list for reordering, deleting, and superset notes. View mode shows
-            // each exercise as a card with its set table inline, like the live workout.
-            if editMode?.wrappedValue.isEditing == true {
             Section(header: Text("Exercises")) {
                 ForEach(workoutRoutineExercises) { workoutRoutineExercise in
-                    // A plain row (no navigation): edit mode is only for reordering, deleting, and the
-                    // superset note/ungroup swipe. The exercise is never opened as its own screen.
-                        HStack(spacing: Theme.Spacing.s) {
-                            if let label = workoutRoutineExercise.supersetLabel {
-                                Text(label)
-                                    .font(.forgeCaption.weight(.bold))
-                                    .foregroundColor(.forgeLabel)
-                                    .frame(width: 22, height: 22)
-                                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.forgeSeparator))
-                                    .accessibilityLabel("Superset \(label)")
+                    HStack(spacing: Theme.Spacing.s) {
+                        if let label = workoutRoutineExercise.supersetLabel {
+                            Text(label)
+                                .font(.forgeCaption.weight(.bold))
+                                .foregroundColor(.forgeLabel)
+                                .frame(width: 22, height: 22)
+                                .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.forgeSeparator))
+                                .accessibilityLabel("Superset \(label)")
+                        }
+                        VStack(alignment: .leading) {
+                            Text(workoutRoutineExercise.exercise(in: self.exerciseStore.exercises)?.title ?? "Unknown Exercise")
+                            workoutRoutineExercise.subtitle.map {
+                                Text($0).foregroundColor(.secondary).font(.caption)
                             }
-                            VStack(alignment: .leading) {
-                                Text(workoutRoutineExercise.exercise(in: self.exerciseStore.exercises)?.title ?? "Unknown Exercise")
-                                workoutRoutineExercise.subtitle.map {
-                                    Text($0)
-                                        .foregroundColor(.secondary)
-                                        .font(.caption)
-                                }
-                                // Show the group's shared note once, under the first member.
-                                if workoutRoutineExercise.supersetIndex == 0, let note = workoutRoutineExercise.supersetNote {
-                                    Text(note)
-                                        .font(.forgeCaption.italic())
-                                        .foregroundColor(.forgeSecondaryLabel)
-                                        .lineLimit(2)
-                                }
+                            if workoutRoutineExercise.supersetIndex == 0, let note = workoutRoutineExercise.supersetNote {
+                                Text(note)
+                                    .font(.forgeCaption.italic())
+                                    .foregroundColor(.forgeSecondaryLabel)
+                                    .lineLimit(2)
                             }
                         }
-                    // Note and Ungroup live on the row, not in a per-exercise menu. Swipe from the leading
-                    // edge; the exercises stay in the routine.
+                    }
                     .swipeActions(edge: .leading) {
                         if let uuid = workoutRoutineExercise.supersetUUID {
                             Button { noteEditorExercise = workoutRoutineExercise } label: {
@@ -286,51 +341,43 @@ struct WorkoutRoutineView: View {
                     }
                 }
                 .onDelete { offsets in
-                    let workoutRoutineExercises = self.workoutRoutineExercises
+                    let exercises = self.workoutRoutineExercises
                     for i in offsets {
-                        let workoutRoutineExercise = workoutRoutineExercises[i]
-                        self.managedObjectContext.delete(workoutRoutineExercise)
-                        workoutRoutineExercise.workoutRoutine?.removeFromWorkoutRoutineExercises(workoutRoutineExercise)
+                        let exercise = exercises[i]
+                        self.managedObjectContext.delete(exercise)
+                        exercise.workoutRoutine?.removeFromWorkoutRoutineExercises(exercise)
                     }
-                    // Clear any superset left with a single member after the removal.
                     self.workoutRoutine.normalizeSupersets()
                     self.managedObjectContext.saveOrCrash()
                 }
                 .onMove { source, destination in
-                    var workoutRoutineExercises = self.workoutRoutineExercises
-                    workoutRoutineExercises.move(fromOffsets: source, toOffset: destination)
-                    self.workoutRoutine.workoutRoutineExercises = NSOrderedSet(array: workoutRoutineExercises)
-                    // A move can split a superset; restore the contiguous-group invariant.
+                    var exercises = self.workoutRoutineExercises
+                    exercises.move(fromOffsets: source, toOffset: destination)
+                    self.workoutRoutine.workoutRoutineExercises = NSOrderedSet(array: exercises)
                     self.workoutRoutine.normalizeSupersets()
                     self.managedObjectContext.saveOrCrash()
                 }
-                // Reordering only in edit mode, so a stray long-press can't change the routine's order.
-                .moveDisabled(editMode?.wrappedValue.isEditing != true)
 
-                Button(action: {
-                    self.showExerciseSelector = true
-                }) {
-                    HStack {
-                        Image(systemName: "plus")
-                        Text("Add exercises")
-                    }
-                }
-            }
-            } else {
-                ForEach(workoutRoutineExercises) { exerciseCard($0) }
-                Section {
-                    Button(action: { self.showExerciseSelector = true }) {
-                        HStack {
-                            Image(systemName: "plus")
-                            Text("Add exercises")
-                        }
-                    }
+                Button(action: { self.showExerciseSelector = true }) {
+                    Label("Add exercises", systemImage: "plus")
                 }
             }
         }
         .listStyleCompat_InsetGroupedListStyle()
         .keyboardDoneToolbar()
-        .sheet(item: $optionsSet) { RoutineSetOptionsView(workoutRoutineSet: $0) }
+    }
+
+    var body: some View {
+        Group {
+            if editMode?.wrappedValue.isEditing == true {
+                editList
+            } else {
+                routineScroll
+            }
+        }
+        .sheet(item: $optionsSet) { set in
+            RoutineSetOptionsView(workoutRoutineSet: set, onDelete: { deleteRoutineSet(set) })
+        }
         .sheet(item: $exerciseSheet) { sheet in
             switch sheet {
             case .note(let ex):
@@ -457,6 +504,7 @@ private struct RoutineSetRow: View {
 /// The type and note editor for a routine set. Rep targets remain editable inline in `RoutineSetRow`.
 private struct RoutineSetOptionsView: View {
     @ObservedObject var workoutRoutineSet: WorkoutRoutineSet
+    var onDelete: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
     @State private var noteInput = ""
 
@@ -493,7 +541,14 @@ private struct RoutineSetOptionsView: View {
                 }
             }
             .navigationBarTitle("Set", displayMode: .inline)
-            .navigationBarItems(trailing: Button("Done") { saveNote(); dismiss() })
+            .navigationBarItems(
+                leading: Button("Delete set", role: .destructive) {
+                    let delete = onDelete
+                    dismiss()
+                    DispatchQueue.main.async(execute: delete)
+                },
+                trailing: Button("Done") { saveNote(); dismiss() }
+            )
             .onAppear { noteInput = workoutRoutineSet.comment ?? "" }
         }
         .presentationDetents([.medium])
