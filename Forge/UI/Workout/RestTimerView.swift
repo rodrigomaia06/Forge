@@ -34,8 +34,7 @@ struct RestTimerView: View {
 
     private func startTimer(duration: TimeInterval) {
         Haptics.impact(.light)
-        restTimerStore.restTimerStart = Date()
-        restTimerStore.restTimerDuration = duration
+        restTimerStore.setTimer(start: Date(), duration: duration)
 
         restTimerStore.recentRestTimes.removeAll { $0 == duration }
         restTimerStore.recentRestTimes.insert(duration, at: 0)
@@ -50,8 +49,7 @@ struct RestTimerView: View {
             restTimerStore.cancel()
             return
         }
-        restTimerStore.restTimerStart = timer.start
-        restTimerStore.restTimerDuration = timer.duration
+        restTimerStore.setTimer(start: timer.start, duration: timer.duration)
     }
 
     private func stopTimer() {

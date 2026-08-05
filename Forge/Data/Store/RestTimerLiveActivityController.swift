@@ -44,12 +44,13 @@ final class RestTimerLiveActivityController {
             self.end()
             return
         }
-        guard let start = start, let endDate = end, endDate > Date() else {
+        guard let start = start, let endDate = end else {
             self.end()
             return
         }
 
-        let state = RestTimerAttributes.ContentState(startDate: start, endDate: endDate, isOverrun: false)
+        let isOverrun = endDate <= Date()
+        let state = RestTimerAttributes.ContentState(startDate: start, endDate: endDate, isOverrun: isOverrun)
         // Stale at the end as a backstop, for when the app is suspended and cannot push anything. On its
         // own it arrived late: the system re-renders a stale activity on its own schedule, so the switch
         // to counting up in red could take a while to appear. The push below is what makes it prompt.
@@ -77,7 +78,12 @@ final class RestTimerLiveActivityController {
             }
         }
 
-        scheduleOverrun(start: start, endDate: endDate)
+        if isOverrun {
+            overrunTask?.cancel()
+            overrunTask = nil
+        } else {
+            scheduleOverrun(start: start, endDate: endDate)
+        }
     }
 
     /// Pushes the overrun the moment the rest ends, so the count flips to red without waiting on the

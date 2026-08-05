@@ -30,6 +30,7 @@ final class RestTimerStore: ObservableObject {
     private var userDefaults: UserDefaults
 
     private var settingsCancellable: AnyCancellable?
+    private var isBatchingTimerUpdate = false
 
     private init(userDefaults: UserDefaults) {
         self.userDefaults = userDefaults
@@ -52,7 +53,9 @@ final class RestTimerStore: ObservableObject {
             defer { HangMonitor.note(.restTimerStartSetterEnd) }
             self.objectWillChange.send()
             userDefaults.restTimerStart = newValue
-            updateNotification()
+            if !isBatchingTimerUpdate {
+                updateNotification()
+            }
         }
     }
     
@@ -65,7 +68,9 @@ final class RestTimerStore: ObservableObject {
             defer { HangMonitor.note(.restTimerDurationSetterEnd) }
             self.objectWillChange.send()
             userDefaults.restTimerDuration = newValue
-            updateNotification()
+            if !isBatchingTimerUpdate {
+                updateNotification()
+            }
         }
     }
     
@@ -105,6 +110,15 @@ final class RestTimerStore: ObservableObject {
         objectWillChange.send()
         updateNotification()
     }
+
+    func setTimer(start: Date?, duration: TimeInterval?) {
+        isBatchingTimerUpdate = true
+        objectWillChange.send()
+        userDefaults.restTimerStart = start
+        userDefaults.restTimerDuration = duration
+        isBatchingTimerUpdate = false
+        updateNotification()
+    }
 }
 
 extension RestTimerStore {
@@ -123,7 +137,6 @@ extension RestTimerStore {
 
 extension RestTimerStore {
     func cancel() {
-        restTimerStart = nil
-        restTimerDuration = nil
+        setTimer(start: nil, duration: nil)
     }
 }

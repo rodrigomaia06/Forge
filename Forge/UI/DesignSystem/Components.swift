@@ -59,11 +59,14 @@ struct ForgeExerciseHeaderRow<Trailing: View>: View {
                 Text(title)
                     .font(.forgeHeadline)
                     .foregroundColor(.forgeLabel)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 if let note, !note.isEmpty {
                     Text(note)
                         .font(.forgeCaption.italic())
                         .foregroundColor(.forgeSecondaryLabel)
                         .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                         .onTapGesture { onNoteTap?() }
                 }
             }

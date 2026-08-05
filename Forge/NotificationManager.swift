@@ -8,6 +8,7 @@
 
 import UserNotifications
 import AudioToolbox
+import Foundation
 
 class NotificationManager: NSObject {
     static let shared = NotificationManager(notificationCenter: UNUserNotificationCenter.current())
@@ -99,7 +100,7 @@ class NotificationManager: NSObject {
             }
             content.categoryIdentifier = NotificationCategoryIdentifier.restTimerUp.rawValue
             
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: remainingTime, repeats: false)
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, remainingTime), repeats: false)
             
             let request = UNNotificationRequest(identifier: NotificationIdentifier.restTimerUp.rawValue, content: content, trigger: trigger)
             
@@ -156,19 +157,32 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
     }
     
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        defer { completionHandler() }
-        
-        guard let duration = RestTimerStore.shared.restTimerDuration else { return}
-        
-        guard let actionIdentifier = NotificationActionIdentifier(rawValue: response.actionIdentifier) else { return }
-        
-        switch actionIdentifier {
-        case .restTimerAdd30:
-            RestTimerStore.shared.restTimerDuration = duration + 30
-        case .restTimerAdd60:
-            RestTimerStore.shared.restTimerDuration = duration + 60
-        case .restTimerAdd90:
-            RestTimerStore.shared.restTimerDuration = duration + 90
+        guard let actionIdentifier = NotificationActionIdentifier(rawValue: response.actionIdentifier) else {
+            completionHandler()
+            return
         }
+
+        DispatchQueue.main.async {
+            defer { completionHandler() }
+            guard let start = RestTimerStore.shared.restTimerStart,
+                  let duration = RestTimerStore.shared.restTimerDuration else { return }
+
+            switch actionIdentifier {
+            case .restTimerAdd30:
+                self.adjustRestTimer(start: start, duration: duration, delta: 30)
+            case .restTimerAdd60:
+                self.adjustRestTimer(start: start, duration: duration, delta: 60)
+            case .restTimerAdd90:
+                self.adjustRestTimer(start: start, duration: duration, delta: 90)
+            }
+        }
+    }
+
+    private func adjustRestTimer(start: Date, duration: TimeInterval, delta: TimeInterval) {
+        guard let timer = RestTimerLogic.adjustedTimer(start: start, duration: duration, delta: delta) else {
+            RestTimerStore.shared.cancel()
+            return
+        }
+        RestTimerStore.shared.setTimer(start: timer.start, duration: timer.duration)
     }
 }

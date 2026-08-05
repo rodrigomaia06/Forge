@@ -155,8 +155,7 @@ struct WorkoutExerciseDetailView : View {
         // start it on completion as before.
         if workoutExercise.startsRestTimerOnSetCompletion {
             HangMonitor.note(.restTimerUpdateBegin)
-            restTimerStore.restTimerDuration = restTimerDuration
-            restTimerStore.restTimerStart = Date() // start the rest timer
+            restTimerStore.setTimer(start: Date(), duration: restTimerDuration)
             HangMonitor.note(.restTimerUpdateEnd)
         }
         managedObjectContext.saveOrCrash()
@@ -500,6 +499,7 @@ struct WorkoutExerciseDetailView : View {
         VStack(spacing: 0) {
             exerciseHeaderRow
                 .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                .padding(.vertical, Theme.Spacing.s)
                 .frame(minHeight: Theme.Layout.minTapTarget)
             ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
             if exerciseIsBodyweight && setsEditable && isAdHocWorkout {

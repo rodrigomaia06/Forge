@@ -125,6 +125,7 @@ struct WorkoutRoutineView: View {
                 exerciseMenu(ex)
             }
             .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+            .padding(.vertical, Theme.Spacing.s)
             .frame(minHeight: routineCardRowHeight)
             ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
             ForEach(indexedRoutineSets(ex), id: \.1.id) { (index, set) in

@@ -147,8 +147,7 @@ struct TimerBannerView: View {
 struct TimerBannerView_Previews: PreviewProvider {
     static var previews: some View {
         if RestTimerStore.shared.restTimerRemainingTime == nil {
-            RestTimerStore.shared.restTimerStart = Date()
-            RestTimerStore.shared.restTimerDuration = 10
+            RestTimerStore.shared.setTimer(start: Date(), duration: 10)
         }
         return TimerBannerView(workout: MockWorkoutData.metricRandom.currentWorkout)
             .mockEnvironment(weightUnit: .metric)
