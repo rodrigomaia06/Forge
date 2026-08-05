@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import CoreData
 import WorkoutDataKit
 import os.log
 
@@ -24,6 +25,7 @@ struct WorkoutDetailView : View {
     @State private var activeExerciseSheet: WorkoutExerciseSheetRoute?
     /// Set by a row tap while this list is editing, since an editing List swallows NavigationLink taps.
     @State private var exerciseToOpen: WorkoutExercise?
+    @State private var readSnapshot: WorkoutReadSnapshot?
 
     /// [initialEditMode] carries editing in from the screen that opened this one, so entering Edit in
     /// History and tapping a workout lands on an editable workout rather than a read-only one.
@@ -90,6 +92,65 @@ struct WorkoutDetailView : View {
     private func workoutSets(workoutExercise: WorkoutExercise) -> [WorkoutSet] {
         workoutExercise.workoutSets?.array as? [WorkoutSet] ?? []
     }
+
+    private struct WorkoutReadSnapshot {
+        let durationText: String
+        let completedSetsText: String
+        let completedWeightText: String
+        let workoutComment: String?
+        let startText: String
+        let endText: String
+        let exercises: [ExerciseReadRow]
+    }
+
+    private struct ExerciseReadRow: Identifiable {
+        let objectID: NSManagedObjectID
+        let title: String
+        let comment: String?
+        let setLines: [String]
+
+        var id: NSManagedObjectID { objectID }
+    }
+
+    private var snapshotBannerEntries: [BannerViewEntry] {
+        guard let snapshot = readSnapshot else { return [] }
+        return [
+            BannerViewEntry(id: 0, title: Text("Duration"), text: Text(snapshot.durationText)),
+            BannerViewEntry(id: 1, title: Text("Sets"), text: Text(snapshot.completedSetsText)),
+            BannerViewEntry(id: 2, title: Text("Weight"), text: Text(snapshot.completedWeightText))
+        ]
+    }
+
+    private func rebuildReadSnapshot() {
+        let exercises = workoutExercises.map { workoutExercise in
+            ExerciseReadRow(
+                objectID: workoutExercise.objectID,
+                title: workoutExercise.exercise(in: self.exerciseStore.exercises)?.title ?? "",
+                comment: workoutExercise.comment?.isEmpty == false ? workoutExercise.comment : nil,
+                setLines: workoutSets(workoutExercise: workoutExercise).map {
+                    $0.logTitle(weightUnit: self.settingsStore.weightUnit)
+                }
+            )
+        }
+
+        readSnapshot = WorkoutReadSnapshot(
+            durationText: Workout.durationFormatter.string(from: workout.safeDuration) ?? "",
+            completedSetsText: String(workout.numberOfCompletedSets ?? 0),
+            completedWeightText: WeightUnit.format(
+                weight: workout.totalCompletedWeight(fallbackBodyweight: settingsStore.bodyweight) ?? 0,
+                from: .metric,
+                to: settingsStore.weightUnit
+            ),
+            workoutComment: workout.comment?.isEmpty == false ? workout.comment : nil,
+            startText: workout.safeStart.formatted(date: .abbreviated, time: .shortened),
+            endText: workout.safeEnd.formatted(date: .abbreviated, time: .shortened),
+            exercises: exercises
+        )
+    }
+
+    private func workoutExercise(for objectID: NSManagedObjectID) -> WorkoutExercise? {
+        (try? managedObjectContext.existingObject(with: objectID)) as? WorkoutExercise
+    }
     
     /// The pushed exercise screen. Shared by the row's link and by the edit-mode tap, so both routes
     /// land on the same thing, editable when this workout is being edited.
@@ -134,7 +195,7 @@ struct WorkoutDetailView : View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.l) {
                 VStack(spacing: 0) {
-                    WorkoutDetailBannerView(workout: workout)
+                    BannerView(entries: snapshotBannerEntries)
                         .padding([.top, .bottom])
                         .frame(maxWidth: .infinity)
                         // A thin white rule under the summary, in place of the old muscle-group color.
@@ -147,7 +208,7 @@ struct WorkoutDetailView : View {
                 }
                 .forgeCard()
 
-                if let comment = workout.comment, !comment.isEmpty {
+                if let comment = readSnapshot?.workoutComment {
                     VStack(spacing: 0) {
                         Text(comment)
                             .editModeHint()
@@ -159,12 +220,12 @@ struct WorkoutDetailView : View {
                 }
 
                 VStack(spacing: 0) {
-                    LabeledContent("Start") { Text(workout.safeStart.formatted(date: .abbreviated, time: .shortened)) }
+                    LabeledContent("Start") { Text(readSnapshot?.startText ?? "") }
                         .editModeHint()
                         .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                         .frame(minHeight: Theme.Layout.minTapTarget)
                     ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
-                    LabeledContent("End") { Text(workout.safeEnd.formatted(date: .abbreviated, time: .shortened)) }
+                    LabeledContent("End") { Text(readSnapshot?.endText ?? "") }
                         .editModeHint()
                         .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                         .frame(minHeight: Theme.Layout.minTapTarget)
@@ -196,23 +257,42 @@ struct WorkoutDetailView : View {
 
     private var compactExercisesSection: some View {
         VStack(spacing: 0) {
-            ForEach(Array(workoutExercises.enumerated()), id: \.element.id) { index, workoutExercise in
+            ForEach(Array((readSnapshot?.exercises ?? []).enumerated()), id: \.element.id) { index, exercise in
                 Button {
-                    exerciseToOpen = workoutExercise
+                    exerciseToOpen = workoutExercise(for: exercise.objectID)
                 } label: {
-                    workoutExerciseView(workoutExercise: workoutExercise)
+                    compactExerciseRow(exercise)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                         .padding(.vertical, Theme.Spacing.s)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                if index < workoutExercises.count - 1 {
+                if index < (readSnapshot?.exercises.count ?? 0) - 1 {
                     ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                 }
             }
         }
         .forgeCard()
+    }
+
+    private func compactExerciseRow(_ exercise: ExerciseReadRow) -> some View {
+        VStack(alignment: .leading) {
+            Text(exercise.title)
+                .font(.body)
+            exercise.comment.map {
+                Text($0.enquoted)
+                    .lineLimit(1)
+                    .font(Font.caption.italic())
+                    .foregroundColor(.secondary)
+            }
+            ForEach(Array(exercise.setLines.enumerated()), id: \.offset) { _, setLine in
+                Text(setLine)
+                    .font(Font.body.monospacedDigit())
+                    .foregroundColor(.secondary)
+                    .lineLimit(nil)
+            }
+        }
     }
 
     private var editList: some View {
@@ -311,6 +391,7 @@ struct WorkoutDetailView : View {
             if !isEditing {
                 adjustAndSaveWorkoutTitleInput()
                 adjustAndSaveWorkoutCommentInput()
+                rebuildReadSnapshot()
                 // A clear success cue that the edits to this past workout were saved.
                 Haptics.success()
             }
@@ -379,6 +460,12 @@ struct WorkoutDetailView : View {
             WorkoutExerciseSheetContent(route: route) { activeExerciseSheet = nil }
         }
         .overlay(ActivitySheet(activityItems: $activityItems))
+        .onAppear { rebuildReadSnapshot() }
+        .onChange(of: settingsStore.weightUnit) { _, _ in rebuildReadSnapshot() }
+        .onChange(of: settingsStore.bodyweight) { _, _ in rebuildReadSnapshot() }
+        .onReceive(NotificationCenter.default.publisher(for: .NSManagedObjectContextObjectsDidChange, object: managedObjectContext)) { _ in
+            rebuildReadSnapshot()
+        }
     }
 }
 

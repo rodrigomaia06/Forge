@@ -83,37 +83,22 @@ struct HistoryView : View {
         return formatter
     }()
 
-    /// A week section's header is the span of the days trained that week (e.g. "Jul 27 – 29, 2026"), which
-    /// collapses to a single date for one workout. Clearer than a "Week 5" number, which confuses because a
-    /// month spans 4 to 6 partial weeks depending on where the 1st lands.
-    private static let weekRangeFormatter: DateIntervalFormatter = {
-        let formatter = DateIntervalFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter
-    }()
-
     private var workoutSnapshotInputs: [WorkoutSnapshotInput] {
         workouts.map { WorkoutSnapshotInput(objectURI: $0.objectID.uriRepresentation(), start: $0.start) }
     }
 
-    /// Workouts grouped into week sections, built from value snapshots so body rendering does not regroup
+    /// Workouts grouped into month sections, built from value snapshots so body rendering does not regroup
     /// Core Data objects or walk relationships for each row.
     private func makeHistorySections() -> [HistorySection] {
-        var calendar = Calendar.current
-        calendar.firstWeekday = settingsStore.firstWeekday
+        let calendar = Calendar.current
         let groups = Dictionary(grouping: displayedWorkouts.map { makeHistoryRow(for: $0) }) { row in
-            calendar.dateComponents([.year, .month, .weekOfMonth], from: row.start ?? Date.distantPast)
+            calendar.dateComponents([.year, .month], from: row.start ?? Date.distantPast)
         }
         return groups
             .map { components, workouts -> (id: String, title: String, workouts: [HistoryRow], sort: Date) in
                 let sorted = workouts.sorted { ($0.start ?? .distantPast) > ($1.start ?? .distantPast) }
                 let newest = sorted.first?.start ?? Date.distantPast
-                let oldest = sorted.last?.start ?? newest
-                let week = components.weekOfMonth ?? 0
-                // Label by the span of days trained that week; sort by the newest so partial weeks order right.
-                let title = Self.weekRangeFormatter.string(from: oldest, to: newest)
-                return ("\(components.year ?? 0)-\(components.month ?? 0)-\(week)", title, sorted, newest)
+                return ("\(components.year ?? 0)-\(components.month ?? 0)", Self.monthFormatter.string(from: newest), sorted, newest)
             }
             .sorted { $0.sort > $1.sort }
             .map { HistorySection(id: $0.id, title: $0.title, workouts: $0.workouts) }
@@ -178,12 +163,12 @@ struct HistoryView : View {
         NavigationStack(path: $path) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: Theme.Spacing.l) {
-                if filterActive {
-                    filterSection
-                }
-                ForEach(historySections) { section in
-                    historySection(section)
-                }
+                    if filterActive {
+                        filterSection
+                    }
+                    ForEach(historySections) { section in
+                        historySection(section)
+                    }
                 }
                 .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                 .padding(.top, Theme.Spacing.m)
@@ -275,7 +260,7 @@ struct HistoryView : View {
     private func historySection(_ section: HistorySection) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             Text(section.title)
-                .font(.forgeCaption)
+                .font(.title3.weight(.semibold))
                 .foregroundColor(.forgeSecondaryLabel)
                 .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
 
@@ -287,7 +272,8 @@ struct HistoryView : View {
                     }
                 }
             }
-            .background(Color.forgeSurface)
+            .forgeCard()
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
         }
     }
 
@@ -298,7 +284,7 @@ struct HistoryView : View {
             } label: {
                 WorkoutCell(workout: row)
                     .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
-                    .frame(minHeight: Theme.Layout.minTapTarget)
+                    .frame(minHeight: 74)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -357,27 +343,28 @@ private struct WorkoutCell: View {
     }
 
     var body: some View {
-        // Center the duration and counts against the left column (which may grow with a comment), so
-        // they sit centered like the row's chevron rather than pinned to the top.
-        HStack(alignment: .center) {
+        HStack(alignment: .center, spacing: Theme.Spacing.s) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(workout.title)
-                    .font(.body)
+                    .font(.title3)
+                    .foregroundColor(.forgeLabel)
 
                 Text(workout.dateText)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(.subheadline)
+                    .foregroundColor(.forgeSecondaryLabel)
             }
             .layoutPriority(1)
 
             Spacer()
 
-            // Duration and the exercise/set counts sit on the right as pills, so the comment has the
-            // left column to itself and the row stays compact.
             VStack(alignment: .trailing, spacing: 4) {
                 workout.durationText.map { pill($0) }
                 pill(workout.summaryLine)
             }
+
+            Image(systemName: "chevron.right")
+                .font(.body.weight(.semibold))
+                .foregroundColor(.forgeSecondaryLabel)
         }
     }
 }
