@@ -653,9 +653,10 @@ private struct SupersetCard: View {
             } label: {
                 Image(systemName: "ellipsis")
                     .foregroundColor(.forgeSecondaryLabel)
-                    .frame(width: 34, height: 24)
+                    .frame(width: 34, height: 44)
                     .contentShape(Rectangle())
             }
+            .accessibilityLabel("Exercise options")
         }
         .listRowInsets(EdgeInsets(top: Theme.Spacing.m, leading: Theme.Spacing.m, bottom: Theme.Spacing.s, trailing: Theme.Spacing.m))
     }

@@ -6274,5 +6274,140 @@
     "tips": [],
     "references": [],
     "png": []
+  },
+  {
+    "uuid": "6C96A29A-1AD0-47BF-9F67-8976987C5309",
+    "id": 9018,
+    "name": "wrist-curl-dumbbell",
+    "title": "Wrist Curl: Dumbbell",
+    "alias": [
+      "Forearm Curl: Dumbbell"
+    ],
+    "primer": "A wrist flexion exercise for the forearms.",
+    "type": "isolation",
+    "primary": [
+      "forearm"
+    ],
+    "secondary": [],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "png": []
+  },
+  {
+    "uuid": "918EDDBA-FB24-4AD2-962C-C3E07218E96C",
+    "id": 9019,
+    "name": "wrist-curl-barbell",
+    "title": "Wrist Curl: Barbell",
+    "alias": [
+      "Forearm Curl: Barbell"
+    ],
+    "primer": "A wrist flexion exercise for the forearms.",
+    "type": "isolation",
+    "primary": [
+      "forearm"
+    ],
+    "secondary": [],
+    "equipment": [
+      "barbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "png": []
+  },
+  {
+    "uuid": "DD67B0B5-0F56-451A-9CB1-7D1997CCFBC0",
+    "id": 9020,
+    "name": "reverse-wrist-curl-dumbbell",
+    "title": "Reverse Wrist Curl: Dumbbell",
+    "alias": [
+      "Reverse Forearm Curl: Dumbbell"
+    ],
+    "primer": "A wrist extension exercise for the forearms.",
+    "type": "isolation",
+    "primary": [
+      "forearm"
+    ],
+    "secondary": [],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "png": []
+  },
+  {
+    "uuid": "24526C9E-BDDC-487B-BA1A-E479C34D2261",
+    "id": 9021,
+    "name": "reverse-wrist-curl-barbell",
+    "title": "Reverse Wrist Curl: Barbell",
+    "alias": [
+      "Reverse Forearm Curl: Barbell"
+    ],
+    "primer": "A wrist extension exercise for the forearms.",
+    "type": "isolation",
+    "primary": [
+      "forearm"
+    ],
+    "secondary": [],
+    "equipment": [
+      "barbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "png": []
+  },
+  {
+    "uuid": "B5B02CC4-431D-4B04-9F5D-C01746C26381",
+    "id": 9022,
+    "name": "wrist-roller",
+    "title": "Wrist Roller",
+    "alias": [
+      "Forearm Roller"
+    ],
+    "primer": "A wrist rolling exercise for the forearms.",
+    "type": "isolation",
+    "primary": [
+      "forearm"
+    ],
+    "secondary": [],
+    "equipment": [
+      "other"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "png": []
+  },
+  {
+    "uuid": "07A98987-D490-41E8-BD7D-8361C0A62F9A",
+    "id": 9023,
+    "name": "farmers-hold-dumbbell",
+    "title": "Farmer's Hold: Dumbbell",
+    "alias": [
+      "Farmer Hold: Dumbbell",
+      "Dumbbell Farmer's Hold"
+    ],
+    "primer": "A loaded grip hold for the forearms.",
+    "type": "isolation",
+    "primary": [
+      "forearm"
+    ],
+    "secondary": [
+      "trapezius"
+    ],
+    "equipment": [
+      "dumbbell"
+    ],
+    "steps": [],
+    "tips": [],
+    "references": [],
+    "png": []
   }
 ]

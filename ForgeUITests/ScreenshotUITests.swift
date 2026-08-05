@@ -536,7 +536,7 @@ final class ScreenshotUITests: XCTestCase {
                 shot("rest-timer-\(adjust == "+10s" ? "plus" : "minus")", settle: 0.8)
             }
         }
-        if tapFirst(in: [app.buttons], labelled: "Skip rest") {
+        if tapFirst(in: [app.buttons], labelled: "Stop timer") {
             shot("rest-timer-stopped", settle: 1.2)
         }
         if !tapFirst(in: [app.buttons], labelled: "Close") { dismissSheet() }

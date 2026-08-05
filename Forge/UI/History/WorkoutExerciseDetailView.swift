@@ -422,36 +422,22 @@ struct WorkoutExerciseDetailView : View {
 
     /// The exercise name (with its note as a small line right under it) and the options menu.
     private var exerciseHeaderRow: some View {
-        HStack(alignment: .firstTextBaseline) {
-            if let member = supersetMember {
-                Text(member.label)
-                    .font(.forgeCaption.weight(.bold))
-                    .foregroundColor(.forgeLabel)
-                    .frame(width: 22, height: 22)
-                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.forgeSeparator))
-                    .accessibilityLabel("Superset position \(member.label)")
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(exerciseTitle)
-                    .font(.forgeHeadline)
-                    .foregroundColor(.forgeLabel)
-                if hasExerciseNote {
-                    Text(workoutExercise.comment ?? "")
-                        .font(.forgeCaption.italic())
-                        .foregroundColor(.forgeSecondaryLabel)
-                        .lineLimit(2)
-                        .onTapGesture { present(.exerciseNote(workoutExercise)) }
-                }
-            }
-            Spacer()
+        ForgeExerciseHeaderRow(
+            title: exerciseTitle,
+            note: hasExerciseNote ? workoutExercise.comment : nil,
+            badge: supersetMember?.label,
+            badgeAccessibilityLabel: supersetMember.map { "Superset position \($0.label)" },
+            onNoteTap: { present(.exerciseNote(workoutExercise)) }
+        ) {
             Menu {
                 exerciseMenuItems
             } label: {
                 Image(systemName: "ellipsis")
                     .foregroundColor(.forgeSecondaryLabel)
-                    .frame(width: 34, height: 30)
+                    .frame(width: 34, height: 44)
                     .contentShape(Rectangle())
             }
+            .accessibilityLabel("Exercise options")
         }
         // Separate a following superset member from the one above it, so A and B read as distinct blocks.
         .padding(.top, (supersetMember.map { !$0.isFirst } ?? false) ? Theme.Spacing.l : 0)
@@ -594,6 +580,7 @@ struct WorkoutExerciseDetailView : View {
                     Image(systemName: "ellipsis")
                         .imageScale(.large)
                 }
+                .accessibilityLabel("Exercise options")
                 Button(historyEditMode == .active ? "Done" : "Edit") {
                     Haptics.selection()
                     withAnimation { historyEditMode = historyEditMode == .active ? .inactive : .active }

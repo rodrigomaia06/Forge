@@ -116,18 +116,12 @@ struct WorkoutRoutineView: View {
     /// navigates to open the exercise as its own screen; everything is edited here.
     private func exerciseCard(_ ex: WorkoutRoutineExercise) -> some View {
         VStack(spacing: 0) {
-            HStack(spacing: Theme.Spacing.s) {
-                if let label = ex.supersetLabel {
-                    Text(label)
-                        .font(.forgeCaption.weight(.bold))
-                        .foregroundColor(.forgeLabel)
-                        .frame(width: 22, height: 22)
-                        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.forgeSeparator))
-                        .accessibilityLabel("Superset \(label)")
-                }
-                Text(ex.exercise(in: exerciseStore.exercises)?.title ?? "Unknown Exercise")
-                    .font(.forgeHeadline)
-                Spacer()
+            ForgeExerciseHeaderRow(
+                title: ex.exercise(in: exerciseStore.exercises)?.title ?? "Unknown Exercise",
+                note: ex.comment,
+                badge: ex.supersetLabel,
+                badgeAccessibilityLabel: ex.supersetLabel.map { "Superset \($0)" }
+            ) {
                 exerciseMenu(ex)
             }
             .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
@@ -189,7 +183,7 @@ struct WorkoutRoutineView: View {
         } label: {
             Image(systemName: "ellipsis")
                 .foregroundColor(.forgeSecondaryLabel)
-                .frame(width: 34, height: 30)
+                .frame(width: 34, height: 44)
                 .contentShape(Rectangle())
         }
         .accessibilityLabel("Exercise options")

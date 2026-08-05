@@ -8,6 +8,7 @@
 
 import SwiftUI
 import AVKit
+import Combine
 
 struct Dragger : View {
     // public
@@ -256,13 +257,14 @@ struct Dragger : View {
 //}
 
 private struct Cursor: View {
+    private static let timer = Timer.publish(every: 0.6, on: .main, in: .common).autoconnect()
     @State private var blink = false
     
     var body: some View {
         RoundedRectangle(cornerRadius: 2, style: .circular)
             .frame(width: 2, height: 20)
             .foregroundColor(blink ? .clear : .accentColor)
-            .onReceive(Timer.publish(every: 0.6, on: .main, in: .common).autoconnect()) { _ in self.blink.toggle() }
+            .onReceive(Self.timer) { _ in self.blink.toggle() }
     }
 }
 

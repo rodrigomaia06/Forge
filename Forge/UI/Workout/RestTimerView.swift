@@ -7,11 +7,13 @@
 //
 
 import SwiftUI
+import Combine
 
 struct RestTimerView: View {
     @EnvironmentObject var restTimerStore: RestTimerStore
 
     @ObservedObject private var refresher = Refresher()
+    private static let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     @State private var customTime: TimeInterval = 90
 
@@ -26,6 +28,10 @@ struct RestTimerView: View {
         return max(0, min(1, remaining / duration))
     }
 
+    private var isExpired: Bool {
+        (roundedRemainingTime ?? 0) < 0
+    }
+
     private func startTimer(duration: TimeInterval) {
         Haptics.impact(.light)
         restTimerStore.restTimerStart = Date()
@@ -37,10 +43,20 @@ struct RestTimerView: View {
 
     /// Adjust the running timer's total duration, which extends or shortens the remaining time.
     private func adjust(by delta: TimeInterval) {
-        guard let duration = restTimerStore.restTimerDuration else { return }
+        guard let start = restTimerStore.restTimerStart,
+              let duration = restTimerStore.restTimerDuration else { return }
         Haptics.impact(.light)
-        let newDuration = duration + delta
-        restTimerStore.restTimerDuration = newDuration > 0 ? newDuration : nil
+        guard let timer = RestTimerLogic.adjustedTimer(start: start, duration: duration, delta: delta) else {
+            restTimerStore.cancel()
+            return
+        }
+        restTimerStore.restTimerStart = timer.start
+        restTimerStore.restTimerDuration = timer.duration
+    }
+
+    private func stopTimer() {
+        Haptics.warning()
+        restTimerStore.cancel()
     }
 
     // MARK: Running
@@ -60,30 +76,42 @@ struct RestTimerView: View {
                     .padding(.horizontal, Theme.Spacing.xl)
             }
 
-            // Adjust only the current running countdown, not the saved rest time.
-            HStack(spacing: Theme.Spacing.m) {
-                Button { adjust(by: -10) } label: {
-                    Text("\u{2212}10s").frame(maxWidth: .infinity).frame(minHeight: 44).forgeGlassCapsule().glassOutline()
+            if isExpired {
+                HStack(spacing: Theme.Spacing.m) {
+                    Button { adjust(by: 30) } label: {
+                        Text("+30s").frame(maxWidth: .infinity).frame(minHeight: 44).forgeGlassCapsule().glassOutline()
+                    }
+                    Button { adjust(by: 60) } label: {
+                        Text("+1 min").frame(maxWidth: .infinity).frame(minHeight: 44).forgeGlassCapsule().glassOutline()
+                    }
                 }
-                Button { adjust(by: 10) } label: {
-                    Text("+10s").frame(maxWidth: .infinity).frame(minHeight: 44).forgeGlassCapsule().glassOutline()
+                .buttonStyle(.plain)
+                .foregroundColor(.forgeLabel)
+                .padding(.horizontal, Theme.Spacing.xl)
+            } else {
+                // Adjust only the current running countdown, not the saved rest time.
+                HStack(spacing: Theme.Spacing.m) {
+                    Button { adjust(by: -10) } label: {
+                        Text("\u{2212}10s").frame(maxWidth: .infinity).frame(minHeight: 44).forgeGlassCapsule().glassOutline()
+                    }
+                    Button { adjust(by: 10) } label: {
+                        Text("+10s").frame(maxWidth: .infinity).frame(minHeight: 44).forgeGlassCapsule().glassOutline()
+                    }
                 }
+                .buttonStyle(.plain)
+                .foregroundColor(.forgeLabel)
+                .padding(.horizontal, Theme.Spacing.xl)
             }
-            .buttonStyle(.plain)
-            .foregroundColor(.forgeLabel)
-            .padding(.horizontal, Theme.Spacing.xl)
 
-            Button("Skip rest", role: .destructive) {
-                Haptics.warning()
-                restTimerStore.restTimerStart = nil
-                restTimerStore.restTimerDuration = nil
+            Button("Stop timer", role: .destructive) {
+                stopTimer()
             }
             .tint(.forgeDestructive)
 
             Spacer(minLength: 0)
         }
         .padding()
-        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in self.refresher.refresh() }
+        .onReceive(Self.timer) { _ in self.refresher.refresh() }
     }
 
     // MARK: Choosing a time

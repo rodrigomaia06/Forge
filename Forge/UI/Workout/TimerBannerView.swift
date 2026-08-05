@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import Combine
 import WorkoutDataKit
 
 struct TimerBannerView: View {
@@ -14,6 +15,8 @@ struct TimerBannerView: View {
     @EnvironmentObject var settingsStore: SettingsStore
     
     @ObservedObject var workout: Workout
+
+    private static let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     /// The workout's start and end are editable (by tapping the stopwatch) only in edit mode, so a stray
     /// tap can't change the recorded times while logging.
@@ -132,7 +135,7 @@ struct TimerBannerView: View {
                 self.restTimerSheet
             }
         }
-        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+        .onReceive(Self.timer) { _ in
             HangMonitor.note(.timerTickBegin)
             self.refresher.refresh()
             HangMonitor.note(.timerTickEnd)

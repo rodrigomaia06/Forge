@@ -40,7 +40,30 @@ struct HistoryView : View {
 
     /// Drives navigation into a workout. A typed path lets both a row tap and a deep-link from another
     /// tab push the same destination.
-    @State private var path: [Workout] = []
+    @State private var path: [NSManagedObjectID] = []
+    @State private var historySections: [HistorySection] = []
+
+    private struct WorkoutSnapshotInput: Equatable {
+        let objectURI: URL
+        let start: Date?
+    }
+
+    fileprivate struct HistorySection: Identifiable {
+        let id: String
+        let title: String
+        let workouts: [HistoryRow]
+    }
+
+    fileprivate struct HistoryRow: Identifiable, Hashable {
+        let objectID: NSManagedObjectID
+        let start: Date?
+        let title: String
+        let dateText: String
+        let durationText: String?
+        let summaryLine: String
+
+        var id: NSManagedObjectID { objectID }
+    }
 
     /// The workouts shown, filtered to the selected date range when the filter is on.
     private var displayedWorkouts: [Workout] {
@@ -70,16 +93,20 @@ struct HistoryView : View {
         return formatter
     }()
 
-    /// Workouts grouped into week sections within each month (newest first), so a busy month reads as a
-    /// few small blocks rather than one long scroll. The week boundary follows the first-weekday setting.
-    private var weekSections: [(id: String, title: String, workouts: [Workout])] {
+    private var workoutSnapshotInputs: [WorkoutSnapshotInput] {
+        workouts.map { WorkoutSnapshotInput(objectURI: $0.objectID.uriRepresentation(), start: $0.start) }
+    }
+
+    /// Workouts grouped into week sections, built from value snapshots so body rendering does not regroup
+    /// Core Data objects or walk relationships for each row.
+    private func makeHistorySections() -> [HistorySection] {
         var calendar = Calendar.current
         calendar.firstWeekday = settingsStore.firstWeekday
-        let groups = Dictionary(grouping: displayedWorkouts) { workout in
-            calendar.dateComponents([.year, .month, .weekOfMonth], from: workout.start ?? Date.distantPast)
+        let groups = Dictionary(grouping: displayedWorkouts.map { makeHistoryRow(for: $0) }) { row in
+            calendar.dateComponents([.year, .month, .weekOfMonth], from: row.start ?? Date.distantPast)
         }
         return groups
-            .map { components, workouts -> (id: String, title: String, workouts: [Workout], sort: Date) in
+            .map { components, workouts -> (id: String, title: String, workouts: [HistoryRow], sort: Date) in
                 let sorted = workouts.sorted { ($0.start ?? .distantPast) > ($1.start ?? .distantPast) }
                 let newest = sorted.first?.start ?? Date.distantPast
                 let oldest = sorted.last?.start ?? newest
@@ -89,7 +116,28 @@ struct HistoryView : View {
                 return ("\(components.year ?? 0)-\(components.month ?? 0)-\(week)", title, sorted, newest)
             }
             .sorted { $0.sort > $1.sort }
-            .map { (id: $0.id, title: $0.title, workouts: $0.workouts) }
+            .map { HistorySection(id: $0.id, title: $0.title, workouts: $0.workouts) }
+    }
+
+    private func makeHistoryRow(for workout: Workout) -> HistoryRow {
+        let exercises = workout.workoutExercises?.array as? [WorkoutExercise] ?? []
+        let sets = exercises.reduce(0) { $0 + ($1.workoutSets?.count ?? 0) }
+        return HistoryRow(
+            objectID: workout.objectID,
+            start: workout.start,
+            title: workout.displayTitle(in: exerciseStore.exercises, showPlan: settingsStore.showPlanInWorkoutTitle),
+            dateText: Workout.dateFormatter.string(from: workout.start, fallback: "Unknown date"),
+            durationText: workout.duration.flatMap { Workout.durationFormatter.string(from: $0) },
+            summaryLine: "\(exercises.count) exercises · \(sets) sets"
+        )
+    }
+
+    private func rebuildHistorySections() {
+        historySections = makeHistorySections()
+    }
+
+    private func workout(for objectID: NSManagedObjectID) -> Workout? {
+        (try? managedObjectContext.existingObject(with: objectID)) as? Workout
     }
 
     /// Returns `true` if at least one of the workouts to delete has workout exercises.
@@ -113,6 +161,10 @@ struct HistoryView : View {
         }
     }
 
+    private func requestDelete(_ rows: [HistoryRow]) {
+        requestDelete(rows.compactMap { workout(for: $0.objectID) })
+    }
+
     private var deleteMessage: String {
         guard let workouts = workoutsToDelete else { return "This cannot be undone." }
         if workouts.count == 1, let workout = workouts.first {
@@ -131,24 +183,27 @@ struct HistoryView : View {
                         DatePicker("To", selection: $toDate, in: fromDate..., displayedComponents: .date)
                     }
                 }
-                ForEach(weekSections, id: \.id) { section in
+                ForEach(historySections) { section in
                     Section(header: Text(section.title)) {
                         ForEach(section.workouts) { workout in
-                            NavigationLink(value: workout) {
+                            NavigationLink(value: workout.objectID) {
                                 WorkoutCell(workout: workout)
                                     .contextMenu {
                                         // TODO add images when SwiftUI fixes the image size
                                         if UIDevice.current.userInterfaceIdiom != .pad {
                                             // not working on iPad, last checked iOS 13.4
                                             Button("Share") {
-                                                guard let logText = workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit, fallbackBodyweight: self.settingsStore.bodyweight) else { return }
+                                                guard let workout = self.workout(for: workout.objectID),
+                                                      let logText = workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit, fallbackBodyweight: self.settingsStore.bodyweight) else { return }
                                                 self.activityItems = [logText]
                                             }
                                         }
                                         Button("Repeat") {
+                                            guard let workout = self.workout(for: workout.objectID) else { return }
                                             WorkoutDetailView.repeatWorkout(workout: workout, settingsStore: self.settingsStore, sceneState: sceneState)
                                         }
                                         Button("Repeat (Blank)") {
+                                            guard let workout = self.workout(for: workout.objectID) else { return }
                                             WorkoutDetailView.repeatWorkoutBlank(workout: workout, settingsStore: self.settingsStore, sceneState: sceneState)
                                         }
                                 }
@@ -162,12 +217,12 @@ struct HistoryView : View {
                                 if editMode == .active {
                                     Color.clear
                                         .contentShape(Rectangle())
-                                        .onTapGesture { path.append(workout) }
+                                        .onTapGesture { path.append(workout.objectID) }
                                 }
                             }
                             // Tint the row while it waits for the delete confirmation, so it is clear which
                             // workout is about to be removed. It stays in the list until Delete is confirmed.
-                            .listRowBackground(workoutsToDelete?.contains(workout) == true ? Color.forgeDestructive.opacity(0.18) : nil)
+                            .listRowBackground(workoutsToDelete?.contains(where: { $0.objectID == workout.objectID }) == true ? Color.forgeDestructive.opacity(0.18) : nil)
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button(role: .destructive) {
                                     requestDelete([workout])
@@ -185,10 +240,14 @@ struct HistoryView : View {
             }
             .listStyleCompat_InsetGroupedListStyle()
             .environment(\.editMode, $editMode)
-            .navigationDestination(for: Workout.self) { workout in
-                // Opened from an editing list, the workout opens editable too.
-                WorkoutDetailView(workout: workout, initialEditMode: editMode)
-                    .environmentObject(self.settingsStore)
+            .navigationDestination(for: NSManagedObjectID.self) { objectID in
+                if let workout = workout(for: objectID) {
+                    // Opened from an editing list, the workout opens editable too.
+                    WorkoutDetailView(workout: workout, initialEditMode: editMode)
+                        .environmentObject(self.settingsStore)
+                } else {
+                    ContentUnavailableView("Workout unavailable", systemImage: "exclamationmark.circle", description: Text("This workout could not be opened."))
+                }
             }
             .alert("Delete workout?", isPresented: Binding(get: { workoutsToDelete != nil }, set: { if !$0 { workoutsToDelete = nil } })) {
                 Button("Delete", role: .destructive) {
@@ -228,33 +287,31 @@ struct HistoryView : View {
         .overlay(ActivitySheet(activityItems: self.$activityItems))
         // A deep-link from another tab (e.g. a past session tapped during a workout) lands here.
         .onChange(of: sceneState.historyWorkoutToOpen) { _ in openPendingHistoryWorkout() }
-        .onAppear { openPendingHistoryWorkout() }
+        .onChange(of: workoutSnapshotInputs) { _, _ in rebuildHistorySections() }
+        .onChange(of: filterActive) { _, _ in rebuildHistorySections() }
+        .onChange(of: fromDate) { _, _ in rebuildHistorySections() }
+        .onChange(of: toDate) { _, _ in rebuildHistorySections() }
+        .onChange(of: settingsStore.firstWeekday) { _, _ in rebuildHistorySections() }
+        .onChange(of: settingsStore.showPlanInWorkoutTitle) { _, _ in rebuildHistorySections() }
+        .onReceive(NotificationCenter.default.publisher(for: .NSManagedObjectContextObjectsDidChange, object: managedObjectContext)) { _ in
+            rebuildHistorySections()
+        }
+        .onAppear {
+            rebuildHistorySections()
+            openPendingHistoryWorkout()
+        }
     }
 
     /// Re-roots the navigation stack at a workout requested from another tab, then clears the request.
     private func openPendingHistoryWorkout() {
         guard let workout = sceneState.historyWorkoutToOpen else { return }
-        path = [workout]
+        path = [workout.objectID]
         sceneState.historyWorkoutToOpen = nil
     }
 }
 
 private struct WorkoutCell: View {
-    @EnvironmentObject var settingsStore: SettingsStore
-    @EnvironmentObject var exerciseStore: ExerciseStore
-    @ObservedObject var workout: Workout
-
-    private var durationString: String? {
-        guard let duration = workout.duration else { return nil }
-        return Workout.durationFormatter.string(from: duration)
-    }
-
-    /// Exercise and set counts, matching the dashboard cards, e.g. "6 exercises · 18 sets".
-    private var summaryLine: String {
-        let exercises = workout.workoutExercises?.array as? [WorkoutExercise] ?? []
-        let sets = exercises.reduce(0) { $0 + ($1.workoutSets?.count ?? 0) }
-        return "\(exercises.count) exercises · \(sets) sets"
-    }
+    let workout: HistoryView.HistoryRow
 
     /// A small outlined pill, used for both the duration and the exercise/set counts.
     private func pill(_ text: String) -> some View {
@@ -276,19 +333,12 @@ private struct WorkoutCell: View {
         // they sit centered like the row's chevron rather than pinned to the top.
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(workout.displayTitle(in: self.exerciseStore.exercises, showPlan: settingsStore.showPlanInWorkoutTitle))
+                Text(workout.title)
                     .font(.body)
 
-                Text(Workout.dateFormatter.string(from: workout.start, fallback: "Unknown date"))
+                Text(workout.dateText)
                     .font(.caption)
                     .foregroundColor(.secondary)
-
-                workout.comment.map {
-                    Text($0.enquoted)
-                        .lineLimit(1)
-                        .font(Font.caption.italic())
-                        .foregroundColor(.secondary)
-                }
             }
             .layoutPriority(1)
 
@@ -297,8 +347,8 @@ private struct WorkoutCell: View {
             // Duration and the exercise/set counts sit on the right as pills, so the comment has the
             // left column to itself and the row stays compact.
             VStack(alignment: .trailing, spacing: 4) {
-                durationString.map { pill($0) }
-                pill(summaryLine)
+                workout.durationText.map { pill($0) }
+                pill(workout.summaryLine)
             }
         }
     }

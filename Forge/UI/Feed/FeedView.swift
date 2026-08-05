@@ -28,8 +28,13 @@ struct FeedView: View {
     @State private var filter: ActivityFilter?
     /// When set (from the year view), the calendar drills into this single month's detailed grid.
     @State private var zoomedMonth: MonthRef?
+    @State private var activityIndex = ActivityIndex()
 
     private struct MonthRef: Equatable { let year: Int; let month: Int }
+    private struct WorkoutActivityInput: Equatable {
+        let objectURI: URL
+        let start: Date?
+    }
 
     /// Calendar.current copies the whole calendar on each access, so this is read once per render
     /// (into `body`) and passed down, never from inside a loop over the workouts.
@@ -52,6 +57,8 @@ struct FeedView: View {
         private(set) var thisMonth = 0
 
         static func key(year: Int, month: Int) -> Int { year * 12 + month }
+
+        init() { }
 
         init(workouts: FetchedResults<Workout>, calendar: Calendar, now: Date) {
             for workout in workouts {
@@ -105,7 +112,7 @@ struct FeedView: View {
 
     var body: some View {
         let calendar = cal
-        let index = ActivityIndex(workouts: workouts, calendar: calendar, now: Date())
+        let index = activityIndex
         return NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
@@ -122,6 +129,17 @@ struct FeedView: View {
             // Keep the custom greeting header; the nav bar only appears on pushed detail screens.
             .toolbar(.hidden, for: .navigationBar)
         }
+        .onAppear { rebuildActivityIndex(calendar: calendar) }
+        .onChange(of: workoutActivityInputs) { _, _ in rebuildActivityIndex(calendar: calendar) }
+        .onChange(of: settingsStore.firstWeekday) { _, _ in rebuildActivityIndex(calendar: cal) }
+    }
+
+    private var workoutActivityInputs: [WorkoutActivityInput] {
+        workouts.map { WorkoutActivityInput(objectURI: $0.objectID.uriRepresentation(), start: $0.start) }
+    }
+
+    private func rebuildActivityIndex(calendar: Calendar) {
+        activityIndex = ActivityIndex(workouts: workouts, calendar: calendar, now: Date())
     }
 
     // MARK: Header

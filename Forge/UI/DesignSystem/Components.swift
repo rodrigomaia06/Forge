@@ -21,6 +21,87 @@ struct ForgeListSeparator: View {
     }
 }
 
+struct ForgeExerciseHeaderRow<Trailing: View>: View {
+    let title: String
+    let note: String?
+    let badge: String?
+    let badgeAccessibilityLabel: String?
+    let onNoteTap: (() -> Void)?
+    let trailing: Trailing
+
+    init(
+        title: String,
+        note: String? = nil,
+        badge: String? = nil,
+        badgeAccessibilityLabel: String? = nil,
+        onNoteTap: (() -> Void)? = nil,
+        @ViewBuilder trailing: () -> Trailing
+    ) {
+        self.title = title
+        self.note = note
+        self.badge = badge
+        self.badgeAccessibilityLabel = badgeAccessibilityLabel
+        self.onNoteTap = onNoteTap
+        self.trailing = trailing()
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: Theme.Spacing.s) {
+            if let badge {
+                Text(badge)
+                    .font(.forgeCaption.weight(.bold))
+                    .foregroundColor(.forgeLabel)
+                    .frame(width: 22, height: 22)
+                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.forgeSeparator))
+                    .accessibilityLabel(badgeAccessibilityLabel ?? badge)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.forgeHeadline)
+                    .foregroundColor(.forgeLabel)
+                if let note, !note.isEmpty {
+                    Text(note)
+                        .font(.forgeCaption.italic())
+                        .foregroundColor(.forgeSecondaryLabel)
+                        .lineLimit(2)
+                        .onTapGesture { onNoteTap?() }
+                }
+            }
+            .layoutPriority(1)
+            Spacer()
+            trailing
+                .frame(minWidth: 34, minHeight: 44)
+        }
+    }
+}
+
+struct ForgeExerciseHeaderGallery: View {
+    private let twoLineNote = "Keep wrists neutral on the way down. Use a lighter load if the second line starts to pull the row taller."
+
+    var body: some View {
+        VStack(spacing: Theme.Spacing.m) {
+            header(title: "Wrist Curl: Dumbbell", note: nil)
+            header(title: "Reverse Wrist Curl: Barbell", note: "Slow eccentric.")
+            header(title: "Farmer's Hold: Dumbbell", note: twoLineNote)
+        }
+        .padding()
+        .background(Color.forgeBackground)
+    }
+
+    private func header(title: String, note: String?) -> some View {
+        ForgeExerciseHeaderRow(title: title, note: note) {
+            Image(systemName: "ellipsis")
+                .foregroundColor(.forgeSecondaryLabel)
+                .frame(width: 34, height: 44)
+                .contentShape(Rectangle())
+                .accessibilityLabel("Exercise options")
+        }
+        .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+        .frame(minHeight: Theme.Layout.minTapTarget)
+        .forgeCard()
+    }
+}
+
 /// A non-List row that keeps the familiar trailing-edge swipe-to-delete interaction. Editable numeric
 /// rows cannot live in `List` because recycling a focused UIKit field can wedge the main thread, but
 /// removing List must not remove a user's quickest way to delete a set.

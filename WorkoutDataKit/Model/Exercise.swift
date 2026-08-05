@@ -61,6 +61,7 @@ extension Exercise {
         "biceps brachii": "biceps",
         "deltoid": "shoulders",
         "erector spinae": "lower back",
+        "forearm": "forearms",
         "gastrocnemius": "calves",
         "soleus": "calves",
         "glutaeus maximus": "glutes",
@@ -79,6 +80,7 @@ extension Exercise {
         "obliques": "abdominals",
         // arms
         "biceps brachii": "arms",
+        "forearm": "arms",
         "triceps brachii": "arms",
         // shoulders
         "deltoid": "shoulders",

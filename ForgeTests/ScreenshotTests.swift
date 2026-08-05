@@ -35,6 +35,10 @@ final class ScreenshotTests: XCTestCase {
         try capture(ForgeExerciseView(), named: "exercise-view")
     }
 
+    func testCaptureExerciseHeaders() throws {
+        try capture(ForgeExerciseHeaderGallery(), named: "exercise-headers")
+    }
+
     func testCaptureHome() throws {
         try capture(ForgeHomeView(), named: "home")
     }
