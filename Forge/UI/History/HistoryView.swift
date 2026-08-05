@@ -77,9 +77,10 @@ struct HistoryView : View {
         }
     }
 
-    private static let monthFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.setLocalizedDateFormatFromTemplate("MMMM yyyy")
+    private static let weekRangeFormatter: DateIntervalFormatter = {
+        let formatter = DateIntervalFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
         return formatter
     }()
 
@@ -87,18 +88,21 @@ struct HistoryView : View {
         workouts.map { WorkoutSnapshotInput(objectURI: $0.objectID.uriRepresentation(), start: $0.start) }
     }
 
-    /// Workouts grouped into month sections, built from value snapshots so body rendering does not regroup
+    /// Workouts grouped into week sections, built from value snapshots so body rendering does not regroup
     /// Core Data objects or walk relationships for each row.
     private func makeHistorySections() -> [HistorySection] {
-        let calendar = Calendar.current
+        var calendar = Calendar.current
+        calendar.firstWeekday = settingsStore.firstWeekday
         let groups = Dictionary(grouping: displayedWorkouts.map { makeHistoryRow(for: $0) }) { row in
-            calendar.dateComponents([.year, .month], from: row.start ?? Date.distantPast)
+            calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: row.start ?? Date.distantPast)
         }
         return groups
             .map { components, workouts -> (id: String, title: String, workouts: [HistoryRow], sort: Date) in
                 let sorted = workouts.sorted { ($0.start ?? .distantPast) > ($1.start ?? .distantPast) }
                 let newest = sorted.first?.start ?? Date.distantPast
-                return ("\(components.year ?? 0)-\(components.month ?? 0)", Self.monthFormatter.string(from: newest), sorted, newest)
+                let oldest = sorted.last?.start ?? newest
+                let title = Self.weekRangeFormatter.string(from: oldest, to: newest)
+                return ("\(components.yearForWeekOfYear ?? 0)-\(components.weekOfYear ?? 0)", title, sorted, newest)
             }
             .sorted { $0.sort > $1.sort }
             .map { HistorySection(id: $0.id, title: $0.title, workouts: $0.workouts) }
@@ -346,11 +350,11 @@ private struct WorkoutCell: View {
         HStack(alignment: .center, spacing: Theme.Spacing.s) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(workout.title)
-                    .font(.title3)
+                    .font(.body)
                     .foregroundColor(.forgeLabel)
 
                 Text(workout.dateText)
-                    .font(.subheadline)
+                    .font(.caption)
                     .foregroundColor(.forgeSecondaryLabel)
             }
             .layoutPriority(1)
