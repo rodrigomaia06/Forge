@@ -130,7 +130,92 @@ struct WorkoutDetailView : View {
         }
     }
 
-    var body: some View {
+    private var readBody: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.l) {
+                VStack(spacing: 0) {
+                    WorkoutDetailBannerView(workout: workout)
+                        .padding([.top, .bottom])
+                        .frame(maxWidth: .infinity)
+                        // A thin white rule under the summary, in place of the old muscle-group color.
+                        .overlay(alignment: .bottom) {
+                            Capsule()
+                                .fill(Color.forgeLabel)
+                                .frame(height: 3)
+                                .padding(.horizontal, Theme.Spacing.m)
+                        }
+                }
+                .forgeCard(radius: Theme.Radius.medium)
+
+                if let comment = workout.comment, !comment.isEmpty {
+                    VStack(spacing: 0) {
+                        Text(comment)
+                            .editModeHint()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                            .frame(minHeight: Theme.Layout.minTapTarget, alignment: .center)
+                    }
+                    .forgeCard(radius: Theme.Radius.medium)
+                }
+
+                VStack(spacing: 0) {
+                    LabeledContent("Start") { Text(workout.safeStart.formatted(date: .abbreviated, time: .shortened)) }
+                        .editModeHint()
+                        .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                        .frame(minHeight: Theme.Layout.minTapTarget)
+                    ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                    LabeledContent("End") { Text(workout.safeEnd.formatted(date: .abbreviated, time: .shortened)) }
+                        .editModeHint()
+                        .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                        .frame(minHeight: Theme.Layout.minTapTarget)
+                }
+                .forgeCard(radius: Theme.Radius.medium)
+
+                CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: false, standaloneCard: true)
+
+                if expanded {
+                    ForEach(workoutExercises) { workoutExercise in
+                        WorkoutExerciseDetailView(
+                            workoutExercise: workoutExercise,
+                            embedded: true,
+                            scrollCard: true,
+                            onPresentSheet: { activeExerciseSheet = $0 }
+                        )
+                        .environmentObject(self.settingsStore)
+                    }
+                } else {
+                    compactExercisesSection
+                }
+            }
+            .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+            .padding(.top, Theme.Spacing.m)
+            .padding(.bottom, Theme.Layout.bottomScrollClearance)
+        }
+        .background(Color.forgeBackground.ignoresSafeArea())
+    }
+
+    private var compactExercisesSection: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(workoutExercises.enumerated()), id: \.element.id) { index, workoutExercise in
+                Button {
+                    exerciseToOpen = workoutExercise
+                } label: {
+                    workoutExerciseView(workoutExercise: workoutExercise)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                        .padding(.vertical, Theme.Spacing.s)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                if index < workoutExercises.count - 1 {
+                    ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                }
+            }
+        }
+        .forgeCard(radius: Theme.Radius.medium)
+    }
+
+    private var editList: some View {
         List {
             Section {
                 WorkoutDetailBannerView(workout: workout)
@@ -145,53 +230,23 @@ struct WorkoutDetailView : View {
                     }
             }
             
-            // Title and comment are editable only in edit mode, so browsing a finished workout cannot
-            // change what was recorded. Read mode shows the comment when there is one.
-            if editMode.isEditing {
-                Section {
-                    ClearableTextField(titleKey: "Title", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
-                    ClearableTextField(titleKey: "Comment", text: workoutComment, onCommit: { self.adjustAndSaveWorkoutCommentInput() })
-                }
-            } else if let comment = workout.comment, !comment.isEmpty {
-                Section {
-                    Text(comment)
-                        .editModeHint()
-                }
+            Section {
+                ClearableTextField(titleKey: "Title", text: workoutTitle, onCommit: { self.adjustAndSaveWorkoutTitleInput() })
+                ClearableTextField(titleKey: "Comment", text: workoutComment, onCommit: { self.adjustAndSaveWorkoutCommentInput() })
             }
                 
-                Section {
-                    // The start and end are editable only in edit mode, so a stray tap while browsing
-                    // a finished workout cannot change its recorded times.
-                    if editMode.isEditing {
-                        DatePicker(selection: $workout.safeStart, in: ...min(workout.safeEnd, Date())) {
-                            Text("Start")
-                        }
-
-                        DatePicker(selection: $workout.safeEnd, in: workout.safeStart...Date()) {
-                            Text("End")
-                        }
-                    } else {
-                        LabeledContent("Start") { Text(workout.safeStart.formatted(date: .abbreviated, time: .shortened)) }
-                            .editModeHint()
-                        LabeledContent("End") { Text(workout.safeEnd.formatted(date: .abbreviated, time: .shortened)) }
-                            .editModeHint()
-                    }
+            Section {
+                DatePicker(selection: $workout.safeStart, in: ...min(workout.safeEnd, Date())) {
+                    Text("Start")
                 }
 
-                CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: editMode.isEditing)
-
-            if expanded && !editMode.isEditing {
-                // Each exercise as its own read-only card with the set table inline (previous, weight, reps),
-                // so the whole workout reads in one scroll without tapping into each exercise.
-                ForEach(workoutExercises) { workoutExercise in
-                    WorkoutExerciseDetailView(
-                        workoutExercise: workoutExercise,
-                        embedded: true,
-                        onPresentSheet: { activeExerciseSheet = $0 }
-                    )
-                        .environmentObject(self.settingsStore)
+                DatePicker(selection: $workout.safeEnd, in: workout.safeStart...Date()) {
+                    Text("End")
                 }
-            } else {
+            }
+
+            CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: true)
+
             Section {
                 ForEach(workoutExercises) { workoutExercise in
                     NavigationLink(destination: exerciseDestination(workoutExercise)) {
@@ -225,23 +280,29 @@ struct WorkoutDetailView : View {
                 }
                 // Reordering only in edit mode, so a stray long-press drag can't change a past workout's
                 // exercise order by accident.
-                .moveDisabled(!editMode.isEditing)
                 
-                if editMode.isEditing {
-                    Button(action: {
-                        self.showingExerciseSelectorSheet = true
-                    }) {
-                        HStack {
-                            Image(systemName: "plus")
-                            Text("Add exercises")
-                        }
+                Button(action: {
+                    self.showingExerciseSelectorSheet = true
+                }) {
+                    HStack {
+                        Image(systemName: "plus")
+                        Text("Add exercises")
                     }
                 }
-            }
             }
         }
         .listStyleCompat_InsetGroupedListStyle()
         .environment(\.editMode, $editMode)
+    }
+
+    var body: some View {
+        Group {
+            if editMode.isEditing {
+                editList
+            } else {
+                readBody
+            }
+        }
         .navigationDestination(item: $exerciseToOpen) { exerciseDestination($0) }
         .keyboardDoneToolbar()
         // Commit the title and comment when Edit is turned off, so tapping Done saves even if the field

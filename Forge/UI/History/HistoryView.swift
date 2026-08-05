@@ -177,7 +177,7 @@ struct HistoryView : View {
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
+                LazyVStack(alignment: .leading, spacing: Theme.Spacing.l) {
                 if filterActive {
                     filterSection
                 }
@@ -186,7 +186,7 @@ struct HistoryView : View {
                 }
                 }
                 .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
-                .padding(.top, Theme.Spacing.l)
+                .padding(.top, Theme.Spacing.m)
                 .padding(.bottom, Theme.Layout.bottomScrollClearance)
             }
             .background(Color.forgeBackground.ignoresSafeArea())
@@ -263,7 +263,7 @@ struct HistoryView : View {
                     .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                     .frame(minHeight: Theme.Layout.minTapTarget)
             }
-            .forgeCard()
+            .forgeCard(radius: Theme.Radius.medium)
 
             Text("Showing workouts from the first to the second date.")
                 .font(.forgeCaption)
@@ -287,7 +287,7 @@ struct HistoryView : View {
                     }
                 }
             }
-            .forgeCard()
+            .forgeCard(radius: Theme.Radius.medium)
         }
     }
 
