@@ -176,70 +176,20 @@ struct HistoryView : View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            List {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
                 if filterActive {
-                    Section(footer: Text("Showing workouts from the first to the second date.")) {
-                        DatePicker("From", selection: $fromDate, in: ...toDate, displayedComponents: .date)
-                        DatePicker("To", selection: $toDate, in: fromDate..., displayedComponents: .date)
-                    }
+                    filterSection
                 }
                 ForEach(historySections) { section in
-                    Section(header: Text(section.title)) {
-                        ForEach(section.workouts) { workout in
-                            NavigationLink(value: workout.objectID) {
-                                WorkoutCell(workout: workout)
-                                    .contextMenu {
-                                        // TODO add images when SwiftUI fixes the image size
-                                        if UIDevice.current.userInterfaceIdiom != .pad {
-                                            // not working on iPad, last checked iOS 13.4
-                                            Button("Share") {
-                                                guard let workout = self.workout(for: workout.objectID),
-                                                      let logText = workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit, fallbackBodyweight: self.settingsStore.bodyweight) else { return }
-                                                self.activityItems = [logText]
-                                            }
-                                        }
-                                        Button("Repeat") {
-                                            guard let workout = self.workout(for: workout.objectID) else { return }
-                                            WorkoutDetailView.repeatWorkout(workout: workout, settingsStore: self.settingsStore, sceneState: sceneState)
-                                        }
-                                        Button("Repeat (Blank)") {
-                                            guard let workout = self.workout(for: workout.objectID) else { return }
-                                            WorkoutDetailView.repeatWorkoutBlank(workout: workout, settingsStore: self.settingsStore, sceneState: sceneState)
-                                        }
-                                }
-                            }
-                            // A List in edit mode swallows the taps that would follow a NavigationLink, so
-                            // while editing the row gets its own tap target that pushes the same
-                            // destination. Editing then carries into the workout rather than being a dead
-                            // end: the workout opens already in edit mode. The overlay covers only the row
-                            // content, so the delete circle and the reorder handle still take their taps.
-                            .overlay {
-                                if editMode == .active {
-                                    Color.clear
-                                        .contentShape(Rectangle())
-                                        .onTapGesture { path.append(workout.objectID) }
-                                }
-                            }
-                            // Tint the row while it waits for the delete confirmation, so it is clear which
-                            // workout is about to be removed. It stays in the list until Delete is confirmed.
-                            .listRowBackground(workoutsToDelete?.contains(where: { $0.objectID == workout.objectID }) == true ? Color.forgeDestructive.opacity(0.18) : nil)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    requestDelete([workout])
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                                .tint(Color.forgeDestructive)
-                            }
-                        }
-                        .onDelete { offsets in
-                            requestDelete(offsets.map { section.workouts[$0] })
-                        }
-                    }
+                    historySection(section)
                 }
+                }
+                .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                .padding(.top, Theme.Spacing.l)
+                .padding(.bottom, Theme.Layout.bottomScrollClearance)
             }
-            .listStyleCompat_InsetGroupedListStyle()
-            .environment(\.editMode, $editMode)
+            .background(Color.forgeBackground.ignoresSafeArea())
             .navigationDestination(for: NSManagedObjectID.self) { objectID in
                 if let workout = workout(for: objectID) {
                     // Opened from an editing list, the workout opens editable too.
@@ -299,6 +249,84 @@ struct HistoryView : View {
         .onAppear {
             rebuildHistorySections()
             openPendingHistoryWorkout()
+        }
+    }
+
+    private var filterSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            VStack(spacing: 0) {
+                DatePicker("From", selection: $fromDate, in: ...toDate, displayedComponents: .date)
+                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                    .frame(minHeight: Theme.Layout.minTapTarget)
+                ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                DatePicker("To", selection: $toDate, in: fromDate..., displayedComponents: .date)
+                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                    .frame(minHeight: Theme.Layout.minTapTarget)
+            }
+            .forgeCard()
+
+            Text("Showing workouts from the first to the second date.")
+                .font(.forgeCaption)
+                .foregroundColor(.forgeSecondaryLabel)
+                .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+        }
+    }
+
+    private func historySection(_ section: HistorySection) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            Text(section.title)
+                .font(.forgeCaption)
+                .foregroundColor(.forgeSecondaryLabel)
+                .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+
+            VStack(spacing: 0) {
+                ForEach(Array(section.workouts.enumerated()), id: \.element.id) { index, workout in
+                    historyRow(workout)
+                    if index < section.workouts.count - 1 {
+                        ForgeListSeparator().padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                    }
+                }
+            }
+            .forgeCard()
+        }
+    }
+
+    private func historyRow(_ row: HistoryRow) -> some View {
+        ForgeSwipeToDeleteRow(deleteAccessibilityLabel: "Delete workout", onDelete: { requestDelete([row]) }) {
+            Button {
+                path.append(row.objectID)
+            } label: {
+                WorkoutCell(workout: row)
+                    .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
+                    .frame(minHeight: Theme.Layout.minTapTarget)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .background(workoutsToDelete?.contains(where: { $0.objectID == row.objectID }) == true ? Color.forgeDestructive.opacity(0.18) : Color.forgeSurface)
+            .contextMenu {
+                // TODO add images when SwiftUI fixes the image size
+                if UIDevice.current.userInterfaceIdiom != .pad {
+                    // not working on iPad, last checked iOS 13.4
+                    Button("Share") {
+                        guard let workout = self.workout(for: row.objectID),
+                              let logText = workout.logText(in: self.exerciseStore.exercises, weightUnit: self.settingsStore.weightUnit, fallbackBodyweight: self.settingsStore.bodyweight) else { return }
+                        self.activityItems = [logText]
+                    }
+                }
+                Button("Repeat") {
+                    guard let workout = self.workout(for: row.objectID) else { return }
+                    WorkoutDetailView.repeatWorkout(workout: workout, settingsStore: self.settingsStore, sceneState: sceneState)
+                }
+                Button("Repeat (Blank)") {
+                    guard let workout = self.workout(for: row.objectID) else { return }
+                    WorkoutDetailView.repeatWorkoutBlank(workout: workout, settingsStore: self.settingsStore, sceneState: sceneState)
+                }
+                Button(role: .destructive) {
+                    requestDelete([row])
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
         }
     }
 

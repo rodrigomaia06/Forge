@@ -256,6 +256,7 @@ extension ExerciseStore {
 
     public func deleteCustomExercise(with uuid: UUID) {
         guard let context = context, let entity = customExerciseEntity(with: uuid, in: context) else { return }
+        deleteRoutineExercises(with: uuid, in: context)
         context.delete(entity)
         saveAndReload(context)
     }
@@ -275,6 +276,18 @@ extension ExerciseStore {
         request.predicate = NSPredicate(format: "uuid == %@", uuid as CVarArg)
         request.fetchLimit = 1
         return (try? context.fetch(request))?.first
+    }
+
+    private func deleteRoutineExercises(with uuid: UUID, in context: NSManagedObjectContext) {
+        let request: NSFetchRequest<WorkoutRoutineExercise> = WorkoutRoutineExercise.fetchRequest()
+        request.predicate = NSPredicate(format: "\(#keyPath(WorkoutRoutineExercise.exerciseUuid)) == %@", uuid as CVarArg)
+        guard let routineExercises = try? context.fetch(request) else { return }
+        for routineExercise in routineExercises {
+            let routine = routineExercise.workoutRoutine
+            context.delete(routineExercise)
+            routine?.removeFromWorkoutRoutineExercises(routineExercise)
+            routine?.normalizeSupersets()
+        }
     }
 
     private func saveAndReload(_ context: NSManagedObjectContext) {

@@ -110,6 +110,8 @@ struct ForgeSwipeToDeleteRow<Content: View>: View {
     // The parent ScrollView begins recognising at roughly ten points. Waiting longer here lets a
     // vertical drag win first, even when it begins on text or a value field inside the card.
     private let horizontalActivationDistance: CGFloat = 24
+    private let deleteTitle: String
+    private let deleteAccessibilityLabel: String
     private let onDelete: () -> Void
     private let content: Content
 
@@ -117,7 +119,9 @@ struct ForgeSwipeToDeleteRow<Content: View>: View {
     @GestureState private var dragOffset: CGFloat = 0
     @State private var isRemoving: Bool = false
 
-    init(onDelete: @escaping () -> Void, @ViewBuilder content: () -> Content) {
+    init(deleteTitle: String = "Delete", deleteAccessibilityLabel: String = "Delete set", onDelete: @escaping () -> Void, @ViewBuilder content: () -> Content) {
+        self.deleteTitle = deleteTitle
+        self.deleteAccessibilityLabel = deleteAccessibilityLabel
         self.onDelete = onDelete
         self.content = content()
     }
@@ -148,7 +152,7 @@ struct ForgeSwipeToDeleteRow<Content: View>: View {
             } label: {
                 VStack(spacing: Theme.Spacing.xxs) {
                     Image(systemName: "trash.fill")
-                    Text("Delete").font(.caption2.weight(.semibold))
+                    Text(deleteTitle).font(.caption2.weight(.semibold))
                 }
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -156,7 +160,7 @@ struct ForgeSwipeToDeleteRow<Content: View>: View {
             .buttonStyle(.plain)
             .frame(width: actionWidth)
             .background(Color.forgeDestructive)
-            .accessibilityLabel("Delete set")
+            .accessibilityLabel(deleteAccessibilityLabel)
 
             content
                 .frame(maxWidth: .infinity)
@@ -185,7 +189,7 @@ struct ForgeSwipeToDeleteRow<Content: View>: View {
                     }
                 }
         )
-        .accessibilityAction(named: "Delete set") {
+        .accessibilityAction(named: deleteAccessibilityLabel) {
             performDelete()
         }
     }

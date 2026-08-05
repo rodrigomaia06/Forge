@@ -213,36 +213,58 @@ extension WorkoutRoutine {
     }
 
     /// Rebuilds this routine's exercises and sets to match the workout, in order, so it reflects what was
-    /// actually done. Existing routine exercises (and their sets) are removed first. Ordered relationships
-    /// are built by setting each child's to-one inverse, which appends it in order; assigning an
-    /// NSOrderedSet would not maintain the inverse and would fail validation on save.
+    /// actually done. Routine-owned notes and set types stay on the routine; a workout can change the
+    /// structure and rep targets, but the routine editor remains the only place that changes template
+    /// comments and set types.
     public func update(fromWorkout workout: Workout) {
         guard let context = managedObjectContext else { return }
-        for routineExercise in (workoutRoutineExercises?.compactMap { $0 as? WorkoutRoutineExercise } ?? []) {
-            removeFromWorkoutRoutineExercises(routineExercise)
-            context.delete(routineExercise)
-        }
+        let existingExercises = workoutRoutineExercises?.compactMap { $0 as? WorkoutRoutineExercise } ?? []
+        var unusedExercises = existingExercises
+        var updatedExercises: [WorkoutRoutineExercise] = []
         var supersetIDMap: [UUID: UUID] = [:]
-        for workoutExercise in (workout.workoutExercises?.compactMap { $0 as? WorkoutExercise } ?? []) {
-            let routineExercise = WorkoutRoutineExercise.create(context: context)
+        for (index, workoutExercise) in (workout.workoutExercises?.compactMap { $0 as? WorkoutExercise } ?? []).enumerated() {
+            let routineExercise: WorkoutRoutineExercise
+            if index < existingExercises.count, existingExercises[index].exerciseUuid == workoutExercise.exerciseUuid {
+                routineExercise = existingExercises[index]
+                unusedExercises.removeAll { $0 == routineExercise }
+            } else if let matchIndex = unusedExercises.firstIndex(where: { $0.exerciseUuid == workoutExercise.exerciseUuid }) {
+                routineExercise = unusedExercises.remove(at: matchIndex)
+            } else {
+                routineExercise = WorkoutRoutineExercise.create(context: context)
+                routineExercise.assistedValue = workoutExercise.assistedValue
+            }
             routineExercise.exerciseUuid = workoutExercise.exerciseUuid
-            routineExercise.comment = workoutExercise.comment
-            routineExercise.supersetComment = workoutExercise.supersetComment
             routineExercise.workoutRoutine = self
             // Carry the workout's superset grouping onto the routine, with fresh ids for the routine.
             if let group = workoutExercise.supersetUUID {
                 routineExercise.supersetUUID = supersetIDMap[group] ?? {
                     let fresh = UUID(); supersetIDMap[group] = fresh; return fresh
                 }()
+            } else {
+                routineExercise.supersetUUID = nil
             }
-            for workoutSet in (workoutExercise.workoutSets?.compactMap { $0 as? WorkoutSet } ?? []) {
-                let routineSet = WorkoutRoutineSet.create(context: context)
+
+            let existingSets = routineExercise.workoutRoutineSets?.compactMap { $0 as? WorkoutRoutineSet } ?? []
+            var updatedSets: [WorkoutRoutineSet] = []
+            for (setIndex, workoutSet) in (workoutExercise.workoutSets?.compactMap { $0 as? WorkoutSet } ?? []).enumerated() {
+                let routineSet = setIndex < existingSets.count ? existingSets[setIndex] : WorkoutRoutineSet.create(context: context)
                 // Keep the planned rep range, falling back to the reps actually done.
                 routineSet.minRepetitionsValue = workoutSet.minTargetRepetitionsValue ?? workoutSet.repetitions?.int16Value
                 routineSet.maxRepetitionsValue = workoutSet.maxTargetRepetitionsValue ?? workoutSet.repetitions?.int16Value
-                routineSet.tagValue = workoutSet.tagValue
                 routineSet.workoutRoutineExercise = routineExercise
+                updatedSets.append(routineSet)
             }
+            for staleSet in existingSets.dropFirst(updatedSets.count) {
+                routineExercise.removeFromWorkoutRoutineSets(staleSet)
+                context.delete(staleSet)
+            }
+            routineExercise.workoutRoutineSets = NSOrderedSet(array: updatedSets)
+            updatedExercises.append(routineExercise)
         }
+        for staleExercise in unusedExercises {
+            removeFromWorkoutRoutineExercises(staleExercise)
+            context.delete(staleExercise)
+        }
+        workoutRoutineExercises = NSOrderedSet(array: updatedExercises)
     }
 }

@@ -77,7 +77,7 @@ struct CustomExercisesView: View {
             }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("This cannot be undone. Any set belonging to this exercise will be deleted.")
+            Text("This cannot be undone. Any workout or routine entry using this exercise will be removed.")
         }
     }
     
@@ -87,6 +87,7 @@ struct CustomExercisesView: View {
         guard let workoutExercises = try? managedObjectContext.fetch(request) else { return }
         workoutExercises.forEach { managedObjectContext.delete($0) }
     }
+
 }
 
 #if DEBUG

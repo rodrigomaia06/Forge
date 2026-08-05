@@ -116,6 +116,66 @@ final class RoutineSupersetTests: XCTestCase {
         XCTAssertNil(re[2].supersetUUID)
     }
 
+    func testUpdateRoutineFromWorkoutKeepsRoutineOwnedMetadata() {
+        let (routine, routineExercises) = makeRoutine(exercises: 1)
+        routine.title = "Routine title"
+        routine.comment = "Routine comment"
+        routineExercises[0].comment = "Routine exercise note"
+        routineExercises[0].supersetComment = "Routine superset note"
+        let routineSet = WorkoutRoutineSet.create(context: context)
+        routineSet.workoutRoutineExercise = routineExercises[0]
+        routineSet.minRepetitionsValue = 6
+        routineSet.maxRepetitionsValue = 8
+        routineSet.tagValue = .warmUp
+        routineSet.comment = "Routine set note"
+
+        let workout = routine.createWorkout(context: context)
+        workout.comment = "Workout comment"
+        let workoutExercise = ordered(workout)[0]
+        workoutExercise.comment = "Workout exercise note"
+        workoutExercise.supersetComment = "Workout superset note"
+        let workoutSet = workoutExercise.workoutSets?.firstObject as! WorkoutSet
+        workoutSet.repetitionsValue = 10
+        workoutSet.minTargetRepetitionsValue = 9
+        workoutSet.maxTargetRepetitionsValue = 11
+        workoutSet.tagValue = .dropSet
+        workoutSet.comment = "Workout set note"
+
+        routine.update(fromWorkout: workout)
+
+        let updatedExercise = ordered(routine)[0]
+        let updatedSet = updatedExercise.workoutRoutineSets?.firstObject as! WorkoutRoutineSet
+        XCTAssertEqual(routine.title, "Routine title")
+        XCTAssertEqual(routine.comment, "Routine comment")
+        XCTAssertEqual(updatedExercise.comment, "Routine exercise note")
+        XCTAssertEqual(updatedExercise.supersetComment, "Routine superset note")
+        XCTAssertEqual(updatedSet.minRepetitionsValue, 9)
+        XCTAssertEqual(updatedSet.maxRepetitionsValue, 11)
+        XCTAssertEqual(updatedSet.tagValue, .warmUp)
+        XCTAssertEqual(updatedSet.comment, "Routine set note")
+    }
+
+    func testUpdateRoutineFromWorkoutDoesNotCopyMetadataToNewSets() {
+        let (routine, _) = makeRoutine(exercises: 1)
+        let workout = routine.createWorkout(context: context)
+        let workoutExercise = ordered(workout)[0]
+        let workoutSet = WorkoutSet.create(context: context)
+        workoutSet.workoutExercise = workoutExercise
+        workoutSet.repetitionsValue = 12
+        workoutSet.tagValue = .dropSet
+        workoutSet.comment = "Workout set note"
+
+        routine.update(fromWorkout: workout)
+
+        let updatedExercise = ordered(routine)[0]
+        let updatedSets = updatedExercise.workoutRoutineSets?.array as? [WorkoutRoutineSet] ?? []
+        XCTAssertEqual(updatedSets.count, 1)
+        XCTAssertNil(updatedSets[0].tagValue)
+        XCTAssertNil(updatedSets[0].comment)
+        XCTAssertEqual(updatedSets[0].minRepetitionsValue, 12)
+        XCTAssertEqual(updatedSets[0].maxRepetitionsValue, 12)
+    }
+
     // MARK: differs detects grouping change
 
     func testDiffersDetectsGroupingChange() {
@@ -146,5 +206,21 @@ final class RoutineSupersetTests: XCTestCase {
         XCTAssertNotNil(ce[0].supersetUUID)
         XCTAssertEqual(ce[0].supersetUUID, ce[1].supersetUUID)
         XCTAssertNil(ce[2].supersetUUID)
+    }
+
+    func testDeletingCustomExerciseRemovesItFromRoutines() {
+        let store = ExerciseStore(context: context)
+        store.createCustomExercise(title: "Cable wrist thing", description: nil, primaryMuscle: ["forearm"], secondaryMuscle: [], type: .other)
+        let customExercise = store.customExercises.first { $0.title == "Cable wrist thing" }!
+        let routine = WorkoutRoutine.create(context: context)
+        let routineExercise = WorkoutRoutineExercise.create(context: context)
+        routineExercise.exerciseUuid = customExercise.uuid
+        routineExercise.workoutRoutine = routine
+        try! context.save()
+
+        store.deleteCustomExercise(with: customExercise.uuid)
+
+        let remaining = routine.workoutRoutineExercises?.array as? [WorkoutRoutineExercise] ?? []
+        XCTAssertTrue(remaining.isEmpty)
     }
 }
