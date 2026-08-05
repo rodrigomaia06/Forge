@@ -145,7 +145,7 @@ struct WorkoutDetailView : View {
                                 .padding(.horizontal, Theme.Spacing.m)
                         }
                 }
-                .forgeCard(radius: Theme.Radius.medium)
+                .forgeCard()
 
                 if let comment = workout.comment, !comment.isEmpty {
                     VStack(spacing: 0) {
@@ -155,7 +155,7 @@ struct WorkoutDetailView : View {
                             .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                             .frame(minHeight: Theme.Layout.minTapTarget, alignment: .center)
                     }
-                    .forgeCard(radius: Theme.Radius.medium)
+                    .forgeCard()
                 }
 
                 VStack(spacing: 0) {
@@ -169,7 +169,7 @@ struct WorkoutDetailView : View {
                         .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                         .frame(minHeight: Theme.Layout.minTapTarget)
                 }
-                .forgeCard(radius: Theme.Radius.medium)
+                .forgeCard()
 
                 CustomAttributesEditor(attributes: workoutCustomAttributes, isEditable: false, standaloneCard: true)
 
@@ -212,7 +212,7 @@ struct WorkoutDetailView : View {
                 }
             }
         }
-        .forgeCard(radius: Theme.Radius.medium)
+        .forgeCard()
     }
 
     private var editList: some View {

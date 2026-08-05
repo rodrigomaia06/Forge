@@ -263,7 +263,7 @@ struct HistoryView : View {
                     .padding(.horizontal, Theme.Layout.insetGroupedRowInset)
                     .frame(minHeight: Theme.Layout.minTapTarget)
             }
-            .forgeCard(radius: Theme.Radius.medium)
+            .background(Color.forgeSurface)
 
             Text("Showing workouts from the first to the second date.")
                 .font(.forgeCaption)
@@ -287,7 +287,7 @@ struct HistoryView : View {
                     }
                 }
             }
-            .forgeCard(radius: Theme.Radius.medium)
+            .background(Color.forgeSurface)
         }
     }
 
