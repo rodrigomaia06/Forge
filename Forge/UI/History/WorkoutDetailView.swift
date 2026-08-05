@@ -240,6 +240,7 @@ struct WorkoutDetailView : View {
                             workoutExercise: workoutExercise,
                             embedded: true,
                             scrollCard: true,
+                            initialEditMode: editMode,
                             onPresentSheet: { activeExerciseSheet = $0 }
                         )
                         .environmentObject(self.settingsStore)
@@ -377,10 +378,11 @@ struct WorkoutDetailView : View {
 
     var body: some View {
         Group {
-            if editMode.isEditing {
+            if editMode.isEditing && !expanded {
                 editList
             } else {
                 readBody
+                    .environment(\.editMode, $editMode)
             }
         }
         .navigationDestination(item: $exerciseToOpen) { exerciseDestination($0) }

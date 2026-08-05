@@ -49,8 +49,9 @@ struct WorkoutExerciseDetailView : View {
     // Edit button flips this so sets become editable.
     @State private var historyEditMode: EditMode
 
-    /// Sets are editable during the live workout, or in history only after tapping Edit.
-    private var setsEditable: Bool { isCurrentWorkout || historyEditMode == .active }
+    /// Sets are editable during the live workout, in a pushed history exercise after tapping Edit, or
+    /// inside an expanded workout detail when the parent workout is being edited.
+    private var setsEditable: Bool { isCurrentWorkout || historyEditMode == .active || editMode?.wrappedValue == .active }
 
     /// When true, renders as a card embedded in the current-workout list (name header + set table,
     /// no navigation bar). When false, renders as the pushed full-screen view used from history.
